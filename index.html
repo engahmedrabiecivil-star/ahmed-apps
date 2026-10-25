@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f6b5c">
+<title>مواقيت الصلاة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
+<style>
+/* Layout: one phone-width column — next-prayer panel on top, the five prayers as a timeline below */
+:root{
+  --bg:#eef3f1; --surface:#ffffff; --fg:#14302b; --muted:#5d746f; --line:#d5e1dd;
+  --accent:#0f6b5c; --accent-soft:#dcefea; --gold:#a87a1c;
+  --display:"Amiri","Traditional Arabic",serif;
+  --body:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1a1f; --surface:#132830; --fg:#e6efec; --muted:#91a8a3; --line:#22414a;
+  --accent:#5cc7b2; --accent-soft:#17383c; --gold:#e0b55a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1a1f; --surface:#132830; --fg:#e6efec; --muted:#91a8a3; --line:#22414a;
+  --accent:#5cc7b2; --accent-soft:#17383c; --gold:#e0b55a; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 32px}
+.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;margin:0;line-height:1.2;text-wrap:balance}
+.dates{color:var(--muted);font-size:.9rem}
+.dates b{color:var(--gold);font-weight:600;display:block}
+label{font-size:.8rem;color:var(--muted);display:block;margin-bottom:4px}
+select{width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.next{background:var(--accent);color:var(--bg);border-radius:18px;padding:22px 20px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden}
+.next::after{content:"";position:absolute;inset-inline-start:-40px;top:-40px;width:160px;height:160px;border-radius:50%;
+  border:28px solid color-mix(in srgb,var(--bg) 12%,transparent)}
+.next small{opacity:.85;font-size:.85rem}
+.next .name{font-family:var(--display);font-size:2.4rem;font-weight:700;line-height:1.2}
+.next .cd{font-size:2rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.02em;direction:ltr;text-align:right}
+.next .at{font-size:.9rem;opacity:.9}
+ol{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:14px 16px;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--muted)}
+li.past{color:var(--muted)}
+li.past .dot{background:var(--muted)}
+li.now{background:var(--accent-soft);color:var(--fg)}
+li.now .dot{border-color:var(--accent);background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent)}
+li.sun{font-size:.9rem}
+.pn{font-weight:600}
+li.sun .pn{font-weight:400;color:var(--muted)}
+.pt{font-variant-numeric:tabular-nums;font-weight:500}
+.note{font-size:.78rem;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+
+<div class="wrap" dir="rtl" lang="ar">
+  <header>
+    <h1>مواقيت الصلاة</h1>
+    <div class="dates"><b id="hijri"></b><span id="greg"></span></div>
+  </header>
+  <div>
+    <label for="city">المدينة</label>
+    <select id="city"></select>
+  </div>
+  <section class="next" aria-live="polite">
+    <small>الصلاة القادمة</small>
+    <span class="name" id="nName"></span>
+    <span class="cd" id="nCd"></span>
+    <span class="at" id="nAt"></span>
+  </section>
+  <ol id="list"></ol>
+  <p class="note">طريقة الحساب: الهيئة المصرية العامة للمساحة (الفجر ١٩٫٥° · العشاء ١٧٫٥° · العصر شافعي). قد تختلف دقيقة أو دقيقتين عن التقويم الرسمي.</p>
+</div>
+
+<script>
+const CITIES=[
+ ["القاهرة",30.0444,31.2357],["الجيزة",30.0131,31.2089],["الإسكندرية",31.2001,29.9187],
+ ["أبو قير",31.3186,30.0617],["العلمين الجديدة",30.8300,28.9550],["الضبعة",31.0333,28.4333],
+ ["مرسى مطروح",31.3543,27.2373],["طنطا",30.7865,31.0004],["المنصورة",31.0409,31.3785],
+ ["الزقازيق",30.5877,31.5020],["دمنهور",31.0341,30.4682],["كفر الشيخ",31.1107,30.9388],
+ ["بورسعيد",31.2653,32.3019],["الإسماعيلية",30.5965,32.2715],["السويس",29.9668,32.5498],
+ ["العاصمة الإدارية",30.0197,31.7600],["بني سويف",29.0661,31.0994],["الفيوم",29.3084,30.8428],
+ ["المنيا",28.1099,30.7503],["أسيوط",27.1809,31.1837],["سوهاج",26.5591,31.6957],
+ ["قنا",26.1551,32.7160],["الأقصر",25.6872,32.6396],["أسوان",24.0889,32.8998],
+ ["الغردقة",27.2579,33.8116],["شرم الشيخ",27.9158,34.3300],["العريش",31.1313,33.7984]
+];
+const TZ="Africa/Cairo";
+const NAMES=[["fajr","الفجر"],["sunrise","الشروق"],["dhuhr","الظهر"],["asr","العصر"],["maghrib","المغرب"],["isha","العشاء"]];
+const rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
+const fix=(a,b)=>{a=a-b*Math.floor(a/b);return a<0?a+b:a};
+
+function sun(jd){
+  const D=jd-2451545, g=fix(357.529+0.98560028*D,360), q=fix(280.459+0.98564736*D,360);
+  const L=fix(q+1.915*Math.sin(rad(g))+0.020*Math.sin(rad(2*g)),360);
+  const e=23.439-0.00000036*D;
+  const RA=fix(deg(Math.atan2(Math.cos(rad(e))*Math.sin(rad(L)),Math.cos(rad(L))))/15,24);
+  let eqt=q/15-RA; eqt=eqt-24*Math.round(eqt/24);
+  return {decl:deg(Math.asin(Math.sin(rad(e))*Math.sin(rad(L)))),eqt};
+}
+function times(y,m,d,lat,lng){
+  const jd0=Date.UTC(y,m,d)/86400000+2440587.5;
+  const at=h=>sun(jd0+h/24); // h = UTC hour guess
+  const noon=h=>12-lng/15-at(h).eqt;
+  const ha=(angle,h)=>{const s=at(h).decl;
+    return deg(Math.acos((-Math.sin(rad(angle))-Math.sin(rad(s))*Math.sin(rad(lat)))/(Math.cos(rad(s))*Math.cos(rad(lat)))))/15};
+  const asrA=h=>{const s=at(h).decl;return -deg(Math.atan(1/(1+Math.tan(rad(Math.abs(lat-s))))))};
+  let g={fajr:5-lng/15,sunrise:6-lng/15,dhuhr:12-lng/15,asr:13-lng/15,maghrib:18-lng/15,isha:18-lng/15};
+  for(let i=0;i<2;i++){ // refine twice
+    const n=noon(g.dhuhr);
+    g={dhuhr:n,fajr:noon(g.fajr)-ha(19.5,g.fajr),sunrise:noon(g.sunrise)-ha(0.833,g.sunrise),
+       asr:noon(g.asr)+ha(asrA(g.asr),g.asr),maghrib:noon(g.maghrib)+ha(0.833,g.maghrib),isha:noon(g.isha)+ha(17.5,g.isha)};
+  }
+  g.dhuhr+=1/60; // Egyptian practice: Dhuhr a minute after zenith
+  const base=Date.UTC(y,m,d), out={};
+  for(const k in g) out[k]=new Date(base+Math.round(g[k]*60)*60000);
+  return out;
+}
+const fmtT=new Intl.DateTimeFormat("ar-EG",{timeZone:TZ,hour:"numeric",minute:"2-digit"});
+const partsCairo=dt=>{const p=new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"numeric",day:"numeric"}).formatToParts(dt);
+  const v=t=>+p.find(x=>x.type===t).value;return [v("year"),v("month")-1,v("day")]};
+
+const sel=document.getElementById("city");
+CITIES.forEach((c,i)=>sel.add(new Option(c[0],i)));
+try{const s=localStorage.getItem("salahCity");if(s!==null&&CITIES[s])sel.value=s}catch(e){}
+sel.addEventListener("change",()=>{try{localStorage.setItem("salahCity",sel.value)}catch(e){};render()});
+
+function render(){
+  const now=new Date(), [y,m,d]=partsCairo(now), c=CITIES[sel.value];
+  const t=times(y,m,d,c[1],c[2]);
+  document.getElementById("hijri").textContent=new Intl.DateTimeFormat("ar-EG-u-ca-islamic-umalqura",{timeZone:TZ,day:"numeric",month:"long",year:"numeric"}).format(now);
+  document.getElementById("greg").textContent=new Intl.DateTimeFormat("ar-EG",{timeZone:TZ,weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(now);
+  const prayers=NAMES.filter(n=>n[0]!=="sunrise");
+  let next=prayers.find(([k])=>t[k]>now), nextTime;
+  if(next) nextTime=t[next[0]];
+  else{const tm=new Date(Date.UTC(y,m,d+1));const t2=times(tm.getUTCFullYear(),tm.getUTCMonth(),tm.getUTCDate(),c[1],c[2]);next=prayers[0];nextTime=t2.fajr}
+  const cur=[...prayers].reverse().find(([k])=>t[k]<=now);
+  document.getElementById("list").innerHTML=NAMES.map(([k,n])=>{
+    const cls=k==="sunrise"?"sun":(cur&&cur[0]===k?"now":(t[k]<=now?"past":""));
+    return `<li class="${cls}"><span class="dot"></span><span class="pn">${n}</span><span class="pt">${fmtT.format(t[k])}</span></li>`}).join("");
+  const diff=Math.max(0,Math.floor((nextTime-now)/1000));
+  const p2=v=>String(v).padStart(2,"0");
+  document.getElementById("nName").textContent=next[1];
+  document.getElementById("nCd").textContent=`${p2(Math.floor(diff/3600))}:${p2(Math.floor(diff%3600/60))}:${p2(diff%60)}`.replace(/\d/g,x=>"٠١٢٣٤٥٦٧٨٩"[x]);
+  document.getElementById("nAt").textContent=`الأذان ${fmtT.format(nextTime)} — ${c[0]}`;
+}
+render(); setInterval(render,1000);
+</script>
+</body>
+</html>
