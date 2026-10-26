@@ -103,6 +103,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:start;white-space:nowrap}
 th{position:sticky;top:0;background:var(--sunk);font-weight:600}
+.note a{color:var(--accent);font-weight:600}
 .note{font-size:13px;color:var(--muted);border-inline-start:3px solid var(--warn);padding-inline-start:10px}
 .drop{border:2px dashed var(--line);border-radius:12px;padding:20px;text-align:center;background:var(--bg)}
 /* alarm overlay */
@@ -186,7 +187,7 @@ const DEF_SET={t7:'07:30',t28:'07:30',eve:true,eveTime:'20:00',snooze:10,sound:'
 let S={projects:[],active:0,marks:{},fired:{},settings:{...DEF_SET}};
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.projects){S=r;S.settings={...DEF_SET,...r.settings};S.fired=S.fired||{}}}catch(e){}
   if(!S.projects.length){S.projects=[{name:'Example project',src:'Example data · import your register from the Register tab',sets:SAMPLE.map(r=>({id:r[0],card:r[1],el:r[2],loc:r[3],grade:r[4],pour:r[5],d7:r[6],d28:r[7],r7:!!r[8],r28:!!r[9]}))}]}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}syncNative()}
 let customSound=null;try{customSound=localStorage.getItem(KEY+'snd')}catch(e){}
 const proj=()=>S.projects[S.active]||S.projects[0];
 /* ---------- schedule ---------- */
@@ -206,27 +207,44 @@ function tests(p=proj()){
 function bucket(){const t=todayYmd(),tm=addD(t,1),all=tests();
   return{all,today:all.filter(x=>x.d===t),tomorrow:all.filter(x=>x.d===tm),over:all.filter(x=>x.d<t&&!x.done&&x.d>=addD(t,-60))}}
 /* ---------- alarm engine ---------- */
-function events(){
-  const st=S.settings,t=todayYmd(),tm=addD(t,1),b=bucket(),ev=[];
-  const pend=(arr,a)=>arr.filter(x=>!x.done&&(a==null?true:(a===28?x.a===28:x.a!==28)));
-  const mk=(day,time,kind,items)=>{if(!items.length)return;const[h,m]=time.split(':').map(Number);const[y,mo,d]=day.split('-').map(Number);ev.push({key:day+'|'+kind,at:new Date(y,mo-1,d,h,m).getTime(),kind,day,items})};
-  for(const day of [t,tm]){
-    const list=day===t?b.today.concat(b.over):b.tomorrow;
-    if(st.t7===st.t28)mk(day,st.t7,'main',pend(list));
-    else{mk(day,st.t7,'7',pend(list,7));mk(day,st.t28,'28',pend(list,28))}
-  }
-  if(st.eve)mk(t,st.eveTime,'eve',pend(b.tomorrow));
-  if(snoozeEv)ev.push(snoozeEv);
-  return ev.sort((a,b)=>a.at-b.at);
+function evFor(p,pi,days){
+  const st=S.settings,t=todayYmd(),all=tests(p),ev=[],by={};
+  for(const x of all){if(x.done||x.d<t)continue;(by[x.d]=by[x.d]||[]).push(x)}
+  const over=all.filter(x=>x.d<t&&!x.done&&x.d>=addD(t,-60));
+  const pend=(arr,a)=>arr.filter(x=>a===28?x.a===28:x.a!==28);
+  const mk=(day,time,kind,items,forDay)=>{if(!items.length)return;const[h,m]=time.split(':').map(Number);const[y,mo,d]=day.split('-').map(Number);ev.push({key:pi+'|'+day+'|'+kind,at:new Date(y,mo-1,d,h,m).getTime(),kind,day:forDay||day,items,proj:p.name})};
+  for(let i=0;i<=days;i++){const day=addD(t,i),list=(by[day]||[]).concat(i===0?over:[]);
+    if(st.t7===st.t28)mk(day,st.t7,'main',list);else{mk(day,st.t7,'7',pend(list,7));mk(day,st.t28,'28',pend(list,28))}
+    if(st.eve&&i<days)mk(day,st.eveTime,'eve',by[addD(day,1)]||[],addD(day,1))}
+  return ev;
 }
+function events(days=1){let ev=[];S.projects.forEach((p,i)=>{ev=ev.concat(evFor(p,i,days))});if(snoozeEv)ev.push(snoozeEv);return ev.sort((a,b)=>a.at-b.at)}
+/* ---------- native Android bridge ---------- */
+const NATIVE=!!window.Android;
+const APK_URL='https://github.com/engahmedrabiecivil-star/ahmed-apps/releases/download/cube-crush-latest/CubeCrushAlert.apk';
+function hashId(k){let h=7;for(const c of k)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)%1000000+1000}
+function evText(e){const g={};for(const x of e.items)(g[x.a]=g[x.a]||[]).push(x.s.id+(x.d<todayYmd()?' (late)':''));return Object.keys(g).sort((a,b)=>a-b).map(a=>a+'-day: '+g[a].join(', ')).join('\n')}
+function evTitle(e){return (e.kind==='eve'?'Crushing tomorrow':'Crush cubes now')+' · '+e.proj}
+function syncNative(){if(!NATIVE)return;try{
+  const now=Date.now(),list=events(60).filter(e=>e.at>now&&e.kind!=='snooze').slice(0,300).map(e=>({id:hashId(e.key),at:e.at,title:evTitle(e),body:nice(e.day)+' · '+e.items.length+' sets\n'+evText(e)}));
+  Android.setPrefs(JSON.stringify({ring:S.settings.ring,vol:S.settings.vol,snooze:S.settings.snooze}));
+  Android.schedule(JSON.stringify(list));
+}catch(err){}}
+function perms(){if(!NATIVE)return null;try{return JSON.parse(Android.permissions())}catch(e){return null}}
+window.onNativeResume=()=>{syncNative();render()};
 let armed=false,snoozeEv=null,ringing=null,wake=null,actx=null,sirenNodes=[],audioEl=null,stopTimer=null;
 function tick(){
+  if(NATIVE){status();return}
   const now=Date.now();
   for(const e of events()){if(e.at<=now&&e.at>now-30*60e3&&!S.fired[e.key]){S.fired[e.key]=1;
     if(e.kind==='snooze')snoozeEv=null;save();ring(e);break}}
   status();
 }
 function status(){
+  if(NATIVE){const n=events(60).filter(e=>e.at>Date.now())[0];$('#status').classList.add('armed');
+    $('#stBig').textContent=n?'Alarm set · '+fmtAt(n.at):'No crushing scheduled';
+    $('#stSmall').textContent=n?n.items.length+' sample sets · '+(n.kind==='eve'?'evening reminder · ':'')+'rings even with the app closed':'Import a register to set the alarms.';
+    $('#armBtn').textContent='Test alarm';return}
   const ev=events().filter(e=>e.at>Date.now()&&!S.fired[e.key]);const n=ev[0];
   $('#status').classList.toggle('armed',armed);
   $('#stBig').textContent=armed?(n?'Armed · next '+fmtAt(n.at):'Armed · nothing due'):'Alarm not armed';
@@ -257,7 +275,7 @@ function stopSound(){clearTimeout(stopTimer);for(const n of sirenNodes){try{n.st
 function ring(e){
   ringing=e;const g={};for(const x of e.items){(g[x.a]=g[x.a]||[]).push(x)}
   $('#alTitle').textContent=e.kind==='eve'?'Crushing tomorrow':'Crush cubes now';
-  $('#alWhen').textContent=(e.kind==='eve'?nice(e.day):nice(e.day)+' · '+new Date().toTimeString().slice(0,5))+' · '+proj().name;
+  $('#alWhen').textContent=(e.kind==='eve'?nice(e.day):nice(e.day)+' · '+new Date().toTimeString().slice(0,5))+' · '+(e.proj||proj().name);
   $('#alList').innerHTML=Object.keys(g).sort((a,b)=>a-b).map(a=>`<div><div style="font-weight:600">${a}-day test · ${g[a].length} sets</div><div class="ids">${g[a].map(x=>esc(x.s.id)+(x.d<todayYmd()?' (late)':'')).join(', ')}</div></div>`).join('');
   $('#alSnooze').textContent='Snooze '+S.settings.snooze+' min';
   $('#alarm').hidden=false;$('#alarm').classList.add('ringing');startSound();
@@ -265,7 +283,7 @@ function ring(e){
 }
 $('#alDismiss').onclick=()=>{stopSound();$('#alarm').hidden=true;ringing=null;render()};
 $('#alSnooze').onclick=()=>{stopSound();$('#alarm').hidden=true;const at=Date.now()+S.settings.snooze*60e3;snoozeEv={...ringing,key:'snooze|'+at,kind:'snooze',at};ringing=null;status();toast('Snoozed until '+new Date(at).toTimeString().slice(0,5))};
-$('#armBtn').onclick=()=>{if(!armed)arm();else{const b=bucket();ring({key:'test',kind:'main',day:todayYmd(),items:b.today.concat(b.over).filter(x=>!x.done).concat(b.tomorrow.filter(x=>!x.done)).slice(0,12)})}};
+$('#armBtn').onclick=()=>{if(NATIVE){Android.testAlarm('Test · Cube Crush Alert','This is a test. Lock the phone now: the siren rings in 10 seconds.');toast('Test alarm in 10 seconds. Lock the phone.');return}if(!armed)arm();else{const b=bucket();ring({key:'test',kind:'main',day:todayYmd(),items:b.today.concat(b.over).filter(x=>!x.done).concat(b.tomorrow.filter(x=>!x.done)).slice(0,12)})}};
 /* ---------- UI ---------- */
 let view='today',filter='today',calMonth=null,calSel=null;
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600)}
@@ -296,7 +314,10 @@ function vToday(){
   const pend=a=>a.filter(x=>!x.done).length;
   const map={today:[b.today,'Today · '+nice(t),'Nothing to crush today.'],tomorrow:[b.tomorrow,'Tomorrow · '+nice(addD(t,1)),'Nothing due tomorrow.'],over:[b.over,'Overdue','No overdue tests. Everything due so far has a result or is marked crushed.']};
   const[items,label,empty]=map[filter];
-  return `<div class="tiles">
+  const pm=perms(),need=pm?[['notif','Notifications','so the alarm can show'],['exact','Alarms & reminders','so it rings on time'],['full','Full-screen alerts','so it shows on the lock screen'],['battery','No battery limits','so the phone does not block it']].filter(([k])=>!pm[k]):[];
+  const permHtml=need.length?`<div class="panel" style="border-color:var(--siren)"><h2>Allow these for the alarm to work</h2>${need.map(([k,l,w])=>`<div class="row"><span style="flex:1"><b>${l}</b> <span class="muted">${w}</span></span><button class="primary" data-perm="${k}">Allow</button></div>`).join('')}</div>`:'';
+  const getApp=NATIVE?'':`<p class="note" style="margin:0">Web version: rings only while open. <a href="${APK_URL}">Get the Android app</a> for a real alarm.</p>`;
+  return permHtml+getApp+`<div class="tiles">
     <button class="tile over" data-f="over" aria-pressed="${filter==='over'}"><div class="n">${b.over.length}</div><div class="l">Overdue</div></button>
     <button class="tile" data-f="today" aria-pressed="${filter==='today'}"><div class="n">${pend(b.today)}</div><div class="l">Today</div></button>
     <button class="tile" data-f="tomorrow" aria-pressed="${filter==='tomorrow'}"><div class="n">${pend(b.tomorrow)}</div><div class="l">Tomorrow</div></button>
@@ -416,7 +437,7 @@ function vSet(){
    <div class="field"><span>Days the lab is closed</span><div class="row">${DN.map((d,i)=>`<label class="row" style="flex:none;min-width:0;gap:4px"><input type="checkbox" class="off" value="${i}" ${st.offDays.includes(i)?'checked':''} style="width:20px;height:20px">${d}</label>`).join('')}</div></div>
    <label class="field"><span>If a test falls on a closed day</span><select id="s-shift"><option value="none" ${st.shift==='none'?'selected':''}>Keep the date</option><option value="prev" ${st.shift==='prev'?'selected':''}>Crush the working day before</option><option value="next" ${st.shift==='next'?'selected':''}>Crush the next working day</option></select></label>
    <label class="field"><span>Extra test ages in days (e.g. 3, 56)</span><input type="text" id="s-extra" value="${esc(st.extra)}" placeholder="none"></label></div>
-  <p class="note">This web version rings only while this page is open with the alarm armed. For alerts with the phone locked or the app closed, build the full Android app from the prompt.</p>`;
+  ${NATIVE?'<p class="note">Alarms are set on the phone for the next 60 days and ring with the app closed, the screen locked, and after a restart. Open the app after importing a newer register so the alarms update.</p>':'<p class="note">This web version rings only while the page is open. <a href="'+APK_URL+'">Get the Android app</a> for an alarm that rings with the app closed.</p>'}`;
 }
 function bindSettings(){
   const st=S.settings,up=()=>{save();status()};
@@ -424,10 +445,10 @@ function bindSettings(){
   $('#s-eve').onchange=e=>{st.eve=e.target.checked;up()};
   $('#s-snooze').onchange=e=>{st.snooze=+e.target.value;up()};
   $('#s-ring').onchange=e=>{st.ring=+e.target.value;up()};
-  $('#s-sound').onchange=e=>{st.sound=e.target.value;up()};
+  $('#s-sound').onchange=e=>{st.sound=e.target.value;if(NATIVE)Android.setSound(st.sound==='custom'&&customSound?customSound:'');up()};
   $('#s-vol').oninput=e=>{st.vol=+e.target.value;up()};
   document.querySelectorAll('.off').forEach(c=>c.onchange=()=>{st.offDays=[...document.querySelectorAll('.off:checked')].map(x=>+x.value);up()});
-  $('#s-file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{customSound=r.result;st.sound='custom';try{localStorage.setItem(KEY+'snd',customSound);toast('Sound saved')}catch(err){toast('Sound set for this session (file too large to keep)')}up();render()};r.readAsDataURL(f)};
+  $('#s-file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{customSound=r.result;st.sound='custom';if(NATIVE)Android.setSound(customSound);try{localStorage.setItem(KEY+'snd',customSound);toast('Sound saved')}catch(err){toast('Sound set for this session (file too large to keep)')}up();render()};r.readAsDataURL(f)};
   $('#preview').onclick=()=>{const r=st.ring;st.ring=5;startSound();st.ring=r};
   $('#stopPrev').onclick=stopSound;
 }
@@ -438,9 +459,10 @@ function render(){
   v.innerHTML=view==='today'?vToday():view==='cal'?vCal():view==='reg'?vReg():vSet();
   v.style.cssText='display:flex;flex-direction:column;gap:12px';
   bindMarks();
+  document.querySelectorAll('[data-perm]').forEach(b=>b.onclick=()=>Android.fix(b.dataset.perm));
   document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{filter=t.dataset.f;render()});
   const cb=$('#copyBtn');if(cb)cb.onclick=()=>{const b=bucket();const items=view==='cal'?tests().filter(x=>x.d===calSel):filter==='over'?b.over:b[filter];const txt=copyText(items,view==='cal'?nice(calSel):filter==='over'?'overdue':nice(filter==='today'?todayYmd():addD(todayYmd(),1)));
-    navigator.clipboard.writeText(txt).then(()=>toast('List copied'),()=>toast('Copy blocked here'))};
+    if(NATIVE){Android.copy(txt);toast('List copied');return}navigator.clipboard.writeText(txt).then(()=>toast('List copied'),()=>toast('Copy blocked here'))};
   if(view==='cal'){document.querySelectorAll('.day').forEach(d=>d.onclick=()=>{calSel=d.dataset.d;render()});
     $('#pm').onclick=()=>{const[y,m]=calMonth.split('-').map(Number);calMonth=m===1?(y-1)+'-12-01':y+'-'+pad(m-1)+'-01';render()};
     $('#nm').onclick=()=>{const[y,m]=calMonth.split('-').map(Number);calMonth=m===12?(y+1)+'-01-01':y+'-'+pad(m+1)+'-01';render()}}
@@ -450,7 +472,7 @@ function render(){
   if(view==='set')bindSettings();
   status();
 }
-load();render();setInterval(tick,10000);tick();
+load();render();if(NATIVE){if(customSound&&S.settings.sound==='custom')Android.setSound(customSound);syncNative()}setInterval(tick,10000);tick();
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 </script>
 </body>
