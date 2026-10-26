@@ -189,7 +189,10 @@ function parseDate(v){
 const DEF_SET={t7:'07:30',t28:'07:30',eve:true,eveTime:'20:00',snooze:10,sound:'siren',vol:0.9,ring:60,offDays:[5],shift:'none',extra:''};
 let S={projects:[],active:0,marks:{},fired:{},settings:{...DEF_SET}};
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.projects){S=r;S.settings={...DEF_SET,...r.settings};S.fired=S.fired||{}}}catch(e){}
+  dropExamples();
   if(!S.projects.length){S.projects=[{name:'Example project',src:'Example data · import your register from the Register tab',sets:SAMPLE.map(r=>({id:r[0],card:r[1],el:r[2],loc:r[3],grade:r[4],pour:r[5],d7:r[6],d28:r[7],r7:!!r[8],r28:!!r[9]}))}]}}
+const isExample=p=>String(p.src||'').startsWith('Example data');
+function dropExamples(){const cur=S.projects[S.active];if(S.projects.some(p=>!isExample(p))){S.projects=S.projects.filter(p=>!isExample(p));const k=S.projects.indexOf(cur);S.active=k>=0?k:0}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}syncNative()}
 let customSound=null;try{customSound=localStorage.getItem(KEY+'snd')}catch(e){}
 const proj=()=>S.projects[S.active]||S.projects[0];
@@ -417,7 +420,7 @@ function doImport(){
     sets.push({id,card:String(cell(row,'card')).trim(),el:String(cell(row,'el')).trim(),loc:String(cell(row,'loc')).trim(),grade:String(cell(row,'grade')).trim(),pour,d7:parseDate(cell(row,'d7')),d28:parseDate(cell(row,'d28')),r7:num(cell(row,'r7')),r28:num(cell(row,'r28'))});
   }
   if(!sets.length){toast('No sample sets found. Check the header row and the column matches.');return}
-  const i=S.projects.findIndex(p=>p.name===name);const p={name,src:pending.name,sets};
+  S.projects=S.projects.filter(x=>!isExample(x));const i=S.projects.findIndex(p=>p.name===name);const p={name,src:pending.name,sets};
   if(i>=0)S.projects[i]=p;else S.projects.push(p);S.active=i>=0?i:S.projects.length-1;
   lastReport=`<b>${sets.length} sample sets imported</b> into “${esc(name)}”${i>=0?' (replaced the earlier copy; your crushed marks are kept)':''}. Skipped ${skipped.noId} rows without a set ID and ${skipped.noDate} without a valid pouring date${dup?`, plus ${dup} duplicate IDs`:''}.`;
   pending=null;save();render();toast('Register imported');
