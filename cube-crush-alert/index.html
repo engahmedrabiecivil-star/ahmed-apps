@@ -44,6 +44,8 @@ h3{font-size:17px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
 .mono{font-family:var(--mono);font-size:13px}
 .muted{color:var(--muted)}
 .top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.topr{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-inline-start:auto}
+.credit{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:.02em;color:var(--accent);text-align:end;line-height:1.1}
 .top .sub{font-size:13px;color:var(--muted)}
 select,input,button{font:inherit;color:inherit}
 select,input[type=time],input[type=number],input[type=text]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:42px;max-width:100%}
@@ -126,7 +128,8 @@ th{position:sticky;top:0;background:var(--sunk);font-weight:600}
 <div class="wrap">
   <header class="top">
     <div><h1>Cube Crush Alert</h1><div class="sub" id="projName"></div></div>
-    <select id="projSel" aria-label="Project"></select>
+    <div class="topr"><div class="credit">Developed by Eng Ahmed Rabie</div>
+    <select id="projSel" aria-label="Project"></select></div>
   </header>
 
   <section class="status" id="status">
