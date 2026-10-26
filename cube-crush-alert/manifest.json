@@ -1,0 +1,17 @@
+{
+  "name": "Cube Crush Alert",
+  "short_name": "Cube Crush",
+  "description": "Concrete cube crushing alarm for 7-day and 28-day tests, read from your pouring register",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1d5fa8",
+  "theme_color": "#1d5fa8",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
