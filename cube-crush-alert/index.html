@@ -221,7 +221,7 @@ function evFor(p,pi,days){
 function events(days=1){let ev=[];S.projects.forEach((p,i)=>{ev=ev.concat(evFor(p,i,days))});if(snoozeEv)ev.push(snoozeEv);return ev.sort((a,b)=>a.at-b.at)}
 /* ---------- native Android bridge ---------- */
 const NATIVE=!!window.Android;
-const APK_URL='https://github.com/engahmedrabiecivil-star/ahmed-apps/releases/download/cube-crush-latest/CubeCrushAlert.apk';
+const APK_URL=(()=>{const h=location.hostname,r=location.pathname.split('/')[1];return h.endsWith('.github.io')&&r?'https://github.com/'+h.split('.')[0]+'/'+r+'/releases/download/cube-crush-latest/CubeCrushAlert.apk':'https://github.com/engahmedrabiecivil-star/ahmed-apps/releases/download/cube-crush-latest/CubeCrushAlert.apk'})();
 function hashId(k){let h=7;for(const c of k)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)%1000000+1000}
 function evText(e){const g={};for(const x of e.items)(g[x.a]=g[x.a]||[]).push(x.s.id+(x.d<todayYmd()?' (late)':''));return Object.keys(g).sort((a,b)=>a-b).map(a=>a+'-day: '+g[a].join(', ')).join('\n')}
 function evTitle(e){return (e.kind==='eve'?'Crushing tomorrow':'Crush cubes now')+' · '+e.proj}
