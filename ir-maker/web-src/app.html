@@ -102,7 +102,7 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
   <div id="main" style="display:none">
     <section>
       <label class="label" for="req">What needs inspection?</label>
-      <textarea id="req" dir="auto" placeholder="e.g. wall rebar and formwork north block 20"></textarea>
+      <textarea id="req" dir="rtl" placeholder="مثلاً: حدادة ونجارة حائط بحري فاصل 20"></textarea>
       <div class="chips" id="examples"></div>
       <div class="row">
         <div class="field" style="flex:1"><label for="date">Submission date</label><input id="date" type="date"></div>
@@ -199,8 +199,8 @@ function render(){
   var L=S.log;
   $('lastIr').textContent = String(L.lastNum);
   $('sub').textContent = L.rows.length+' requests in log · '+Object.keys(L.blocks).length+' blocks';
-  var ex=['wall rebar north block 20','wall formwork south block 11 level 3.207','raft bottom mesh block 21','raft pour block 21','haunch block 4 level -2.43','piles block 22 P54 P61 P112'];
-  $('examples').innerHTML = ex.map(function(x){return '<button class="chip" data-ex="'+esc(x)+'">'+esc(x)+'</button>';}).join('');
+  var ex=['حدادة حائط بحري فاصل 20','نجارة حائط قبلي فاصل 11 منسوب 3.207','حدادة لبشة رقة سفلية فاصل 21','صب لبشة فاصل 21','هونش فاصل 4 منسوب -2.43','خوازيق فاصل 22 P54 P61 P112'];
+  $('examples').innerHTML = ex.map(function(x){return '<button class="chip" dir="rtl" data-ex="'+esc(x)+'">'+esc(x)+'</button>';}).join('');
   renderRecent(); renderDrafts();
   $('info').textContent = 'Log: '+S.logName+' · Word form: '+(S.tpl===null?'—':'ready');
 }
@@ -238,7 +238,7 @@ function renderDrafts(){
 
 // ---------- actions ----------
 function understand(){
-  var text=$('req').value.trim(); if(!text){ msg('warn','Type the request first, e.g. wall rebar north block 20'); return; }
+  var text=$('req').value.trim(); if(!text){ msg('warn','Type the request first, e.g. حدادة حائط بحري فاصل 20'); return; }
   var u = E.understand(S.log, text, isoToDate($('date').value));
   $('msgs').innerHTML='';
   if (!u.drafts.length) msg('warn','The type of work was not recognised. Write it the way it appears in the log, or pick a suggestion below.');
