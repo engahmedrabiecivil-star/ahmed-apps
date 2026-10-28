@@ -537,6 +537,18 @@
         return out || '<w:r>' + rPr + '<w:t></w:t></w:r>';
       });
     });
+    // plain «Name» placeholders (from a form learned from a previous IR)
+    xml = xml.replace(/<w:r\b[^>]*>(<w:rPr>(?:(?!<\/w:rPr>)[\s\S])*<\/w:rPr>)?<w:t[^>]*>«([A-Za-z_]+)»<\/w:t><\/w:r>/g, function (run, rPr, name) {
+      if (!(name in values)) return run;
+      rPr = rPr || '';
+      var ltrPr = rPr ? rPr.replace(/<w:rtl\s*\/>|<w:rtl\s+w:val="[^"]*"\s*\/>/g, '').replace('</w:rPr>', '<w:rtl w:val="0"/></w:rPr>') : '<w:rPr><w:rtl w:val="0"/></w:rPr>';
+      var out = '';
+      String(values[name] == null ? '' : values[name]).split(/\r?\n/).forEach(function (line, li) {
+        if (li) out += '<w:r>' + rPr + '<w:br/></w:r>';
+        line.split(/(\d\+\d{3}|\d{3}\+\d)/).forEach(function (seg, si) { if (seg) out += '<w:r>' + (si % 2 ? ltrPr : rPr) + '<w:t xml:space="preserve">' + xmlEsc(seg) + '</w:t></w:r>'; });
+      });
+      return out || '<w:r>' + rPr + '<w:t></w:t></w:r>';
+    });
     // also handle simple fields if any
     xml = xml.replace(/<w:fldSimple\b[^>]*w:instr="\s*MERGEFIELD\s+(\w+)[^"]*"[^>]*>([\s\S]*?)<\/w:fldSimple>/g, function (a, name, inner) {
       if (!(name in values)) return a;
@@ -562,9 +574,12 @@
     var core = body.replace(/(<w:p\b[^>]*\/>|<w:p\b[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?<\/w:p>)\s*$/, '');
     var trailing = body.slice(core.length) || '<w:p/>';
     var pageBreak = '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r></w:p>';
+    var meta = null, mf = zip.file('irmaker.json');
+    if (mf) { try { meta = JSON.parse(await mf.async('string')); } catch (e) {} zip.remove('irmaker.json'); }
     var names = templateFieldNames(core);
     var copies = irs.map(function (ir) {
       var vals = {}; names.forEach(function (n) { vals[n] = fieldValue(ir, n); });
+      if (meta && meta.irPrefix != null && ir.n != null && vals.IR_No != null) vals.IR_No = meta.irPrefix + String(ir.n).padStart(meta.irWidth || 1, '0') + (meta.revSep != null ? meta.revSep + String(ir.rev || 0).padStart(meta.revWidth || 2, '0') : '');
       var c = fillFieldsXml(core, vals);
       return markAttempt(c, ir.attempt);
     });
@@ -578,6 +593,116 @@
       if (zip.file(sr)) { var r = await zip.file(sr).async('string'); zip.file(sr, r.replace(/<Relationship\b[^>]*mailMergeSource[^>]*\/>/g, '')); }
     }
     return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }
+
+  // ---------- learning the form from a previous, already-filled IR ----------
+  // Reads the IR number in the document, finds that IR in the log, then finds where the log's values
+  // (description, location, date, element type) sit in the document and turns those spots into fields.
+  function paraText(p) { var t = '', re = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:tab\s*\/>|<w:br\s*\/>/g, m; while ((m = re.exec(p))) t += m[1] != null ? xmlDecode(m[1]) : ' '; return t; }
+  function placeholderPara(p, name) {
+    var open = p.match(/^<w:p\b[^>]*>/)[0], pPr = (p.match(/<w:pPr>[\s\S]*?<\/w:pPr>/) || [''])[0];
+    var body = p.slice(open.length + (pPr ? p.indexOf(pPr) - open.length + pPr.length : 0));
+    var rPr = (body.match(/<w:r\b[^>]*>\s*(<w:rPr>[\s\S]*?<\/w:rPr>)\s*<w:t/) || [null, ''])[1];
+    return open + pPr + '<w:r>' + rPr + '<w:t>«' + name + '»</w:t></w:r></w:p>';
+  }
+  function simTokens(s) {
+    var t = toArabicDigitsLatin(String(s)).replace(/(\d)\s*\+\s*(\d{3})(?!\d)|(\d{3})\s*\+\s*(\d)(?!\d)/g, function (m, a, b, c, d) { return ' st' + (a ? a + b : d + c) + ' '; });
+    return tokens(t).filter(function (w) { return w.length > 1 || /\d/.test(w); });
+  }
+  function similarity(a, b) {
+    var A = simTokens(a), B = simTokens(b); if (!A.length || !B.length) return 0;
+    var hit = 0; A.forEach(function (w) { if (B.indexOf(w) >= 0) hit++; });
+    return hit / Math.max(A.length, B.length);
+  }
+  var LABELS = {
+    IR_No: /رقم\s*طلب|ir\s*no|request\s*no/i, Item: /نوع\s*العنصر|element|item/i, Submitted__Date: /تاريخ\s*طلب|تاريخ\s*الطلب|date/i,
+    Description: /الاعمال\s*المطلوب|الأعمال\s*المطلوب|description|works/i, Main_Location: /الموقع|location/i
+  };
+  async function learnFromFilledIr(bytes, log) {
+    var zip = await JSZipRef.loadAsync(bytes);
+    var f = zip.file('word/document.xml'); if (!f) throw new Error('This is not a Word .docx file');
+    var xml = await f.async('string');
+    var paras = [], re = /<w:p\b[^>]*\/>|<w:p\b[^>]*>[\s\S]*?<\/w:p>/g, m;
+    while ((m = re.exec(xml))) paras.push({ i: m.index, x: m[0], t: /\/>$/.test(m[0].slice(0, m[0].indexOf('>') + 1)) ? '' : paraText(m[0]) });
+    var full = paras.map(function (p) { return p.t; }).join('\n');
+    // 1) the IR number
+    var esc = log.prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var irRe = new RegExp('(' + esc + ')\\s*(\\d+)(?:\\s*([-/])\\s*(\\d{1,2}))?(?!\\d)');
+    var irM = null, irPara = -1;
+    paras.forEach(function (p, k) { if (irM) return; var mm = p.t.match(irRe); if (mm) { irM = mm; irPara = k; } });
+    if (!irM) { // any code ending in a number, e.g. ABC-IR-0123-00
+      var gen = /([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-)(\d{2,5})(?:([-/])(\d{1,2}))?(?!\d)/;
+      paras.forEach(function (p, k) { if (irM) return; var mm = p.t.match(gen); if (mm) { irM = mm; irPara = k; } });
+    }
+    if (!irM) throw new Error('Could not find an IR number in this document. Upload a filled IR from this project (Word .docx).');
+    var n = +irM[2], rev = irM[4] != null ? +irM[4] : 0;
+    var rows = log.rows.filter(function (r) { return irNum(r.ir) === n; });
+    if (!rows.length) throw new Error('IR ' + n + ' from this document is not in the uploaded log. Upload a previous IR that exists in the log.');
+    var row = rows.filter(function (r) { return (+r.rev || 0) === rev; })[0] || rows[rows.length - 1];
+    var B = log.blocks[blockNum(row.block)];
+    var meta = { irPrefix: irM[1], irWidth: irM[2].length, revSep: irM[3] != null ? irM[3] : null, revWidth: irM[4] ? irM[4].length : 2, sourceIr: irM[0].trim() };
+
+    var assigned = {}, used = {}, report = {};
+    function take(name, k, how) { assigned[name] = k; used[k] = name; report[name] = how; }
+    take('IR_No', irPara, 'found');
+    // 2) values from the log row, matched to paragraphs
+    function best(name, values, min) {
+      var bk = -1, bs = 0;
+      paras.forEach(function (p, k) {
+        if (used[k] != null || !p.t.trim()) return;
+        values.forEach(function (v) { if (!v) return; var sc = norm(p.t) === norm(v) ? 1 : similarity(p.t, v); if (sc > bs) { bs = sc; bk = k; } });
+      });
+      if (bk >= 0 && bs >= min) take(name, bk, 'matched');
+    }
+    best('Description', [row.desc], 0.6);
+    best('Main_Location', [B ? formLocation(B) : '', row.loc], 0.6);
+    best('Item', [row.item], 0.99);
+    // date: the paragraph holding the log's submitted date
+    if (row.date) {
+      var d = row.date, dd = d.getDate(), mo = d.getMonth() + 1, yy = d.getFullYear();
+      var dre = new RegExp('(^|\\D)0?' + dd + '\\s*[/.\\-]\\s*0?' + mo + '\\s*[/.\\-]\\s*(' + yy + '|' + String(yy).slice(2) + ')(\\D|$)');
+      paras.forEach(function (p, k) { if (assigned.Submitted__Date == null && used[k] == null && dre.test(toArabicDigitsLatin(p.t))) take('Submitted__Date', k, 'matched'); });
+    }
+    // 3) labels next to empty-handed fields (table cell beside "نوع العنصر", "تاريخ طلب الفحص", …)
+    var rowsRe = /<w:tr\b[\s\S]*?<\/w:tr>/g, tr;
+    while ((tr = rowsRe.exec(xml))) {
+      var cells = [], cre = /<w:tc\b[\s\S]*?<\/w:tc>/g, tc;
+      while ((tc = cre.exec(tr[0]))) cells.push({ s: tr.index + tc.index, e: tr.index + tc.index + tc[0].length, t: paraText(tc[0]).trim() });
+      cells.forEach(function (c, ci) {
+        Object.keys(LABELS).forEach(function (name) {
+          if (assigned[name] != null || !LABELS[name].test(c.t) || c.t.length > 40) return;
+          [cells[ci - 1], cells[ci + 1]].forEach(function (nb) {
+            if (!nb || assigned[name] != null || !nb.t) return;
+            if (Object.keys(LABELS).some(function (L) { return LABELS[L].test(nb.t) && nb.t.length <= 40; })) return;
+            paras.forEach(function (p, k) { if (assigned[name] == null && used[k] == null && p.i >= nb.s && p.i < nb.e && p.t.trim()) take(name, k, 'beside label'); });
+          });
+        });
+      });
+    }
+    ['Item', 'Submitted__Date', 'Description', 'Main_Location'].forEach(function (nm) { if (assigned[nm] == null) report[nm] = 'not found'; });
+    // 4) rewrite the document: placeholders where the old values were, empty attempt circles
+    var out = '', last = 0;
+    paras.forEach(function (p, k) {
+      if (used[k] == null) return;
+      var nx = p.x;
+      if (used[k] === 'IR_No' && p.t.trim() !== irM[0].trim()) {
+        // the number shares the paragraph with other text: replace only the number inside its run
+        var done = false;
+        nx = p.x.replace(/<w:t([^>]*)>([^<]*)<\/w:t>/g, function (a, at, txt) {
+          if (done) return a; var mm = xmlDecode(txt).match(irRe) || xmlDecode(txt).match(/[A-Z][A-Z0-9-]*-\d{2,5}(?:[-/]\d{1,2})?/);
+          if (!mm) return a; done = true; var tt = xmlDecode(txt);
+          return '<w:t xml:space="preserve">' + xmlEsc(tt.slice(0, mm.index)) + '</w:t></w:r><w:r><w:t>«IR_No»</w:t></w:r><w:r><w:t xml:space="preserve">' + xmlEsc(tt.slice(mm.index + mm[0].length)) + '</w:t>';
+        });
+        if (!done) nx = placeholderPara(p.x, 'IR_No');
+      } else nx = placeholderPara(p.x, used[k]);
+      out += xml.slice(last, p.i) + nx; last = p.i + p.x.length;
+    });
+    out += xml.slice(last);
+    out = out.replace(/<w:t([^>]*)>([^<]*مرة[^<]*)<\/w:t>/g, function (a, at, txt) { return '<w:t' + at + '>' + txt.replace(/[●⬤◉•]/g, '◯') + '</w:t>'; });
+    zip.file('word/document.xml', out);
+    zip.file('irmaker.json', JSON.stringify(meta));
+    var tpl = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+    return { bytes: tpl, report: report, sourceIr: meta.sourceIr, row: row };
   }
 
   // build full IR records from drafts (assigns serials)
@@ -598,6 +723,7 @@
   function templateFieldNames(xml) {
     var out = [], re = /MERGEFIELD\s+"?([^\s"\\]+)/g, m;
     while ((m = re.exec(xml))) if (out.indexOf(m[1]) < 0) out.push(m[1]);
+    var re2 = /<w:t[^>]*>«([A-Za-z_]+)»<\/w:t>/g; while ((m = re2.exec(xml))) if (out.indexOf(m[1]) < 0) out.push(m[1]);
     return out;
   }
   async function inspectTemplate(bytes) {
@@ -630,7 +756,7 @@
   }
 
   var api = {
-    loadLog: loadLog, normalizeStations: normalizeStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
+    loadLog: loadLog, learnFromFilledIr: learnFromFilledIr, normalizeStations: normalizeStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
     recordFromRow: recordFromRow, formLocation: formLocation, norm: norm, fmtDate: fmtDate, stationStr: stationStr,
     nextIrNumbers: nextIrNumbers, formIrNo: formIrNo, irNum: irNum, blockNum: blockNum,
     saveLog: function (log) { return log.zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }

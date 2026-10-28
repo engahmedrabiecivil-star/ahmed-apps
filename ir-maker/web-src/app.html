@@ -98,7 +98,7 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
     <strong>Set up your project</strong>
     <div class="small">Upload the project IR log and the project IR form once. Both stay on this phone.</div>
     <div class="step"><div><b>1 · IR Log</b><span class="small" id="stLog">Excel file (.xlsx)</span></div><label class="file-btn ghost"><span>Choose</span><input id="logFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label></div>
-    <div class="step"><div><b>2 · IR Form</b><span class="small" id="stTpl">Word file (.docx) with mail-merge fields</span></div><label class="file-btn ghost"><span>Choose</span><input id="tplFile0" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label></div>
+    <div class="step"><div><b>2 · IR Form</b><span class="small" id="stTpl">Word (.docx): a previous IR from this project, or a blank mail-merge form</span></div><label class="file-btn ghost"><span>Choose</span><input id="tplFile0" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label></div>
     <div id="setupMsg" style="width:100%"></div>
     <button class="primary" id="start" disabled>Start</button>
   </div>
@@ -204,17 +204,27 @@ function projName(){ return S.log && E.isUSection(S.log) ? 'Alex U \u2013 Sectio
 function setupMsg(kind, text){ $('setupMsg').innerHTML = text ? '<div class="notice '+kind+'">'+esc(text)+'</div>' : ''; }
 function renderSetup(){
   $('stLog').textContent = S.log ? '✓ '+S.logName+' · '+S.log.rows.length+' requests, last IR '+S.log.lastNum : 'Excel file (.xlsx)';
-  $('stTpl').textContent = S.tpl ? '✓ '+(S.tplName||'saved form')+' · fields: '+((S.tplFields||[]).join(', ')||'none') : 'Word file (.docx) with mail-merge fields';
+  $('stTpl').textContent = S.tpl ? '✓ '+(S.tplName||'saved form')+' · fields: '+((S.tplFields||[]).join(', ')||'none') : 'Word (.docx): a previous IR from this project, or a blank mail-merge form';
   $('start').disabled = !(S.log && S.tpl);
 }
 var KNOWN = /^(irno|irnumber|ir|irnum|requestno|item|element|elementtype|submitteddate|date|submissiondate|irdate|description|desc|works|workdescription|mainlocation|location|loc|blockno|block|fromst|from|fromstation|tost|to|tostation|subitem|unitplantno|unit|discipline|revno|rev|revision)$/;
+var FIELD_LABEL = { IR_No:'IR number', Submitted__Date:'Date', Item:'Element type', Description:'Works', Main_Location:'Location' };
 async function useTemplate(bytes, name){
-  var fields = await E.inspectTemplate(bytes);
-  if (!fields.length) throw new Error('This form has no mail-merge fields. Insert fields like IR_No, Description, Main_Location in Word (Mailings → Insert Merge Field).');
+  var fields = await E.inspectTemplate(bytes), note = null;
+  if (!fields.length) {
+    // a previous, already-filled IR: learn where each value goes by linking it to the log
+    if (!S.log) throw new Error('Upload the IR log first (step 1), then the previous IR.');
+    var L = await E.learnFromFilledIr(bytes, S.log);
+    bytes = L.bytes; fields = await E.inspectTemplate(bytes);
+    var ok = [], miss = [];
+    Object.keys(FIELD_LABEL).forEach(function(k){ (L.report[k] && L.report[k] !== 'not found' ? ok : miss).push(FIELD_LABEL[k]); });
+    note = { kind: miss.length ? 'warn' : 'good', text: 'Learned the form from '+L.sourceIr+'. Found: '+ok.join(', ')+'.'+(miss.length ? ' Not found, will stay as in the old IR: '+miss.join(', ')+'.' : '') };
+  }
   var unknown = fields.filter(function(f){ return !KNOWN.test(String(f).toLowerCase().replace(/[^a-z0-9]/g,'')); });
+  if (!note && unknown.length) note = { kind:'warn', text:'These form fields have no matching log column and will stay empty: '+unknown.join(', ') };
   S.tpl = bytes; S.tplName = name; S.tplFields = fields;
   await put('tpl', bytes); await put('tplName', name);
-  return unknown;
+  return note;
 }
 function render(){
   var has = !!(S.ready && S.log && S.tpl);
@@ -365,7 +375,7 @@ $('req').addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shift
 
 function readFile(input, cb){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ cb(new Uint8Array(r.result), f.name); input.value=''; }; r.readAsArrayBuffer(f); }
 $('logFile').addEventListener('change', function(){ readFile(this, function(b,n){ useLog(b,n,true).then(function(){ setupMsg(''); }).catch(function(e){ setupMsg('err','This file is not a readable IR log: '+e.message); render(); }); }); });
-$('tplFile0').addEventListener('change', function(){ readFile(this, function(b,n){ useTemplate(b,n).then(function(unknown){ setupMsg(unknown.length?'warn':'', unknown.length ? 'These form fields have no matching log column and will stay empty: '+unknown.join(', ') : ''); render(); }).catch(function(e){ setupMsg('err', e.message); }); }); });
+$('tplFile0').addEventListener('change', function(){ readFile(this, function(b,n){ useTemplate(b,n).then(function(note){ setupMsg(note?note.kind:'', note?note.text:''); render(); }).catch(function(e){ setupMsg('err', e.message); }); }); });
 $('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; S.ready = true; render(); if (S.stationFix){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved to Download/IR Maker.'); S.stationFix=0; } window.scrollTo(0,0); });
 $('changeProj').addEventListener('click', function(){ S.ready = false; S.drafts = []; render(); window.scrollTo(0,0); });
 
