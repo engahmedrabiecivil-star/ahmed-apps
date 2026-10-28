@@ -136,7 +136,7 @@
         action: c[col.action], status: c[col.status]
       });
     });
-    var log = { zip: zip, sheetPath: sheetPath, sheetName: sheet.name, col: col, rows: rows };
+    var log = { zip: zip, sheetPath: sheetPath, sheetName: sheet.name, col: col, rows: rows, absPath: xmlDecode((wb.match(/absPath url="([^"]*)"/) || [])[1] || '') };
     analyse(log);
     return log;
   }
