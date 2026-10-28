@@ -108,7 +108,7 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
     <div class="small">Upload the project IR log and the project IR form once. Both stay on this phone.</div>
     <div class="step"><div><b>1 · IR Log</b><span class="small" id="stLog">Excel file (.xlsx)</span></div><label class="file-btn ghost"><span>Choose</span><input id="logFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label></div>
     <div class="step"><div><b>2 · IR Form</b><span class="small" id="stTpl">Word (.docx): a previous IR from this project, or a blank mail-merge form</span></div><label class="file-btn ghost"><span>Choose</span><input id="tplFile0" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label></div>
-    <div class="step"><div style="flex:1"><b>3 · Company name <span class="small">(optional)</span></b><input id="company0" maxlength="60" placeholder="e.g. Hassan Allam Construction" autocomplete="organization" style="margin-top:6px"></div></div>
+    <div class="step"><div style="flex:1"><b>3 · Company name <span class="small">(optional)</span></b><input id="company0" maxlength="60" placeholder="Your company name" autocomplete="organization" style="margin-top:6px"></div></div>
     <div id="setupMsg" style="width:100%"></div>
     <button class="primary" id="start" disabled>Start</button>
   </div>
@@ -143,7 +143,7 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
           <button class="ghost" id="changeProj">Change project (IR log &amp; form)</button>
         </div>
         <div class="field"><label for="company1">Company name</label>
-          <div class="row"><input id="company1" maxlength="60" placeholder="e.g. Hassan Allam Construction" style="flex:1"><button class="ghost" id="saveCompany">Save</button></div>
+          <div class="row"><input id="company1" maxlength="60" placeholder="Your company name" style="flex:1"><button class="ghost" id="saveCompany">Save</button></div>
         </div>
         <div id="confirmBox"></div>
         <div class="small" id="info"></div>
