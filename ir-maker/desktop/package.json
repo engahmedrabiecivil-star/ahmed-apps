@@ -1,0 +1,29 @@
+{
+  "name": "ir-maker",
+  "productName": "IR Maker",
+  "version": "1.0.0",
+  "description": "IR Maker - Quality Department",
+  "author": "Eng. Ahmed Rabie",
+  "main": "main.js",
+  "build": {
+    "appId": "com.ahmedrabie.irmaker",
+    "productName": "IR Maker",
+    "files": ["main.js", "preload.js", "index.html", "icon.png"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "IR Maker",
+      "artifactName": "IR-Maker-Setup.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  }
+}

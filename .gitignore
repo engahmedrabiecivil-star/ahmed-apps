@@ -4,3 +4,6 @@ android/app/build/
 android/local.properties
 android/app/src/main/assets/
 *.apk
+ir-maker/desktop/node_modules/
+ir-maker/desktop/dist/
+ir-maker/desktop/index.html
