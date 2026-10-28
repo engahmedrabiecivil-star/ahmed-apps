@@ -104,7 +104,7 @@
   };
   function headKey(s) { return String(s || '').toLowerCase().replace(/[^a-z]/g, ''); }
 
-  async function loadLog(bytes) {
+  async function loadLog(bytes, fileName) {
     var zip = await JSZipRef.loadAsync(bytes);
     var wb = await zip.file('xl/workbook.xml').async('string');
     var wbRels = relsMap(await zip.file('xl/_rels/workbook.xml.rels').async('string'), 'xl/workbook.xml');
@@ -136,7 +136,7 @@
         action: c[col.action], status: c[col.status]
       });
     });
-    var log = { zip: zip, sheetPath: sheetPath, sheetName: sheet.name, col: col, rows: rows, absPath: xmlDecode((wb.match(/absPath url="([^"]*)"/) || [])[1] || '') };
+    var log = { zip: zip, sheetPath: sheetPath, sheetName: sheet.name, col: col, rows: rows, fileName: fileName || '', absPath: xmlDecode((wb.match(/absPath url="([^"]*)"/) || [])[1] || '') };
     analyse(log);
     return log;
   }
@@ -145,6 +145,7 @@
   function blockNum(s) { var m = String(s || '').match(/(\d+)/); return m ? +m[1] : null; }
   function irNum(s) { var m = String(s || '').match(/(\d+)\s*$/); return m ? +m[1] : null; }
 
+  function isUSection(log) { return /u[\s._-]*section/i.test((log.absPath || '') + ' ' + (log.fileName || '')); }
   function analyse(log) {
     var blocks = {}, maxN = 0, prefix = 'HAC-HYDRO-IR-US-', width = 3, lastIr = null;
     log.rows.forEach(function (r) {
@@ -156,7 +157,7 @@
       var a = parseStation(r.from), z = parseStation(r.to);
       if (a != null && z != null && a !== z) { var key = Math.min(a, z) + '-' + Math.max(a, z); B.st[key] = (B.st[key] || 0) + 1; }
     });
-    BLOCK_TABLE.forEach(function (t) {
+    if (isUSection(log)) BLOCK_TABLE.forEach(function (t) {
       var B = blocks[t[0]] || (blocks[t[0]] = { n: t[0], labels: {}, locs: [], st: {} });
       B.fixed = [t[1], t[2]];
       if (!Object.keys(B.labels).length) B.labels['Block no  ' + t[0]] = 1;
@@ -530,8 +531,10 @@
     var core = body.replace(/(<w:p\b[^>]*\/>|<w:p\b[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?<\/w:p>)\s*$/, '');
     var trailing = body.slice(core.length) || '<w:p/>';
     var pageBreak = '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r></w:p>';
+    var names = templateFieldNames(core);
     var copies = irs.map(function (ir) {
-      var c = fillFieldsXml(core, { IR_No: ir.formIr, Item: ir.formItem, Submitted__Date: fmtDate(ir.date), Description: ir.desc, Main_Location: ir.formLoc });
+      var vals = {}; names.forEach(function (n) { vals[n] = fieldValue(ir, n); });
+      var c = fillFieldsXml(core, vals);
       return markAttempt(c, ir.attempt);
     });
     zip.file(docPath, head + copies.join(pageBreak) + trailing + tail);
@@ -560,13 +563,43 @@
       };
     });
   }
+  // which mail-merge fields a Word form uses
+  function templateFieldNames(xml) {
+    var out = [], re = /MERGEFIELD\s+"?([^\s"\\]+)/g, m;
+    while ((m = re.exec(xml))) if (out.indexOf(m[1]) < 0) out.push(m[1]);
+    return out;
+  }
+  async function inspectTemplate(bytes) {
+    var zip = await JSZipRef.loadAsync(bytes);
+    var f = zip.file('word/document.xml'); if (!f) throw new Error('not a Word .docx file');
+    return templateFieldNames(await f.async('string'));
+  }
+  // map a form field name (as Word mail merge names log columns) to the IR value
+  function fieldValue(ir, name) {
+    var k = String(name).toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g, '');
+    var map = [
+      [/^(irno|irnumber|ir|irnum|requestno)$/, ir.formIr],
+      [/^(item|element|elementtype)$/, ir.formItem],
+      [/^(submitteddate|date|submissiondate|irdate)$/, ir.date ? fmtDate(ir.date) : ''],
+      [/^(description|desc|works|workdescription)$/, ir.desc],
+      [/^(mainlocation|location|loc)$/, ir.formLoc],
+      [/^(blockno|block)$/, ir.blockLabel],
+      [/^(fromst|from|fromstation)$/, ir.from],
+      [/^(tost|to|tostation)$/, ir.to],
+      [/^(subitem)$/, ir.subItem],
+      [/^(unitplantno|unit|discipline)$/, ir.unit],
+      [/^(revno|rev|revision)$/, ir.rev == null ? '' : String(ir.rev)]
+    ];
+    for (var i = 0; i < map.length; i++) if (map[i][0].test(k)) return map[i][1] == null ? '' : map[i][1];
+    return '';
+  }
   function recordFromRow(log, r) {
     var n = irNum(r.ir), B = log.blocks[blockNum(r.block)];
-    return { n: n, ir: r.ir, formIr: formIrNo(log, n, r.rev), desc: r.desc, formItem: r.item, date: r.date || new Date(), formLoc: B ? formLocation(B) : String(r.loc || '').replace(/\s+/g, ' '), attempt: (+r.rev || 0) + 1 };
+    return { n: n, ir: r.ir, rev: r.rev, formIr: formIrNo(log, n, r.rev), desc: r.desc, formItem: r.item, item: r.item, subItem: r.subItem, unit: r.unit, blockLabel: r.block, from: r.from, to: r.to, date: r.date || new Date(), formLoc: B ? formLocation(B) : String(r.loc || '').replace(/\s+/g, ' '), attempt: (+r.rev || 0) + 1 };
   }
 
   var api = {
-    loadLog: loadLog, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
+    loadLog: loadLog, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
     recordFromRow: recordFromRow, formLocation: formLocation, norm: norm, fmtDate: fmtDate, stationStr: stationStr,
     nextIrNumbers: nextIrNumbers, formIrNo: formIrNo, irNum: irNum, blockNum: blockNum,
     saveLog: function (log) { return log.zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }
