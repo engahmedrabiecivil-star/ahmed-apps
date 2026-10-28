@@ -65,7 +65,7 @@ public class MainActivity extends Activity {
                 pick.addCategory(Intent.CATEGORY_OPENABLE);
                 pick.setType("*/*");
                 try {
-                    startActivityForResult(Intent.createChooser(pick, "اختار الملف"), FILE_REQ);
+                    startActivityForResult(Intent.createChooser(pick, "Choose file"), FILE_REQ);
                 } catch (ActivityNotFoundException e) {
                     pendingChooser = null;
                     return false;
@@ -140,18 +140,18 @@ public class MainActivity extends Activity {
                         view.setDataAndType(fileUri, mime);
                         view.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         try {
-                            startActivity(Intent.createChooser(view, "افتح الـ IR للطباعة"));
+                            startActivity(Intent.createChooser(view, "Open the IR to print"));
                         } catch (ActivityNotFoundException e) {
-                            Toast.makeText(MainActivity.this, "نزّل Word أو WPS عشان تفتح الفورم", Toast.LENGTH_LONG).show();
+                            Toast.makeText(MainActivity.this, "Install Word or WPS Office to open the form", Toast.LENGTH_LONG).show();
                         }
                     });
                 } else {
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "اتحفظ في Download/IR Maker: " + name, Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Saved to Download/IR Maker: " + name, Toast.LENGTH_SHORT).show());
                 }
                 return uri.toString();
             } catch (Exception e) {
                 final String m = e.getMessage();
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "خطأ في الحفظ: " + m, Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Save failed: " + m, Toast.LENGTH_LONG).show());
                 return "";
             }
         }

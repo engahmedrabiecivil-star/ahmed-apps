@@ -8,7 +8,7 @@
   --paper:#f6f7f9; --sheet:#ffffff; --ink:#1b2333; --muted:#5d6678; --line:#d9dde5;
   --stamp:#2f3f9e; --stamp-soft:#e7eafb; --amber:#a35a00; --amber-soft:#fff3df;
   --ok:#1f7a4d; --ok-soft:#e2f4ea; --bad:#b3261e; --bad-soft:#fde8e6;
-  --f-body:"Noto Sans Arabic","Segoe UI",Tahoma,"Dubai",system-ui,sans-serif;
+  --f-body:system-ui,"Roboto","Segoe UI","Noto Sans Arabic",Tahoma,sans-serif;
   --f-mono:ui-monospace,"Roboto Mono","Consolas",monospace;
   --r:10px;
 }
@@ -23,7 +23,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--paper);color:var(--ink)}
-body{font-family:var(--f-body);font-size:15px;line-height:1.6;margin:0;direction:rtl;
+body{font-family:var(--f-body);font-size:15px;line-height:1.6;margin:0;direction:ltr;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 120px}
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 .credit{padding-top:10px;text-align:center;font-size:12px;letter-spacing:.04em;color:var(--stamp);font-weight:600;direction:ltr}
@@ -90,26 +90,26 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
   <div class="credit">Developed by Eng. Ahmed Rabie</div>
   <header>
     <div>
-      <h1>طلبات الفحص — U-Section</h1>
-      <div class="sub" id="sub">قطاع القناة المستطيل · St 8+500 → 9+500</div>
+      <h1>IR Maker — U-Section</h1>
+      <div class="sub" id="sub">Rectangular channel · St 8+500 → 9+500</div>
     </div>
-    <div class="counter" id="counter" hidden><span>آخر IR في اللوج</span><b id="lastIr">—</b></div>
+    <div class="counter" id="counter" hidden><span>Last IR in log</span><b id="lastIr">—</b></div>
   </header>
 
   <div id="setup" class="setup" hidden>
-    <strong>ارفع ملف الـ IR Log</strong>
-    <div class="small">البرنامج بيقرأ اللوج مرة واحدة ويحفظه جوّه التليفون. بعد كده كل IR جديد بيتضاف عليه تلقائي.</div>
-    <label class="file-btn primary"><span>اختار ملف Excel</span><input id="logFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+    <strong>Upload the IR Log</strong>
+    <div class="small">The app reads the log once and keeps it on this phone. Every new IR is then added to it automatically.</div>
+    <label class="file-btn primary"><span>Choose Excel file</span><input id="logFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
   </div>
 
   <div id="main" style="display:none">
     <section>
-      <label class="label" for="req">اكتب المطلوب</label>
-      <textarea id="req" placeholder="مثلاً: حدادة ونجارة حائط بحري فاصل 20"></textarea>
+      <label class="label" for="req">What needs inspection?</label>
+      <textarea id="req" dir="auto" placeholder="e.g. wall rebar and formwork north block 20"></textarea>
       <div class="chips" id="examples"></div>
       <div class="row">
-        <div class="field" style="flex:1"><label for="date">تاريخ طلب الفحص</label><input id="date" type="date"></div>
-        <button class="primary" id="go" style="align-self:flex-end">جهّز الـ IR</button>
+        <div class="field" style="flex:1"><label for="date">Submission date</label><input id="date" type="date"></div>
+        <button class="primary" id="go" style="align-self:flex-end">Prepare IR</button>
       </div>
     </section>
 
@@ -119,18 +119,18 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
     <div id="done"></div>
 
     <details id="tools">
-      <summary>أدوات اللوج</summary>
+      <summary>Log tools</summary>
       <div class="inner">
-        <div class="field"><label for="reNo">طباعة IR قديم أو إعادة تقديمه (رقم الـ IR)</label>
-          <div class="row"><input id="reNo" class="mono" inputmode="numeric" placeholder="558" style="flex:1"><button class="ghost" id="rePrint">طباعة</button><button class="ghost" id="reSubmit">إعادة تقديم (Rev جديد)</button></div>
+        <div class="field"><label for="reNo">Reprint or resubmit an existing IR (IR number)</label>
+          <div class="row"><input id="reNo" class="mono" inputmode="numeric" placeholder="558" style="flex:1"><button class="ghost" id="rePrint">Print</button><button class="ghost" id="reSubmit">Resubmit (new Rev)</button></div>
         </div>
         <div class="row">
-          <button class="ghost" id="exportLog">حفظ نسخة من اللوج</button>
-          <button class="ghost" id="undo">تراجع عن آخر تسجيل</button>
+          <button class="ghost" id="exportLog">Save a copy of the log</button>
+          <button class="ghost" id="undo">Undo last entry</button>
         </div>
         <div class="row">
-          <label class="file-btn ghost"><span>تغيير ملف اللوج</span><input id="logFile2" type="file" accept=".xlsx"></label>
-          <label class="file-btn ghost"><span>تغيير فورم الـ Word</span><input id="tplFile" type="file" accept=".docx"></label>
+          <label class="file-btn ghost"><span>Replace IR log</span><input id="logFile2" type="file" accept=".xlsx"></label>
+          <label class="file-btn ghost"><span>Replace Word form</span><input id="tplFile" type="file" accept=".docx"></label>
         </div>
         <div id="confirmBox"></div>
         <div class="small" id="info"></div>
@@ -138,15 +138,15 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
     </details>
 
     <section>
-      <div class="label">آخر الطلبات في اللوج</div>
+      <div class="label">Latest requests in the log</div>
       <div class="list" id="recent" style="background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);padding:0 12px"></div>
     </section>
   </div>
 </div>
 
 <div class="bar" id="bar" hidden><div class="in">
-  <button class="primary" id="save">سجّل في اللوج واطبع</button>
-  <button class="ghost" id="clear">مسح</button>
+  <button class="primary" id="save">Add to log &amp; print</button>
+  <button class="ghost" id="clear">Clear</button>
 </div></div>
 
 <script>/*!
@@ -280,7 +280,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var ss = ssPath && zip.file(ssPath) ? sharedStringsFrom(await zip.file(ssPath).async('string')) : [];
     var sheetXml = await zip.file(sheetPath).async('string');
     var raw = parseRows(sheetXml, ss);
-    if (!raw.length) throw new Error('الشيت فاضي');
+    if (!raw.length) throw new Error('The sheet is empty');
     var header = raw[0].cells, col = {};
     header.forEach(function (h, i) {
       var k = headKey(h);
@@ -371,12 +371,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   // ---------- understanding a request ----------
   var ORD = [
-    { k: ['اولي', 'اول', '1', 'الاولي', 'الاول'], f: 'الاولى', fx: 'اولى' },
-    { k: ['ثانيه', 'تانيه', 'ثاني', 'تاني', '2'], f: 'الثانية', fx: 'ثانية' },
-    { k: ['ثالثه', 'تالته', 'ثالث', 'تالت', '3'], f: 'الثالثة', fx: 'ثالثة' },
-    { k: ['رابعه', 'رابع', '4'], f: 'الرابعة', fx: 'رابعة' },
-    { k: ['خامسه', 'خامس', '5'], f: 'الخامسة', fx: 'خامسة' },
-    { k: ['سادسه', 'سادس', '6'], f: 'السادسة', fx: 'سادسة' }
+    { k: ['اولي', 'اول', '1', 'الاولي', 'الاول', 'first', '1st'], f: 'الاولى', fx: 'اولى' },
+    { k: ['ثانيه', 'تانيه', 'ثاني', 'تاني', '2', 'second', '2nd'], f: 'الثانية', fx: 'ثانية' },
+    { k: ['ثالثه', 'تالته', 'ثالث', 'تالت', '3', 'third', '3rd'], f: 'الثالثة', fx: 'ثالثة' },
+    { k: ['رابعه', 'رابع', '4', 'fourth', '4th'], f: 'الرابعة', fx: 'رابعة' },
+    { k: ['خامسه', 'خامس', '5', 'fifth', '5th'], f: 'الخامسة', fx: 'خامسة' },
+    { k: ['سادسه', 'سادس', '6', 'sixth', '6th'], f: 'السادسة', fx: 'سادسة' }
   ];
   var _nc = {};
   function has(t, words) { for (var i = 0; i < words.length; i++) { var w = _nc[words[i]] || (_nc[words[i]] = norm(words[i])); if (t.indexOf(w) >= 0) return true; } return false; }
@@ -397,7 +397,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var tNoSt = tNoP.replace(/(\d)\s*\+\s*(\d{3})|(\d{3})\s*\+\s*(\d)/g, ' ');
 
     // level (منسوب)
-    var lm = tNoSt.match(/منسوب\s*(-?\s*\d+(?:\.\d+)?\s*-?)/) || tNoSt.match(/(-?\d+\.\d+-?)/);
+    var lm = tNoSt.match(/(?:منسوب|level|lvl|el\.?)\s*(-?\s*\d+(?:\.\d+)?\s*-?)/) || tNoSt.match(/(-?\d+\.\d+-?)/);
     if (lm) {
       var lv = lm[1].replace(/\s/g, ''); var neg = /-/.test(lv); var num = lv.replace(/-/g, '');
       ctx.level = { num: num, neg: neg };
@@ -405,10 +405,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var tNoLv = lm ? tNoSt.replace(lm[0], ' ') : tNoSt;
 
     // count (عدد N)
-    var cm = tNoLv.match(/عدد\s*(\d+)/); if (cm) ctx.count = +cm[1];
+    var cm = (tNoLv.match(/(?:عدد|count|no\.? of)\s*(\d+)/) || tNoLv.match(/(\d+)\s*wells?/)); if (cm) ctx.count = +cm[1];
 
     // blocks: "فاصل 5" / "فواصل 5 و 9 و 11" / "ف5" / "block 5"
-    var bre = /(?:فواصل|فاصل|الفاصل|لفاصل|بلوك|block|blk|\bف)\s*(?:رقم|no\.?|#)?\s*(\d{1,2}(?:\s*(?:و|,|-|،|&|and)\s*\d{1,2})*)/g, bm;
+    var bre = /(?:فواصل|فاصل|الفاصل|لفاصل|بلوك|blocks|block|blk|\bف)\s*(?:رقم|no\.?|#)?\s*(\d{1,2}(?:\s*(?:و|,|-|،|&|and)\s*\d{1,2})*)/g, bm;
     while ((bm = bre.exec(tNoLv))) bm[1].split(/[^\d]+/).filter(Boolean).forEach(function (x) { if (ctx.blocks.indexOf(+x) < 0) ctx.blocks.push(+x); });
     stations.forEach(function (st) { var B = blockForStation(log, st); if (B && ctx.blocks.indexOf(B.n) < 0) ctx.blocks.push(B.n); });
     if (!ctx.blocks.length) {
@@ -417,22 +417,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
 
     // sides / layers / positions
-    if (has(t, ['بحري', 'بحرى', 'شمال'])) ctx.sides.push('البحرى');
-    if (has(t, ['قبلي', 'قبلى', 'جنوب'])) ctx.sides.push('القبلى');
-    if (has(t, ['سفلي', 'سفليه', 'تحتانيه', 'bottom'])) ctx.layers.push('السفلية');
-    if (has(t, ['علوي', 'علويه', 'فوقانيه', 'top'])) ctx.layers.push('العلوية');
-    ctx.pos = has(t, ['اسفل', 'تحت العزل', 'تحت']) ? 'اسفل' : (has(t, ['اعلي', 'فوق']) ? 'اعلى' : null);
+    if (has(t, ['بحري', 'بحرى', 'شمال', 'north', 'sea side'])) ctx.sides.push('البحرى');
+    if (has(t, ['قبلي', 'قبلى', 'جنوب', 'south'])) ctx.sides.push('القبلى');
+    if (has(t, ['سفلي', 'سفليه', 'تحتانيه', 'bottom', 'lower'])) ctx.layers.push('السفلية');
+    if (has(t, ['علوي', 'علويه', 'فوقانيه', 'top', 'upper'])) ctx.layers.push('العلوية');
+    ctx.pos = has(t, ['اسفل', 'تحت العزل', 'تحت', 'below', 'under']) ? 'اسفل' : (has(t, ['اعلي', 'فوق', 'above', 'over']) ? 'اعلى' : null);
 
     // operations
     var o = ctx.ops;
-    o.rebar = has(t, ['حداده', 'حديد', 'تسليح', 'rebar', 'رقه']);
-    o.form = has(t, ['نجاره', 'شده', 'شدات', 'formwork']);
-    o.pour = /(^|\s|ل|و|ب)صب(\s|$)/.test(t) || has(t, ['اذن صب', 'ازن صب', 'pour', 'casting']);
-    o.inspect = has(t, ['معاينه', 'استلام', 'فحص']);
-    o.survey = has(t, ['احداثيات', 'مساحه', 'survey', 'مناسيب']);
-    o.plt = has(t, ['plt', 'تحميل', 'لوحي']);
-    o.operate = has(t, ['تشغيل']);
-    o.drill = has(t, ['حفر ابار', 'حفر الابار']);
+    o.rebar = has(t, ['حداده', 'حديد', 'تسليح', 'rebar', 'reinforcement', 'steel', 'رقه', 'mesh']);
+    o.form = has(t, ['نجاره', 'شده', 'شدات', 'formwork', 'shuttering', 'form ']);
+    o.pour = /(^|\s|ل|و|ب)صب(\s|$)/.test(t) || has(t, ['اذن صب', 'ازن صب', 'pour', 'casting', 'concreting']);
+    o.inspect = has(t, ['معاينه', 'استلام', 'فحص', 'inspection', 'inspect']);
+    o.survey = has(t, ['احداثيات', 'مساحه', 'survey', 'coordinates', 'مناسيب', 'levels']);
+    o.plt = has(t, ['plt', 'تحميل', 'لوحي', 'plate load']);
+    o.operate = has(t, ['تشغيل', 'operation', 'operating']);
+    o.drill = has(t, ['حفر ابار', 'حفر الابار', 'drilling']);
     return ctx;
   }
 
@@ -455,7 +455,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     { id: 'wall', test: function (t) { return has(t, ['حائط', 'حوائط', 'حيطه', 'حيطان', 'جدار', 'wall']); },
       build: function (c) {
         var sides = c.sides.length ? c.sides : ['البحرى', 'القبلى'], out = [], o = c.ops, any = o.rebar || o.form || o.pour;
-        if (!c.sides.length) c.warnings.push('ما حددتش الحائط (بحري/قبلي) — طلعتلك الاتنين');
+        if (!c.sides.length) c.warnings.push('Wall side not given (north/south), so both were added');
         sides.forEach(function (s) {
           if (o.rebar || !any) out.push({ desc: 'فحص واستلام حدادة الحائط ' + s + ' لفاصل ' + c.b, item: 'حدادة الحوائط', subItem: 'فحص واستلام' });
           if (o.form) out.push({ desc: 'فحص واستلام نجارة الحائط ' + s + ' لفاصل ' + c.b + (c.level ? '\nعلى منسوب  ' + lvl(c, 'trail') : ''), item: 'حدادة الحوائط', subItem: 'فحص واستلام' });
@@ -468,15 +468,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         var out = [];
         if (!c.ops.pour || c.ops.inspect || c.ops.form) out.push({ desc: 'فحص واستلام الهونش  على منسوب ' + (lvl(c, 'lead') || '…'), item: 'الهونش', subItem: 'فحص واستلام' });
         if (c.ops.pour) out.push({ desc: 'اذن صب خرسانة الهونش', item: 'الهونش', subItem: 'ازن صب' });
-        if (!c.level && out.some(function (x) { return /منسوب/.test(x.desc); })) c.warnings.push('اكتب منسوب الهونش (مثلاً: منسوب -2.47)');
+        if (!c.level && out.some(function (x) { return /منسوب/.test(x.desc); })) c.warnings.push('Add the haunch level, e.g. level -2.47');
         return out;
       } },
-    { id: 'tendons', test: function (t) { return has(t, ['اوتار', 'وتر ', 'الوتر']); },
+    { id: 'tendons', test: function (t) { return has(t, ['اوتار', 'وتر ', 'الوتر', 'tendon', 'waterstop', 'water stop']); },
       build: function (c) { return [{ desc: 'استلام معاينة الاوتار فاصل ' + c.b, item: 'الاوتار', subItem: 'معاينة' }]; } },
     { id: 'piles', test: function (t) { return has(t, ['خوازيق', 'خازوق', 'cmc', 'pile']); },
       build: function (c) {
         var list = c.piles, k = list.length || c.count || 0, l = list.length ? list.join('-') + '-' : '…';
-        if (!list.length) c.warnings.push('اكتب أرقام الخوازيق (مثلاً: P24 P25 P26)');
+        if (!list.length) c.warnings.push('Add the pile numbers, e.g. P24 P25 P26');
         var out = [];
         if (c.ops.survey) out.push({ desc: 'تسليم احداثيات عدد ' + k + ' خازوق CMC ارقام ( ' + l + ' )', item: 'خوازيق', subItem: 'خوازيق', unit: 'Survey' });
         if (!c.ops.survey || /مدني|civil/.test(c.t)) out.push({ desc: 'طلب فحص واستلام اعمال مدنية عدد ' + k + ' خازوق CMC ارقام ( ' + l + ' )', item: 'خوازيق', subItem: 'خوازيق', unit: 'Civil' });
@@ -490,7 +490,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         if (o.pour || !any) out.push({ desc: 'إذن صب الخرسانة العاديةGFRP بسمك 60 سم', item: 'لبشه عاديه', subItem: 'ازن صب' });
         return out;
       } },
-    { id: 'insulation', test: function (t) { return has(t, ['عزل', 'جيوتكستيل', 'جيوتكستايل', 'pvc', 'geotext']) && !has(t, ['نضافه', 'عاديه', 'فرشه']); },
+    { id: 'insulation', test: function (t) { return has(t, ['عزل', 'جيوتكستيل', 'جيوتكستايل', 'pvc', 'geotext', 'insulation', 'waterproof']) && !has(t, ['نضافه', 'عاديه', 'فرشه', 'blinding', 'lean']); },
       build: function (c) {
         var t = c.t, g = has(t, ['جيوتكستيل', 'جيوتكستايل', 'geotext']), p = /pvc/.test(t), first = has(t, ['اولي', 'اول', 'تحت']), second = has(t, ['ثانيه', 'تانيه', 'اعلي', 'فوق']);
         var out = [], all = !g && !p;
@@ -499,31 +499,31 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         if (all || (g && second)) out.push({ desc: 'فرد الجيوتكستيل للطبقة الثانية أعلى الـ PVC', item: 'عزل تحت اللبشة', subItem: 'فرد' });
         return out;
       } },
-    { id: 'blinding', test: function (t) { return has(t, ['لبشه عاديه', 'لبشه العاديه', 'نضافه', 'فرشه', 'عاديه']) ; },
+    { id: 'blinding', test: function (t) { return has(t, ['لبشه عاديه', 'لبشه العاديه', 'نضافه', 'فرشه', 'عاديه', 'blinding', 'lean concrete', 'plain concrete']) ; },
       build: function (c) {
         var pos = c.pos || 'اسفل', o = c.ops, any = o.form || o.pour, out = [];
-        if (!c.pos) c.warnings.push('افترضت فرشة النضافة أسفل العزل — غيّرها لو فوق العزل');
+        if (!c.pos) c.warnings.push('Blinding assumed below the insulation. Change it if it is above');
         if (o.form || !any) out.push({ desc: 'فحص واستلام  حدود ومناسيب نجارة وصب اللبشة العادية علي منسوب ' + (lvl(c, 'trail') || '…') + '  (فرشة النضافة ' + pos + ' العزل) بسمك 10 سم', item: 'لبشه عاديه', subItem: 'نجاره' });
         if (o.pour) out.push({ desc: 'إذن صب الخرسانة العادية حمايه ' + pos + ' العزل بسمك 10سم', item: 'لبشه عاديه', subItem: 'ازن صب' });
         if (has(c.t, ['سطح'])) out.push({ desc: 'تسليم معاينة سطح الخرسانة بعد الصب وقبل اعمال العزل', item: 'لبشه عاديه', subItem: 'معاينة' });
         return out;
       } },
-    { id: 'raft', test: function (t) { return has(t, ['لبشه', 'رقه', 'raft']); },
+    { id: 'raft', test: function (t) { return has(t, ['لبشه', 'رقه', 'raft', 'slab']); },
       build: function (c) {
         var o = c.ops, any = o.rebar || o.form || o.pour, out = [];
         if (o.rebar || !any) {
           var layers = c.layers.length ? c.layers : ['السفلية', 'العلوية'];
-          if (!c.layers.length && o.rebar) c.warnings.push('ما حددتش الرقة (سفلية/علوية) — طلعتلك الاتنين');
+          if (!c.layers.length && o.rebar) c.warnings.push('Mesh not given (bottom/top), so both were added');
           layers.forEach(function (L) { out.push({ desc: 'فحص واستلام حدادة الرقة ' + L + ' للحديد فاصل ' + c.b, item: 'فحص الرقة للبشة المسلحة', subItem: 'حديد' }); });
         }
         if (o.form) out.push({ desc: 'فحص واستلام نجارة اللبشة المسلحة  فاصل ' + c.b, item: 'فحص النجارة للبشة المسلحة', subItem: 'نجارة' });
         if (o.pour) out.push({ desc: 'اذن صب اللبشة المسلحة  فاصل  ' + c.b + ' ', item: 'لبشة مسلحة', subItem: 'ازن صب' });
         return out;
       } },
-    { id: 'replacement', test: function (t) { return has(t, ['احلال', 'طبقه']); },
+    { id: 'replacement', test: function (t) { return has(t, ['احلال', 'طبقه', 'replacement', 'layer']); },
       build: function (c) {
         var ords = ordFor(c), out = [];
-        if (!ords.length) { c.warnings.push('اكتب رقم طبقة الإحلال (مثلاً: طبقة تالتة)'); ords = [ORD[0]]; }
+        if (!ords.length) { c.warnings.push('Add the replacement layer number, e.g. layer 3'); ords = [ORD[0]]; }
         var L = lvl(c, 'trail') || '…';
         ords.forEach(function (O) {
           if (c.ops.plt) out.push({ desc: 'تسليم طلب اعتماد نتائج واختبار تجربةالتحميل اللوحى( PLT) للطبقه ' + O.f.replace(/^ال/, '') + ' من الاحلال وطبقة ' + O.fx + '  احلال السن بعرض 30.20 علي منسوب ' + L, item: 'إحلال', subItem: 'طبقة ' + O.fx + ' PLT' });
@@ -531,17 +531,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         });
         return out;
       } },
-    { id: 'excavation', test: function (t) { return has(t, ['قاع']); },
+    { id: 'excavation', test: function (t) { return has(t, ['قاع', 'excavation', 'formation']); },
       build: function (c) {
         var out = [];
         if (c.ops.survey || !c.ops.inspect) out.push({ desc: 'تسليم  مناسيب واحداثيات وعرض  قاع حفر', item: 'قاع حفر', subItem: 'عمق' });
         if (c.ops.inspect || has(c.t, ['معاينه'])) out.push({ desc: 'تسليم معاينة قاع الحفر', item: 'قاع حفر', subItem: 'معاينة' });
         return out;
       } },
-    { id: 'wells', test: function (t) { return has(t, ['ابار', 'بير', 'بئر']); },
+    { id: 'wells', test: function (t) { return has(t, ['ابار', 'بير', 'بئر', 'well', 'dewatering']); },
       build: function (c) {
         var B = c.B, k = c.count || '…', st = B && B.from != null ? ' من محطة ' + stationFormStr(B.from) + ' الي ' + stationFormStr(B.to) : '', out = [];
-        if (!c.count) c.warnings.push('اكتب عدد الآبار (مثلاً: عدد 6)');
+        if (!c.count) c.warnings.push('Add the number of wells, e.g. 6 wells');
         if (!c.ops.operate || c.ops.drill) out.push({ desc: 'تسليم حفر ابار عدد ' + k + ' لفاصل رقم ' + c.b + st, item: 'آبار', subItem: 'عمق' });
         if (c.ops.operate) out.push({ desc: 'محضر تشغيل ابار عدد ' + k + ' لفاصل رقم ' + c.b + st, item: 'آبار', subItem: 'تشغيل' });
         return out;
@@ -580,11 +580,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var ctx = parseRequest(log, text);
     var rule = null; for (var i = 0; i < RULES.length; i++) if (RULES[i].test(ctx.t)) { rule = RULES[i]; break; }
     var blocks = ctx.blocks.length ? ctx.blocks : [null];
-    if (!ctx.blocks.length) ctx.warnings.push('ما لقيتش رقم الفاصل — اكتب مثلاً "فاصل 20"');
+    if (!ctx.blocks.length) ctx.warnings.push('No block number found. Write it like "block 20"');
     var drafts = [];
     blocks.forEach(function (b) {
       var B = b != null ? log.blocks[b] : null;
-      if (b != null && !B) ctx.warnings.push('فاصل ' + b + ' مش موجود في اللوج');
+      if (b != null && !B) ctx.warnings.push('Block ' + b + ' is not in the log');
       var c = Object.assign({}, ctx, { b: b == null ? '…' : b, B: B });
       var list = [];
       if (rule) list = rule.build(c);
@@ -760,7 +760,7 @@ function isoToDate(s){ var p=(s||todayISO()).split('-'); return new Date(+p[0],+
 
 var DOCX='application/vnd.openxmlformats-officedocument.wordprocessingml.document', XLSX='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 function deliver(name, bytes, mime, open){
-  if (BR && BR.saveFile) { try { return BR.saveFile(name, bytesToB64(bytes), mime, !!open); } catch(e) { msg('err','ما قدرتش أحفظ الملف: '+e.message); return null; } }
+  if (BR && BR.saveFile) { try { return BR.saveFile(name, bytesToB64(bytes), mime, !!open); } catch(e) { msg('err','Could not save the file: '+e.message); return null; } }
   var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([bytes],{type:mime})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},4000); return name;
 }
 
@@ -777,7 +777,7 @@ async function init(){
   $('date').value = todayISO();
   var t = await get('tpl'); S.tpl = t ? t : b64ToBytes(TEMPLATE_B64);
   var saved = await get('log');
-  if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); return; } catch(e){ msg('err','الملف المحفوظ فيه مشكلة، ارفعه تاني.'); } }
+  if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); return; } catch(e){ msg('err','The saved log could not be read. Please upload it again.'); } }
   render();
 }
 
@@ -788,55 +788,55 @@ function render(){
   if (!has) return;
   var L=S.log;
   $('lastIr').textContent = String(L.lastNum);
-  $('sub').textContent = L.rows.length+' طلب في اللوج · '+Object.keys(L.blocks).length+' فاصل';
-  var ex=['حدادة حائط بحري فاصل 20','نجارة حائط قبلي فاصل 11 منسوب 3.207','حدادة لبشة رقة سفلية فاصل 21','صب لبشة فاصل 21','هونش فاصل 4 منسوب -2.43','خوازيق فاصل 22 P54 P61 P112'];
+  $('sub').textContent = L.rows.length+' requests in log · '+Object.keys(L.blocks).length+' blocks';
+  var ex=['wall rebar north block 20','wall formwork south block 11 level 3.207','raft bottom mesh block 21','raft pour block 21','haunch block 4 level -2.43','piles block 22 P54 P61 P112'];
   $('examples').innerHTML = ex.map(function(x){return '<button class="chip" data-ex="'+esc(x)+'">'+esc(x)+'</button>';}).join('');
   renderRecent(); renderDrafts();
-  $('info').textContent = 'اللوج: '+S.logName+' · الفورم: '+(S.tpl===null?'—':'جاهز');
+  $('info').textContent = 'Log: '+S.logName+' · Word form: '+(S.tpl===null?'—':'ready');
 }
 
 function renderRecent(){
   var rows = S.log.rows.slice(-8).reverse();
   $('recent').innerHTML = rows.map(function(r){
     var a = String(r.action||'').trim().toUpperCase();
-    return '<div class="li"><span class="mono" style="font-size:13px;font-weight:700">'+E.irNum(r.ir)+(+r.rev?'<small>-R'+r.rev+'</small>':'')+'</span><span class="d" title="'+esc(r.desc)+'">'+esc(r.desc.replace(/\s+/g,' '))+'</span><span class="row" style="gap:6px"><span class="pill '+esc(a)+'">'+esc(a||'—')+'</span><button class="ghost" style="padding:4px 10px;font-size:12px" data-reprint="'+esc(r.ir)+'|'+r.rev+'">طباعة</button></span></div>';
+    return '<div class="li"><span class="mono" style="font-size:13px;font-weight:700">'+E.irNum(r.ir)+(+r.rev?'<small>-R'+r.rev+'</small>':'')+'</span><span class="d" dir="auto" title="'+esc(r.desc)+'">'+esc(r.desc.replace(/\s+/g,' '))+'</span><span class="row" style="gap:6px"><span class="pill '+esc(a)+'">'+esc(a||'—')+'</span><button class="ghost" style="padding:4px 10px;font-size:12px" data-reprint="'+esc(r.ir)+'|'+r.rev+'">Print</button></span></div>';
   }).join('');
 }
 
 function blockOptions(sel){
-  return '<option value="">—</option>'+Object.keys(S.log.blocks).map(Number).sort(function(a,b){return a-b;}).map(function(n){return '<option value="'+n+'"'+(n===sel?' selected':'')+'>فاصل '+n+'</option>';}).join('');
+  return '<option value="">—</option>'+Object.keys(S.log.blocks).map(Number).sort(function(a,b){return a-b;}).map(function(n){return '<option value="'+n+'"'+(n===sel?' selected':'')+'>Block '+n+'</option>';}).join('');
 }
 function renderDrafts(){
   var nums = E.nextIrNumbers(S.log, S.drafts.length);
   $('drafts').innerHTML = S.drafts.map(function(d,i){
     var B=S.log.blocks[d.block];
     return '<article class="ir" data-i="'+i+'">'+
-      '<div class="ir-head"><span class="ir-no">'+esc(E.formIrNo(S.log,nums[i].n,0))+'</span><button class="danger" data-del="'+i+'" aria-label="احذف">حذف ✕</button></div>'+
+      '<div class="ir-head"><span class="ir-no">'+esc(E.formIrNo(S.log,nums[i].n,0))+'</span><button class="danger" data-del="'+i+'" aria-label="Remove">Remove ✕</button></div>'+
       '<div class="ir-body">'+
-        '<div class="field full"><label for="d-desc-'+i+'">الأعمال المطلوب فحصها</label><textarea id="d-desc-'+i+'" data-k="desc">'+esc(d.desc)+'</textarea></div>'+
-        '<div class="field"><label for="d-block-'+i+'">الفاصل</label><select id="d-block-'+i+'" data-k="block">'+blockOptions(d.block)+'</select></div>'+
+        '<div class="field full"><label for="d-desc-'+i+'">Works to be inspected</label><textarea dir="auto" id="d-desc-'+i+'" data-k="desc">'+esc(d.desc)+'</textarea></div>'+
+        '<div class="field"><label for="d-block-'+i+'">Block</label><select id="d-block-'+i+'" data-k="block">'+blockOptions(d.block)+'</select></div>'+
         '<div class="field"><label for="d-unit-'+i+'">Unit</label><select id="d-unit-'+i+'" data-k="unit">'+['Civil','Survey','Survey+Civil'].map(function(u){return '<option'+(u===d.unit?' selected':'')+'>'+u+'</option>';}).join('')+'</select></div>'+
-        '<div class="field"><label for="d-item-'+i+'">Item (اللوج)</label><input id="d-item-'+i+'" data-k="item" value="'+esc(d.item)+'"></div>'+
-        '<div class="field"><label for="d-sub-'+i+'">Sub-Item</label><input id="d-sub-'+i+'" data-k="subItem" value="'+esc(d.subItem)+'"></div>'+
-        '<div class="field full"><label for="d-fi-'+i+'">نوع العنصر (على الفورم)</label><input id="d-fi-'+i+'" data-k="formItem" value="'+esc(d.formItem)+'"></div>'+
-        '<div class="loc full">📍 '+esc(B?E.formLocation(B):'اختار الفاصل')+'</div>'+
+        '<div class="field"><label for="d-item-'+i+'">Item (log)</label><input dir="auto" id="d-item-'+i+'" data-k="item" value="'+esc(d.item)+'"></div>'+
+        '<div class="field"><label for="d-sub-'+i+'">Sub-Item</label><input dir="auto" id="d-sub-'+i+'" data-k="subItem" value="'+esc(d.subItem)+'"></div>'+
+        '<div class="field full"><label for="d-fi-'+i+'">Element type (on form)</label><input dir="auto" id="d-fi-'+i+'" data-k="formItem" value="'+esc(d.formItem)+'"></div>'+
+        '<div class="loc full" dir="auto">📍 '+(B?esc(E.formLocation(B)).replace(/(\d+\+\d+)/g,'<bdi dir="ltr">$1</bdi>'):'Choose the block')+'</div>'+
       '</div></article>';
   }).join('');
   $('bar').hidden = !S.drafts.length;
-  $('save').textContent = S.drafts.length>1 ? 'سجّل '+S.drafts.length+' طلبات في اللوج واطبع' : 'سجّل في اللوج واطبع';
+  $('save').textContent = S.drafts.length>1 ? 'Add '+S.drafts.length+' IRs to log & print' : 'Add to log & print';
 }
 
 // ---------- actions ----------
 function understand(){
-  var text=$('req').value.trim(); if(!text){ msg('warn','اكتب المطلوب الأول، مثلاً: حدادة حائط بحري فاصل 20'); return; }
+  var text=$('req').value.trim(); if(!text){ msg('warn','Type the request first, e.g. wall rebar north block 20'); return; }
   var u = E.understand(S.log, text, isoToDate($('date').value));
   $('msgs').innerHTML='';
-  if (!u.drafts.length) msg('warn','ما فهمتش نوع الشغل. جرّب تكتبه زي ما بيتكتب في اللوج، أو اختار من الاقتراحات تحت.');
+  if (!u.drafts.length) msg('warn','The type of work was not recognised. Write it the way it appears in the log, or pick a suggestion below.');
   u.warnings.forEach(function(w){ msg('warn', w, true); });
   S.drafts = S.drafts.concat(u.drafts);
   if (u.rule) u.alternatives = [];
   S.alts = u.alternatives;
-  $('alts').innerHTML = (u.alternatives.length? '<span class="small" style="width:100%">صيغ مشابهة من اللوج:</span>':'') + u.alternatives.map(function(r,i){ return '<button class="chip" data-alt="'+i+'">'+esc(r.desc.replace(/\s+/g,' ').slice(0,70))+'</button>'; }).join('');
+  $('alts').innerHTML = (u.alternatives.length? '<span class="small" style="width:100%">Similar entries from the log:</span>':'') + u.alternatives.map(function(r,i){ return '<button class="chip" dir="auto" data-alt="'+i+'">'+esc(r.desc.replace(/\s+/g,' ').slice(0,70))+'</button>'; }).join('');
   $('done').innerHTML='';
   renderDrafts();
 }
@@ -844,7 +844,7 @@ function understand(){
 async function save(){
   if (!S.drafts.length) return;
   var bad = S.drafts.filter(function(d){ return d.block==null || d.block==='' || /…/.test(d.desc); });
-  if (bad.length){ msg('err','فيه طلب ناقص (الفاصل أو قيمة مكتوب مكانها …). كمّله الأول.'); return; }
+  if (bad.length){ msg('err','One IR is incomplete (missing block, or a value shown as …). Complete it first.'); return; }
   $('save').disabled = true;
   try{
     var date = isoToDate($('date').value);
@@ -861,10 +861,10 @@ async function save(){
     deliver(S.logName, bytes, XLSX, false);
     deliver(fname, form, DOCX, true);
     S.drafts=[]; $('req').value=''; $('alts').innerHTML=''; $('msgs').innerHTML='';
-    $('done').innerHTML = '<div class="notice good">اتسجّل '+(recs.length===1?'IR رقم ':'من ')+'<span class="mono">'+recs[0].n+(recs.length>1?' → '+recs[recs.length-1].n:'')+'</span> في اللوج، والفورم جاهز للطباعة.'+
-      '<div class="row" style="margin-top:8px"><button class="ghost" id="reopen">افتح الفورم تاني</button></div></div>';
+    $('done').innerHTML = '<div class="notice good">'+(recs.length===1?'IR ':'IRs ')+'<span class="mono">'+recs[0].n+(recs.length>1?' → '+recs[recs.length-1].n:'')+'</span> added to the log. The form is ready to print.'+
+      '<div class="row" style="margin-top:8px"><button class="ghost" id="reopen">Open the form again</button></div></div>';
     renderDrafts();
-  } catch(e){ msg('err','حصلت مشكلة أثناء التسجيل: '+e.message); }
+  } catch(e){ msg('err','Could not add to the log: '+e.message); }
   $('save').disabled = false;
 }
 
@@ -875,12 +875,12 @@ function findRows(no){
 async function reprint(irStr, rev){
   var rows = S.log.rows.filter(function(r){ return r.ir===irStr && String(r.rev)===String(rev); });
   var r = rows[rows.length-1] || S.log.rows.filter(function(x){return x.ir===irStr;}).pop();
-  if(!r){ msg('err','الرقم ده مش موجود في اللوج'); return; }
+  if(!r){ msg('err','This IR number is not in the log'); return; }
   var form = await E.buildForm(S.tpl, rows.length>1 ? rows.map(function(x){return E.recordFromRow(S.log,x);}) : [E.recordFromRow(S.log, r)]);
   deliver(E.formIrNo(S.log,E.irNum(r.ir),r.rev)+'.docx', form, DOCX, true);
 }
 async function resubmit(no){
-  var rows = findRows(no); if(!rows.length){ msg('err','الرقم ده مش موجود في اللوج'); return; }
+  var rows = findRows(no); if(!rows.length){ msg('err','This IR number is not in the log'); return; }
   var last = rows[rows.length-1], rev = Math.max.apply(null, rows.map(function(r){return +r.rev||0;})) + 1;
   var B = S.log.blocks[E.blockNum(last.block)];
   var rec = { n:E.irNum(last.ir), ir:last.ir, rev:rev, sub:'L', unit:last.unit, blockLabel:last.block, loc:last.loc, from:last.from, to:last.to, desc:last.desc, item:last.item, subItem:last.subItem,
@@ -892,7 +892,7 @@ async function resubmit(no){
   await useLog(bytes, S.logName, true);
   deliver(S.logName, bytes, XLSX, false);
   deliver(rec.formIr+'.docx', await E.buildForm(S.tpl,[rec]), DOCX, true);
-  msg('good','اتسجّل '+rec.formIr+' (المرة رقم '+(rev+1)+') في اللوج.');
+  msg('good',rec.formIr+' (submission '+(rev+1)+') added to the log.');
 }
 
 // ---------- events ----------
@@ -907,15 +907,15 @@ document.addEventListener('click', function(ev){
   if (t.id==='save') save();
   if (t.id==='clear'){ S.drafts=[]; $('alts').innerHTML=''; $('msgs').innerHTML=''; renderDrafts(); }
   if (t.id==='reopen' && S.lastFiles) deliver(S.lastFiles.fname, S.lastFiles.form, DOCX, true);
-  if (t.id==='exportLog') { deliver(S.logName, S.logBytes, XLSX, false); msg('good','اتحفظت نسخة من اللوج: '+S.logName); }
-  if (t.id==='rePrint'){ var rows=findRows($('reNo').value); if(!rows.length) msg('err','الرقم ده مش موجود في اللوج'); else { var r2=rows[rows.length-1]; reprint(r2.ir, r2.rev); } }
-  if (t.id==='reSubmit'){ var no=$('reNo').value; if(!findRows(no).length){ msg('err','الرقم ده مش موجود في اللوج'); return; }
-    $('confirmBox').innerHTML='<div class="notice warn">هيتضاف سطر جديد بنفس رقم '+esc(no)+' و Rev أعلى. متأكد؟ <button class="ghost" id="yesRe">أيوه سجّل</button> <button class="ghost" id="noRe">لأ</button></div>'; }
+  if (t.id==='exportLog') { deliver(S.logName, S.logBytes, XLSX, false); msg('good','Log copy saved: '+S.logName); }
+  if (t.id==='rePrint'){ var rows=findRows($('reNo').value); if(!rows.length) msg('err','This IR number is not in the log'); else { var r2=rows[rows.length-1]; reprint(r2.ir, r2.rev); } }
+  if (t.id==='reSubmit'){ var no=$('reNo').value; if(!findRows(no).length){ msg('err','This IR number is not in the log'); return; }
+    $('confirmBox').innerHTML='<div class="notice warn">A new row will be added with IR '+esc(no)+' and the next Rev. Continue? <button class="ghost" id="yesRe">Yes, add it</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
   if (t.id==='yesRe'){ $('confirmBox').innerHTML=''; resubmit($('reNo').value); }
   if (t.id==='noRe'){ $('confirmBox').innerHTML=''; }
-  if (t.id==='undo'){ $('confirmBox').innerHTML='<div class="notice warn">هيرجع اللوج زي ما كان قبل آخر تسجيل. متأكد؟ <button class="ghost" id="yesUndo">أيوه</button> <button class="ghost" id="noRe">لأ</button></div>'; }
-  if (t.id==='yesUndo'){ $('confirmBox').innerHTML=''; get('logPrev').then(function(p){ if(!p||!p.bytes){ msg('warn','مفيش تسجيل أتراجع عنه.'); return; }
-      return useLog(p.bytes, p.name, true).then(function(){ put('logPrev', null); deliver(S.logName, S.logBytes, XLSX, false); msg('good','رجعت اللوج لآخر IR رقم '+S.log.lastNum+'.'); }); }); }
+  if (t.id==='undo'){ $('confirmBox').innerHTML='<div class="notice warn">The log will go back to how it was before the last entry. Continue? <button class="ghost" id="yesUndo">Yes, undo</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
+  if (t.id==='yesUndo'){ $('confirmBox').innerHTML=''; get('logPrev').then(function(p){ if(!p||!p.bytes){ msg('warn','There is nothing to undo.'); return; }
+      return useLog(p.bytes, p.name, true).then(function(){ put('logPrev', null); deliver(S.logName, S.logBytes, XLSX, false); msg('good','Undone. Last IR in the log is now '+S.log.lastNum+'.'); }); }); }
 });
 document.addEventListener('input', function(ev){
   var el=ev.target, card=el.closest('.ir'); if(!card||!el.dataset.k) return;
@@ -927,8 +927,8 @@ document.addEventListener('change', function(ev){ if(ev.target.dataset && ev.tar
 $('req').addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); understand(); } });
 
 function readFile(input, cb){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ cb(new Uint8Array(r.result), f.name); input.value=''; }; r.readAsArrayBuffer(f); }
-['logFile','logFile2'].forEach(function(id){ $(id).addEventListener('change', function(){ readFile(this, function(b,n){ useLog(b,n,true).then(function(){ msg('good','اتقرا اللوج: '+S.log.rows.length+' طلب، آخر IR رقم '+S.log.lastNum); }).catch(function(e){ msg('err','الملف ده مش لوج IR مفهوم: '+e.message); render(); }); }); }); });
-$('tplFile').addEventListener('change', function(){ readFile(this, function(b){ S.tpl=b; put('tpl', b); msg('good','اتغيّر فورم الـ Word.'); render(); }); });
+['logFile','logFile2'].forEach(function(id){ $(id).addEventListener('change', function(){ readFile(this, function(b,n){ useLog(b,n,true).then(function(){ msg('good','Log loaded: '+S.log.rows.length+' requests, last IR '+S.log.lastNum); }).catch(function(e){ msg('err','This file is not a readable IR log: '+e.message); render(); }); }); }); });
+$('tplFile').addEventListener('change', function(){ readFile(this, function(b){ S.tpl=b; put('tpl', b); msg('good','Word form replaced.'); render(); }); });
 
 init();
 })();

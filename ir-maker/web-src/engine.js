@@ -116,7 +116,7 @@
     var ss = ssPath && zip.file(ssPath) ? sharedStringsFrom(await zip.file(ssPath).async('string')) : [];
     var sheetXml = await zip.file(sheetPath).async('string');
     var raw = parseRows(sheetXml, ss);
-    if (!raw.length) throw new Error('الشيت فاضي');
+    if (!raw.length) throw new Error('The sheet is empty');
     var header = raw[0].cells, col = {};
     header.forEach(function (h, i) {
       var k = headKey(h);
@@ -207,12 +207,12 @@
 
   // ---------- understanding a request ----------
   var ORD = [
-    { k: ['اولي', 'اول', '1', 'الاولي', 'الاول'], f: 'الاولى', fx: 'اولى' },
-    { k: ['ثانيه', 'تانيه', 'ثاني', 'تاني', '2'], f: 'الثانية', fx: 'ثانية' },
-    { k: ['ثالثه', 'تالته', 'ثالث', 'تالت', '3'], f: 'الثالثة', fx: 'ثالثة' },
-    { k: ['رابعه', 'رابع', '4'], f: 'الرابعة', fx: 'رابعة' },
-    { k: ['خامسه', 'خامس', '5'], f: 'الخامسة', fx: 'خامسة' },
-    { k: ['سادسه', 'سادس', '6'], f: 'السادسة', fx: 'سادسة' }
+    { k: ['اولي', 'اول', '1', 'الاولي', 'الاول', 'first', '1st'], f: 'الاولى', fx: 'اولى' },
+    { k: ['ثانيه', 'تانيه', 'ثاني', 'تاني', '2', 'second', '2nd'], f: 'الثانية', fx: 'ثانية' },
+    { k: ['ثالثه', 'تالته', 'ثالث', 'تالت', '3', 'third', '3rd'], f: 'الثالثة', fx: 'ثالثة' },
+    { k: ['رابعه', 'رابع', '4', 'fourth', '4th'], f: 'الرابعة', fx: 'رابعة' },
+    { k: ['خامسه', 'خامس', '5', 'fifth', '5th'], f: 'الخامسة', fx: 'خامسة' },
+    { k: ['سادسه', 'سادس', '6', 'sixth', '6th'], f: 'السادسة', fx: 'سادسة' }
   ];
   var _nc = {};
   function has(t, words) { for (var i = 0; i < words.length; i++) { var w = _nc[words[i]] || (_nc[words[i]] = norm(words[i])); if (t.indexOf(w) >= 0) return true; } return false; }
@@ -233,7 +233,7 @@
     var tNoSt = tNoP.replace(/(\d)\s*\+\s*(\d{3})|(\d{3})\s*\+\s*(\d)/g, ' ');
 
     // level (منسوب)
-    var lm = tNoSt.match(/منسوب\s*(-?\s*\d+(?:\.\d+)?\s*-?)/) || tNoSt.match(/(-?\d+\.\d+-?)/);
+    var lm = tNoSt.match(/(?:منسوب|level|lvl|el\.?)\s*(-?\s*\d+(?:\.\d+)?\s*-?)/) || tNoSt.match(/(-?\d+\.\d+-?)/);
     if (lm) {
       var lv = lm[1].replace(/\s/g, ''); var neg = /-/.test(lv); var num = lv.replace(/-/g, '');
       ctx.level = { num: num, neg: neg };
@@ -241,10 +241,10 @@
     var tNoLv = lm ? tNoSt.replace(lm[0], ' ') : tNoSt;
 
     // count (عدد N)
-    var cm = tNoLv.match(/عدد\s*(\d+)/); if (cm) ctx.count = +cm[1];
+    var cm = (tNoLv.match(/(?:عدد|count|no\.? of)\s*(\d+)/) || tNoLv.match(/(\d+)\s*wells?/)); if (cm) ctx.count = +cm[1];
 
     // blocks: "فاصل 5" / "فواصل 5 و 9 و 11" / "ف5" / "block 5"
-    var bre = /(?:فواصل|فاصل|الفاصل|لفاصل|بلوك|block|blk|\bف)\s*(?:رقم|no\.?|#)?\s*(\d{1,2}(?:\s*(?:و|,|-|،|&|and)\s*\d{1,2})*)/g, bm;
+    var bre = /(?:فواصل|فاصل|الفاصل|لفاصل|بلوك|blocks|block|blk|\bف)\s*(?:رقم|no\.?|#)?\s*(\d{1,2}(?:\s*(?:و|,|-|،|&|and)\s*\d{1,2})*)/g, bm;
     while ((bm = bre.exec(tNoLv))) bm[1].split(/[^\d]+/).filter(Boolean).forEach(function (x) { if (ctx.blocks.indexOf(+x) < 0) ctx.blocks.push(+x); });
     stations.forEach(function (st) { var B = blockForStation(log, st); if (B && ctx.blocks.indexOf(B.n) < 0) ctx.blocks.push(B.n); });
     if (!ctx.blocks.length) {
@@ -253,22 +253,22 @@
     }
 
     // sides / layers / positions
-    if (has(t, ['بحري', 'بحرى', 'شمال'])) ctx.sides.push('البحرى');
-    if (has(t, ['قبلي', 'قبلى', 'جنوب'])) ctx.sides.push('القبلى');
-    if (has(t, ['سفلي', 'سفليه', 'تحتانيه', 'bottom'])) ctx.layers.push('السفلية');
-    if (has(t, ['علوي', 'علويه', 'فوقانيه', 'top'])) ctx.layers.push('العلوية');
-    ctx.pos = has(t, ['اسفل', 'تحت العزل', 'تحت']) ? 'اسفل' : (has(t, ['اعلي', 'فوق']) ? 'اعلى' : null);
+    if (has(t, ['بحري', 'بحرى', 'شمال', 'north', 'sea side'])) ctx.sides.push('البحرى');
+    if (has(t, ['قبلي', 'قبلى', 'جنوب', 'south'])) ctx.sides.push('القبلى');
+    if (has(t, ['سفلي', 'سفليه', 'تحتانيه', 'bottom', 'lower'])) ctx.layers.push('السفلية');
+    if (has(t, ['علوي', 'علويه', 'فوقانيه', 'top', 'upper'])) ctx.layers.push('العلوية');
+    ctx.pos = has(t, ['اسفل', 'تحت العزل', 'تحت', 'below', 'under']) ? 'اسفل' : (has(t, ['اعلي', 'فوق', 'above', 'over']) ? 'اعلى' : null);
 
     // operations
     var o = ctx.ops;
-    o.rebar = has(t, ['حداده', 'حديد', 'تسليح', 'rebar', 'رقه']);
-    o.form = has(t, ['نجاره', 'شده', 'شدات', 'formwork']);
-    o.pour = /(^|\s|ل|و|ب)صب(\s|$)/.test(t) || has(t, ['اذن صب', 'ازن صب', 'pour', 'casting']);
-    o.inspect = has(t, ['معاينه', 'استلام', 'فحص']);
-    o.survey = has(t, ['احداثيات', 'مساحه', 'survey', 'مناسيب']);
-    o.plt = has(t, ['plt', 'تحميل', 'لوحي']);
-    o.operate = has(t, ['تشغيل']);
-    o.drill = has(t, ['حفر ابار', 'حفر الابار']);
+    o.rebar = has(t, ['حداده', 'حديد', 'تسليح', 'rebar', 'reinforcement', 'steel', 'رقه', 'mesh']);
+    o.form = has(t, ['نجاره', 'شده', 'شدات', 'formwork', 'shuttering', 'form ']);
+    o.pour = /(^|\s|ل|و|ب)صب(\s|$)/.test(t) || has(t, ['اذن صب', 'ازن صب', 'pour', 'casting', 'concreting']);
+    o.inspect = has(t, ['معاينه', 'استلام', 'فحص', 'inspection', 'inspect']);
+    o.survey = has(t, ['احداثيات', 'مساحه', 'survey', 'coordinates', 'مناسيب', 'levels']);
+    o.plt = has(t, ['plt', 'تحميل', 'لوحي', 'plate load']);
+    o.operate = has(t, ['تشغيل', 'operation', 'operating']);
+    o.drill = has(t, ['حفر ابار', 'حفر الابار', 'drilling']);
     return ctx;
   }
 
@@ -291,7 +291,7 @@
     { id: 'wall', test: function (t) { return has(t, ['حائط', 'حوائط', 'حيطه', 'حيطان', 'جدار', 'wall']); },
       build: function (c) {
         var sides = c.sides.length ? c.sides : ['البحرى', 'القبلى'], out = [], o = c.ops, any = o.rebar || o.form || o.pour;
-        if (!c.sides.length) c.warnings.push('ما حددتش الحائط (بحري/قبلي) — طلعتلك الاتنين');
+        if (!c.sides.length) c.warnings.push('Wall side not given (north/south), so both were added');
         sides.forEach(function (s) {
           if (o.rebar || !any) out.push({ desc: 'فحص واستلام حدادة الحائط ' + s + ' لفاصل ' + c.b, item: 'حدادة الحوائط', subItem: 'فحص واستلام' });
           if (o.form) out.push({ desc: 'فحص واستلام نجارة الحائط ' + s + ' لفاصل ' + c.b + (c.level ? '\nعلى منسوب  ' + lvl(c, 'trail') : ''), item: 'حدادة الحوائط', subItem: 'فحص واستلام' });
@@ -304,15 +304,15 @@
         var out = [];
         if (!c.ops.pour || c.ops.inspect || c.ops.form) out.push({ desc: 'فحص واستلام الهونش  على منسوب ' + (lvl(c, 'lead') || '…'), item: 'الهونش', subItem: 'فحص واستلام' });
         if (c.ops.pour) out.push({ desc: 'اذن صب خرسانة الهونش', item: 'الهونش', subItem: 'ازن صب' });
-        if (!c.level && out.some(function (x) { return /منسوب/.test(x.desc); })) c.warnings.push('اكتب منسوب الهونش (مثلاً: منسوب -2.47)');
+        if (!c.level && out.some(function (x) { return /منسوب/.test(x.desc); })) c.warnings.push('Add the haunch level, e.g. level -2.47');
         return out;
       } },
-    { id: 'tendons', test: function (t) { return has(t, ['اوتار', 'وتر ', 'الوتر']); },
+    { id: 'tendons', test: function (t) { return has(t, ['اوتار', 'وتر ', 'الوتر', 'tendon', 'waterstop', 'water stop']); },
       build: function (c) { return [{ desc: 'استلام معاينة الاوتار فاصل ' + c.b, item: 'الاوتار', subItem: 'معاينة' }]; } },
     { id: 'piles', test: function (t) { return has(t, ['خوازيق', 'خازوق', 'cmc', 'pile']); },
       build: function (c) {
         var list = c.piles, k = list.length || c.count || 0, l = list.length ? list.join('-') + '-' : '…';
-        if (!list.length) c.warnings.push('اكتب أرقام الخوازيق (مثلاً: P24 P25 P26)');
+        if (!list.length) c.warnings.push('Add the pile numbers, e.g. P24 P25 P26');
         var out = [];
         if (c.ops.survey) out.push({ desc: 'تسليم احداثيات عدد ' + k + ' خازوق CMC ارقام ( ' + l + ' )', item: 'خوازيق', subItem: 'خوازيق', unit: 'Survey' });
         if (!c.ops.survey || /مدني|civil/.test(c.t)) out.push({ desc: 'طلب فحص واستلام اعمال مدنية عدد ' + k + ' خازوق CMC ارقام ( ' + l + ' )', item: 'خوازيق', subItem: 'خوازيق', unit: 'Civil' });
@@ -326,7 +326,7 @@
         if (o.pour || !any) out.push({ desc: 'إذن صب الخرسانة العاديةGFRP بسمك 60 سم', item: 'لبشه عاديه', subItem: 'ازن صب' });
         return out;
       } },
-    { id: 'insulation', test: function (t) { return has(t, ['عزل', 'جيوتكستيل', 'جيوتكستايل', 'pvc', 'geotext']) && !has(t, ['نضافه', 'عاديه', 'فرشه']); },
+    { id: 'insulation', test: function (t) { return has(t, ['عزل', 'جيوتكستيل', 'جيوتكستايل', 'pvc', 'geotext', 'insulation', 'waterproof']) && !has(t, ['نضافه', 'عاديه', 'فرشه', 'blinding', 'lean']); },
       build: function (c) {
         var t = c.t, g = has(t, ['جيوتكستيل', 'جيوتكستايل', 'geotext']), p = /pvc/.test(t), first = has(t, ['اولي', 'اول', 'تحت']), second = has(t, ['ثانيه', 'تانيه', 'اعلي', 'فوق']);
         var out = [], all = !g && !p;
@@ -335,31 +335,31 @@
         if (all || (g && second)) out.push({ desc: 'فرد الجيوتكستيل للطبقة الثانية أعلى الـ PVC', item: 'عزل تحت اللبشة', subItem: 'فرد' });
         return out;
       } },
-    { id: 'blinding', test: function (t) { return has(t, ['لبشه عاديه', 'لبشه العاديه', 'نضافه', 'فرشه', 'عاديه']) ; },
+    { id: 'blinding', test: function (t) { return has(t, ['لبشه عاديه', 'لبشه العاديه', 'نضافه', 'فرشه', 'عاديه', 'blinding', 'lean concrete', 'plain concrete']) ; },
       build: function (c) {
         var pos = c.pos || 'اسفل', o = c.ops, any = o.form || o.pour, out = [];
-        if (!c.pos) c.warnings.push('افترضت فرشة النضافة أسفل العزل — غيّرها لو فوق العزل');
+        if (!c.pos) c.warnings.push('Blinding assumed below the insulation. Change it if it is above');
         if (o.form || !any) out.push({ desc: 'فحص واستلام  حدود ومناسيب نجارة وصب اللبشة العادية علي منسوب ' + (lvl(c, 'trail') || '…') + '  (فرشة النضافة ' + pos + ' العزل) بسمك 10 سم', item: 'لبشه عاديه', subItem: 'نجاره' });
         if (o.pour) out.push({ desc: 'إذن صب الخرسانة العادية حمايه ' + pos + ' العزل بسمك 10سم', item: 'لبشه عاديه', subItem: 'ازن صب' });
         if (has(c.t, ['سطح'])) out.push({ desc: 'تسليم معاينة سطح الخرسانة بعد الصب وقبل اعمال العزل', item: 'لبشه عاديه', subItem: 'معاينة' });
         return out;
       } },
-    { id: 'raft', test: function (t) { return has(t, ['لبشه', 'رقه', 'raft']); },
+    { id: 'raft', test: function (t) { return has(t, ['لبشه', 'رقه', 'raft', 'slab']); },
       build: function (c) {
         var o = c.ops, any = o.rebar || o.form || o.pour, out = [];
         if (o.rebar || !any) {
           var layers = c.layers.length ? c.layers : ['السفلية', 'العلوية'];
-          if (!c.layers.length && o.rebar) c.warnings.push('ما حددتش الرقة (سفلية/علوية) — طلعتلك الاتنين');
+          if (!c.layers.length && o.rebar) c.warnings.push('Mesh not given (bottom/top), so both were added');
           layers.forEach(function (L) { out.push({ desc: 'فحص واستلام حدادة الرقة ' + L + ' للحديد فاصل ' + c.b, item: 'فحص الرقة للبشة المسلحة', subItem: 'حديد' }); });
         }
         if (o.form) out.push({ desc: 'فحص واستلام نجارة اللبشة المسلحة  فاصل ' + c.b, item: 'فحص النجارة للبشة المسلحة', subItem: 'نجارة' });
         if (o.pour) out.push({ desc: 'اذن صب اللبشة المسلحة  فاصل  ' + c.b + ' ', item: 'لبشة مسلحة', subItem: 'ازن صب' });
         return out;
       } },
-    { id: 'replacement', test: function (t) { return has(t, ['احلال', 'طبقه']); },
+    { id: 'replacement', test: function (t) { return has(t, ['احلال', 'طبقه', 'replacement', 'layer']); },
       build: function (c) {
         var ords = ordFor(c), out = [];
-        if (!ords.length) { c.warnings.push('اكتب رقم طبقة الإحلال (مثلاً: طبقة تالتة)'); ords = [ORD[0]]; }
+        if (!ords.length) { c.warnings.push('Add the replacement layer number, e.g. layer 3'); ords = [ORD[0]]; }
         var L = lvl(c, 'trail') || '…';
         ords.forEach(function (O) {
           if (c.ops.plt) out.push({ desc: 'تسليم طلب اعتماد نتائج واختبار تجربةالتحميل اللوحى( PLT) للطبقه ' + O.f.replace(/^ال/, '') + ' من الاحلال وطبقة ' + O.fx + '  احلال السن بعرض 30.20 علي منسوب ' + L, item: 'إحلال', subItem: 'طبقة ' + O.fx + ' PLT' });
@@ -367,17 +367,17 @@
         });
         return out;
       } },
-    { id: 'excavation', test: function (t) { return has(t, ['قاع']); },
+    { id: 'excavation', test: function (t) { return has(t, ['قاع', 'excavation', 'formation']); },
       build: function (c) {
         var out = [];
         if (c.ops.survey || !c.ops.inspect) out.push({ desc: 'تسليم  مناسيب واحداثيات وعرض  قاع حفر', item: 'قاع حفر', subItem: 'عمق' });
         if (c.ops.inspect || has(c.t, ['معاينه'])) out.push({ desc: 'تسليم معاينة قاع الحفر', item: 'قاع حفر', subItem: 'معاينة' });
         return out;
       } },
-    { id: 'wells', test: function (t) { return has(t, ['ابار', 'بير', 'بئر']); },
+    { id: 'wells', test: function (t) { return has(t, ['ابار', 'بير', 'بئر', 'well', 'dewatering']); },
       build: function (c) {
         var B = c.B, k = c.count || '…', st = B && B.from != null ? ' من محطة ' + stationFormStr(B.from) + ' الي ' + stationFormStr(B.to) : '', out = [];
-        if (!c.count) c.warnings.push('اكتب عدد الآبار (مثلاً: عدد 6)');
+        if (!c.count) c.warnings.push('Add the number of wells, e.g. 6 wells');
         if (!c.ops.operate || c.ops.drill) out.push({ desc: 'تسليم حفر ابار عدد ' + k + ' لفاصل رقم ' + c.b + st, item: 'آبار', subItem: 'عمق' });
         if (c.ops.operate) out.push({ desc: 'محضر تشغيل ابار عدد ' + k + ' لفاصل رقم ' + c.b + st, item: 'آبار', subItem: 'تشغيل' });
         return out;
@@ -416,11 +416,11 @@
     var ctx = parseRequest(log, text);
     var rule = null; for (var i = 0; i < RULES.length; i++) if (RULES[i].test(ctx.t)) { rule = RULES[i]; break; }
     var blocks = ctx.blocks.length ? ctx.blocks : [null];
-    if (!ctx.blocks.length) ctx.warnings.push('ما لقيتش رقم الفاصل — اكتب مثلاً "فاصل 20"');
+    if (!ctx.blocks.length) ctx.warnings.push('No block number found. Write it like "block 20"');
     var drafts = [];
     blocks.forEach(function (b) {
       var B = b != null ? log.blocks[b] : null;
-      if (b != null && !B) ctx.warnings.push('فاصل ' + b + ' مش موجود في اللوج');
+      if (b != null && !B) ctx.warnings.push('Block ' + b + ' is not in the log');
       var c = Object.assign({}, ctx, { b: b == null ? '…' : b, B: B });
       var list = [];
       if (rule) list = rule.build(c);

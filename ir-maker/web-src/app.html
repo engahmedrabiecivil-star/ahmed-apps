@@ -6,7 +6,7 @@
   --paper:#f6f7f9; --sheet:#ffffff; --ink:#1b2333; --muted:#5d6678; --line:#d9dde5;
   --stamp:#2f3f9e; --stamp-soft:#e7eafb; --amber:#a35a00; --amber-soft:#fff3df;
   --ok:#1f7a4d; --ok-soft:#e2f4ea; --bad:#b3261e; --bad-soft:#fde8e6;
-  --f-body:"Noto Sans Arabic","Segoe UI",Tahoma,"Dubai",system-ui,sans-serif;
+  --f-body:system-ui,"Roboto","Segoe UI","Noto Sans Arabic",Tahoma,sans-serif;
   --f-mono:ui-monospace,"Roboto Mono","Consolas",monospace;
   --r:10px;
 }
@@ -21,7 +21,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--paper);color:var(--ink)}
-body{font-family:var(--f-body);font-size:15px;line-height:1.6;margin:0;direction:rtl;
+body{font-family:var(--f-body);font-size:15px;line-height:1.6;margin:0;direction:ltr;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 120px}
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 .credit{padding-top:10px;text-align:center;font-size:12px;letter-spacing:.04em;color:var(--stamp);font-weight:600;direction:ltr}
@@ -87,26 +87,26 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
   <div class="credit">Developed by Eng. Ahmed Rabie</div>
   <header>
     <div>
-      <h1>طلبات الفحص — U-Section</h1>
-      <div class="sub" id="sub">قطاع القناة المستطيل · St 8+500 → 9+500</div>
+      <h1>IR Maker — U-Section</h1>
+      <div class="sub" id="sub">Rectangular channel · St 8+500 → 9+500</div>
     </div>
-    <div class="counter" id="counter" hidden><span>آخر IR في اللوج</span><b id="lastIr">—</b></div>
+    <div class="counter" id="counter" hidden><span>Last IR in log</span><b id="lastIr">—</b></div>
   </header>
 
   <div id="setup" class="setup" hidden>
-    <strong>ارفع ملف الـ IR Log</strong>
-    <div class="small">البرنامج بيقرأ اللوج مرة واحدة ويحفظه جوّه التليفون. بعد كده كل IR جديد بيتضاف عليه تلقائي.</div>
-    <label class="file-btn primary"><span>اختار ملف Excel</span><input id="logFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+    <strong>Upload the IR Log</strong>
+    <div class="small">The app reads the log once and keeps it on this phone. Every new IR is then added to it automatically.</div>
+    <label class="file-btn primary"><span>Choose Excel file</span><input id="logFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
   </div>
 
   <div id="main" style="display:none">
     <section>
-      <label class="label" for="req">اكتب المطلوب</label>
-      <textarea id="req" placeholder="مثلاً: حدادة ونجارة حائط بحري فاصل 20"></textarea>
+      <label class="label" for="req">What needs inspection?</label>
+      <textarea id="req" dir="auto" placeholder="e.g. wall rebar and formwork north block 20"></textarea>
       <div class="chips" id="examples"></div>
       <div class="row">
-        <div class="field" style="flex:1"><label for="date">تاريخ طلب الفحص</label><input id="date" type="date"></div>
-        <button class="primary" id="go" style="align-self:flex-end">جهّز الـ IR</button>
+        <div class="field" style="flex:1"><label for="date">Submission date</label><input id="date" type="date"></div>
+        <button class="primary" id="go" style="align-self:flex-end">Prepare IR</button>
       </div>
     </section>
 
@@ -116,18 +116,18 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
     <div id="done"></div>
 
     <details id="tools">
-      <summary>أدوات اللوج</summary>
+      <summary>Log tools</summary>
       <div class="inner">
-        <div class="field"><label for="reNo">طباعة IR قديم أو إعادة تقديمه (رقم الـ IR)</label>
-          <div class="row"><input id="reNo" class="mono" inputmode="numeric" placeholder="558" style="flex:1"><button class="ghost" id="rePrint">طباعة</button><button class="ghost" id="reSubmit">إعادة تقديم (Rev جديد)</button></div>
+        <div class="field"><label for="reNo">Reprint or resubmit an existing IR (IR number)</label>
+          <div class="row"><input id="reNo" class="mono" inputmode="numeric" placeholder="558" style="flex:1"><button class="ghost" id="rePrint">Print</button><button class="ghost" id="reSubmit">Resubmit (new Rev)</button></div>
         </div>
         <div class="row">
-          <button class="ghost" id="exportLog">حفظ نسخة من اللوج</button>
-          <button class="ghost" id="undo">تراجع عن آخر تسجيل</button>
+          <button class="ghost" id="exportLog">Save a copy of the log</button>
+          <button class="ghost" id="undo">Undo last entry</button>
         </div>
         <div class="row">
-          <label class="file-btn ghost"><span>تغيير ملف اللوج</span><input id="logFile2" type="file" accept=".xlsx"></label>
-          <label class="file-btn ghost"><span>تغيير فورم الـ Word</span><input id="tplFile" type="file" accept=".docx"></label>
+          <label class="file-btn ghost"><span>Replace IR log</span><input id="logFile2" type="file" accept=".xlsx"></label>
+          <label class="file-btn ghost"><span>Replace Word form</span><input id="tplFile" type="file" accept=".docx"></label>
         </div>
         <div id="confirmBox"></div>
         <div class="small" id="info"></div>
@@ -135,15 +135,15 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
     </details>
 
     <section>
-      <div class="label">آخر الطلبات في اللوج</div>
+      <div class="label">Latest requests in the log</div>
       <div class="list" id="recent" style="background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);padding:0 12px"></div>
     </section>
   </div>
 </div>
 
 <div class="bar" id="bar" hidden><div class="in">
-  <button class="primary" id="save">سجّل في اللوج واطبع</button>
-  <button class="ghost" id="clear">مسح</button>
+  <button class="primary" id="save">Add to log &amp; print</button>
+  <button class="ghost" id="clear">Clear</button>
 </div></div>
 
 <script>/*__JSZIP__*/</script>
@@ -170,7 +170,7 @@ function isoToDate(s){ var p=(s||todayISO()).split('-'); return new Date(+p[0],+
 
 var DOCX='application/vnd.openxmlformats-officedocument.wordprocessingml.document', XLSX='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 function deliver(name, bytes, mime, open){
-  if (BR && BR.saveFile) { try { return BR.saveFile(name, bytesToB64(bytes), mime, !!open); } catch(e) { msg('err','ما قدرتش أحفظ الملف: '+e.message); return null; } }
+  if (BR && BR.saveFile) { try { return BR.saveFile(name, bytesToB64(bytes), mime, !!open); } catch(e) { msg('err','Could not save the file: '+e.message); return null; } }
   var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([bytes],{type:mime})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},4000); return name;
 }
 
@@ -187,7 +187,7 @@ async function init(){
   $('date').value = todayISO();
   var t = await get('tpl'); S.tpl = t ? t : b64ToBytes(TEMPLATE_B64);
   var saved = await get('log');
-  if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); return; } catch(e){ msg('err','الملف المحفوظ فيه مشكلة، ارفعه تاني.'); } }
+  if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); return; } catch(e){ msg('err','The saved log could not be read. Please upload it again.'); } }
   render();
 }
 
@@ -198,55 +198,55 @@ function render(){
   if (!has) return;
   var L=S.log;
   $('lastIr').textContent = String(L.lastNum);
-  $('sub').textContent = L.rows.length+' طلب في اللوج · '+Object.keys(L.blocks).length+' فاصل';
-  var ex=['حدادة حائط بحري فاصل 20','نجارة حائط قبلي فاصل 11 منسوب 3.207','حدادة لبشة رقة سفلية فاصل 21','صب لبشة فاصل 21','هونش فاصل 4 منسوب -2.43','خوازيق فاصل 22 P54 P61 P112'];
+  $('sub').textContent = L.rows.length+' requests in log · '+Object.keys(L.blocks).length+' blocks';
+  var ex=['wall rebar north block 20','wall formwork south block 11 level 3.207','raft bottom mesh block 21','raft pour block 21','haunch block 4 level -2.43','piles block 22 P54 P61 P112'];
   $('examples').innerHTML = ex.map(function(x){return '<button class="chip" data-ex="'+esc(x)+'">'+esc(x)+'</button>';}).join('');
   renderRecent(); renderDrafts();
-  $('info').textContent = 'اللوج: '+S.logName+' · الفورم: '+(S.tpl===null?'—':'جاهز');
+  $('info').textContent = 'Log: '+S.logName+' · Word form: '+(S.tpl===null?'—':'ready');
 }
 
 function renderRecent(){
   var rows = S.log.rows.slice(-8).reverse();
   $('recent').innerHTML = rows.map(function(r){
     var a = String(r.action||'').trim().toUpperCase();
-    return '<div class="li"><span class="mono" style="font-size:13px;font-weight:700">'+E.irNum(r.ir)+(+r.rev?'<small>-R'+r.rev+'</small>':'')+'</span><span class="d" title="'+esc(r.desc)+'">'+esc(r.desc.replace(/\s+/g,' '))+'</span><span class="row" style="gap:6px"><span class="pill '+esc(a)+'">'+esc(a||'—')+'</span><button class="ghost" style="padding:4px 10px;font-size:12px" data-reprint="'+esc(r.ir)+'|'+r.rev+'">طباعة</button></span></div>';
+    return '<div class="li"><span class="mono" style="font-size:13px;font-weight:700">'+E.irNum(r.ir)+(+r.rev?'<small>-R'+r.rev+'</small>':'')+'</span><span class="d" dir="auto" title="'+esc(r.desc)+'">'+esc(r.desc.replace(/\s+/g,' '))+'</span><span class="row" style="gap:6px"><span class="pill '+esc(a)+'">'+esc(a||'—')+'</span><button class="ghost" style="padding:4px 10px;font-size:12px" data-reprint="'+esc(r.ir)+'|'+r.rev+'">Print</button></span></div>';
   }).join('');
 }
 
 function blockOptions(sel){
-  return '<option value="">—</option>'+Object.keys(S.log.blocks).map(Number).sort(function(a,b){return a-b;}).map(function(n){return '<option value="'+n+'"'+(n===sel?' selected':'')+'>فاصل '+n+'</option>';}).join('');
+  return '<option value="">—</option>'+Object.keys(S.log.blocks).map(Number).sort(function(a,b){return a-b;}).map(function(n){return '<option value="'+n+'"'+(n===sel?' selected':'')+'>Block '+n+'</option>';}).join('');
 }
 function renderDrafts(){
   var nums = E.nextIrNumbers(S.log, S.drafts.length);
   $('drafts').innerHTML = S.drafts.map(function(d,i){
     var B=S.log.blocks[d.block];
     return '<article class="ir" data-i="'+i+'">'+
-      '<div class="ir-head"><span class="ir-no">'+esc(E.formIrNo(S.log,nums[i].n,0))+'</span><button class="danger" data-del="'+i+'" aria-label="احذف">حذف ✕</button></div>'+
+      '<div class="ir-head"><span class="ir-no">'+esc(E.formIrNo(S.log,nums[i].n,0))+'</span><button class="danger" data-del="'+i+'" aria-label="Remove">Remove ✕</button></div>'+
       '<div class="ir-body">'+
-        '<div class="field full"><label for="d-desc-'+i+'">الأعمال المطلوب فحصها</label><textarea id="d-desc-'+i+'" data-k="desc">'+esc(d.desc)+'</textarea></div>'+
-        '<div class="field"><label for="d-block-'+i+'">الفاصل</label><select id="d-block-'+i+'" data-k="block">'+blockOptions(d.block)+'</select></div>'+
+        '<div class="field full"><label for="d-desc-'+i+'">Works to be inspected</label><textarea dir="auto" id="d-desc-'+i+'" data-k="desc">'+esc(d.desc)+'</textarea></div>'+
+        '<div class="field"><label for="d-block-'+i+'">Block</label><select id="d-block-'+i+'" data-k="block">'+blockOptions(d.block)+'</select></div>'+
         '<div class="field"><label for="d-unit-'+i+'">Unit</label><select id="d-unit-'+i+'" data-k="unit">'+['Civil','Survey','Survey+Civil'].map(function(u){return '<option'+(u===d.unit?' selected':'')+'>'+u+'</option>';}).join('')+'</select></div>'+
-        '<div class="field"><label for="d-item-'+i+'">Item (اللوج)</label><input id="d-item-'+i+'" data-k="item" value="'+esc(d.item)+'"></div>'+
-        '<div class="field"><label for="d-sub-'+i+'">Sub-Item</label><input id="d-sub-'+i+'" data-k="subItem" value="'+esc(d.subItem)+'"></div>'+
-        '<div class="field full"><label for="d-fi-'+i+'">نوع العنصر (على الفورم)</label><input id="d-fi-'+i+'" data-k="formItem" value="'+esc(d.formItem)+'"></div>'+
-        '<div class="loc full">📍 '+esc(B?E.formLocation(B):'اختار الفاصل')+'</div>'+
+        '<div class="field"><label for="d-item-'+i+'">Item (log)</label><input dir="auto" id="d-item-'+i+'" data-k="item" value="'+esc(d.item)+'"></div>'+
+        '<div class="field"><label for="d-sub-'+i+'">Sub-Item</label><input dir="auto" id="d-sub-'+i+'" data-k="subItem" value="'+esc(d.subItem)+'"></div>'+
+        '<div class="field full"><label for="d-fi-'+i+'">Element type (on form)</label><input dir="auto" id="d-fi-'+i+'" data-k="formItem" value="'+esc(d.formItem)+'"></div>'+
+        '<div class="loc full" dir="auto">📍 '+(B?esc(E.formLocation(B)).replace(/(\d+\+\d+)/g,'<bdi dir="ltr">$1</bdi>'):'Choose the block')+'</div>'+
       '</div></article>';
   }).join('');
   $('bar').hidden = !S.drafts.length;
-  $('save').textContent = S.drafts.length>1 ? 'سجّل '+S.drafts.length+' طلبات في اللوج واطبع' : 'سجّل في اللوج واطبع';
+  $('save').textContent = S.drafts.length>1 ? 'Add '+S.drafts.length+' IRs to log & print' : 'Add to log & print';
 }
 
 // ---------- actions ----------
 function understand(){
-  var text=$('req').value.trim(); if(!text){ msg('warn','اكتب المطلوب الأول، مثلاً: حدادة حائط بحري فاصل 20'); return; }
+  var text=$('req').value.trim(); if(!text){ msg('warn','Type the request first, e.g. wall rebar north block 20'); return; }
   var u = E.understand(S.log, text, isoToDate($('date').value));
   $('msgs').innerHTML='';
-  if (!u.drafts.length) msg('warn','ما فهمتش نوع الشغل. جرّب تكتبه زي ما بيتكتب في اللوج، أو اختار من الاقتراحات تحت.');
+  if (!u.drafts.length) msg('warn','The type of work was not recognised. Write it the way it appears in the log, or pick a suggestion below.');
   u.warnings.forEach(function(w){ msg('warn', w, true); });
   S.drafts = S.drafts.concat(u.drafts);
   if (u.rule) u.alternatives = [];
   S.alts = u.alternatives;
-  $('alts').innerHTML = (u.alternatives.length? '<span class="small" style="width:100%">صيغ مشابهة من اللوج:</span>':'') + u.alternatives.map(function(r,i){ return '<button class="chip" data-alt="'+i+'">'+esc(r.desc.replace(/\s+/g,' ').slice(0,70))+'</button>'; }).join('');
+  $('alts').innerHTML = (u.alternatives.length? '<span class="small" style="width:100%">Similar entries from the log:</span>':'') + u.alternatives.map(function(r,i){ return '<button class="chip" dir="auto" data-alt="'+i+'">'+esc(r.desc.replace(/\s+/g,' ').slice(0,70))+'</button>'; }).join('');
   $('done').innerHTML='';
   renderDrafts();
 }
@@ -254,7 +254,7 @@ function understand(){
 async function save(){
   if (!S.drafts.length) return;
   var bad = S.drafts.filter(function(d){ return d.block==null || d.block==='' || /…/.test(d.desc); });
-  if (bad.length){ msg('err','فيه طلب ناقص (الفاصل أو قيمة مكتوب مكانها …). كمّله الأول.'); return; }
+  if (bad.length){ msg('err','One IR is incomplete (missing block, or a value shown as …). Complete it first.'); return; }
   $('save').disabled = true;
   try{
     var date = isoToDate($('date').value);
@@ -271,10 +271,10 @@ async function save(){
     deliver(S.logName, bytes, XLSX, false);
     deliver(fname, form, DOCX, true);
     S.drafts=[]; $('req').value=''; $('alts').innerHTML=''; $('msgs').innerHTML='';
-    $('done').innerHTML = '<div class="notice good">اتسجّل '+(recs.length===1?'IR رقم ':'من ')+'<span class="mono">'+recs[0].n+(recs.length>1?' → '+recs[recs.length-1].n:'')+'</span> في اللوج، والفورم جاهز للطباعة.'+
-      '<div class="row" style="margin-top:8px"><button class="ghost" id="reopen">افتح الفورم تاني</button></div></div>';
+    $('done').innerHTML = '<div class="notice good">'+(recs.length===1?'IR ':'IRs ')+'<span class="mono">'+recs[0].n+(recs.length>1?' → '+recs[recs.length-1].n:'')+'</span> added to the log. The form is ready to print.'+
+      '<div class="row" style="margin-top:8px"><button class="ghost" id="reopen">Open the form again</button></div></div>';
     renderDrafts();
-  } catch(e){ msg('err','حصلت مشكلة أثناء التسجيل: '+e.message); }
+  } catch(e){ msg('err','Could not add to the log: '+e.message); }
   $('save').disabled = false;
 }
 
@@ -285,12 +285,12 @@ function findRows(no){
 async function reprint(irStr, rev){
   var rows = S.log.rows.filter(function(r){ return r.ir===irStr && String(r.rev)===String(rev); });
   var r = rows[rows.length-1] || S.log.rows.filter(function(x){return x.ir===irStr;}).pop();
-  if(!r){ msg('err','الرقم ده مش موجود في اللوج'); return; }
+  if(!r){ msg('err','This IR number is not in the log'); return; }
   var form = await E.buildForm(S.tpl, rows.length>1 ? rows.map(function(x){return E.recordFromRow(S.log,x);}) : [E.recordFromRow(S.log, r)]);
   deliver(E.formIrNo(S.log,E.irNum(r.ir),r.rev)+'.docx', form, DOCX, true);
 }
 async function resubmit(no){
-  var rows = findRows(no); if(!rows.length){ msg('err','الرقم ده مش موجود في اللوج'); return; }
+  var rows = findRows(no); if(!rows.length){ msg('err','This IR number is not in the log'); return; }
   var last = rows[rows.length-1], rev = Math.max.apply(null, rows.map(function(r){return +r.rev||0;})) + 1;
   var B = S.log.blocks[E.blockNum(last.block)];
   var rec = { n:E.irNum(last.ir), ir:last.ir, rev:rev, sub:'L', unit:last.unit, blockLabel:last.block, loc:last.loc, from:last.from, to:last.to, desc:last.desc, item:last.item, subItem:last.subItem,
@@ -302,7 +302,7 @@ async function resubmit(no){
   await useLog(bytes, S.logName, true);
   deliver(S.logName, bytes, XLSX, false);
   deliver(rec.formIr+'.docx', await E.buildForm(S.tpl,[rec]), DOCX, true);
-  msg('good','اتسجّل '+rec.formIr+' (المرة رقم '+(rev+1)+') في اللوج.');
+  msg('good',rec.formIr+' (submission '+(rev+1)+') added to the log.');
 }
 
 // ---------- events ----------
@@ -317,15 +317,15 @@ document.addEventListener('click', function(ev){
   if (t.id==='save') save();
   if (t.id==='clear'){ S.drafts=[]; $('alts').innerHTML=''; $('msgs').innerHTML=''; renderDrafts(); }
   if (t.id==='reopen' && S.lastFiles) deliver(S.lastFiles.fname, S.lastFiles.form, DOCX, true);
-  if (t.id==='exportLog') { deliver(S.logName, S.logBytes, XLSX, false); msg('good','اتحفظت نسخة من اللوج: '+S.logName); }
-  if (t.id==='rePrint'){ var rows=findRows($('reNo').value); if(!rows.length) msg('err','الرقم ده مش موجود في اللوج'); else { var r2=rows[rows.length-1]; reprint(r2.ir, r2.rev); } }
-  if (t.id==='reSubmit'){ var no=$('reNo').value; if(!findRows(no).length){ msg('err','الرقم ده مش موجود في اللوج'); return; }
-    $('confirmBox').innerHTML='<div class="notice warn">هيتضاف سطر جديد بنفس رقم '+esc(no)+' و Rev أعلى. متأكد؟ <button class="ghost" id="yesRe">أيوه سجّل</button> <button class="ghost" id="noRe">لأ</button></div>'; }
+  if (t.id==='exportLog') { deliver(S.logName, S.logBytes, XLSX, false); msg('good','Log copy saved: '+S.logName); }
+  if (t.id==='rePrint'){ var rows=findRows($('reNo').value); if(!rows.length) msg('err','This IR number is not in the log'); else { var r2=rows[rows.length-1]; reprint(r2.ir, r2.rev); } }
+  if (t.id==='reSubmit'){ var no=$('reNo').value; if(!findRows(no).length){ msg('err','This IR number is not in the log'); return; }
+    $('confirmBox').innerHTML='<div class="notice warn">A new row will be added with IR '+esc(no)+' and the next Rev. Continue? <button class="ghost" id="yesRe">Yes, add it</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
   if (t.id==='yesRe'){ $('confirmBox').innerHTML=''; resubmit($('reNo').value); }
   if (t.id==='noRe'){ $('confirmBox').innerHTML=''; }
-  if (t.id==='undo'){ $('confirmBox').innerHTML='<div class="notice warn">هيرجع اللوج زي ما كان قبل آخر تسجيل. متأكد؟ <button class="ghost" id="yesUndo">أيوه</button> <button class="ghost" id="noRe">لأ</button></div>'; }
-  if (t.id==='yesUndo'){ $('confirmBox').innerHTML=''; get('logPrev').then(function(p){ if(!p||!p.bytes){ msg('warn','مفيش تسجيل أتراجع عنه.'); return; }
-      return useLog(p.bytes, p.name, true).then(function(){ put('logPrev', null); deliver(S.logName, S.logBytes, XLSX, false); msg('good','رجعت اللوج لآخر IR رقم '+S.log.lastNum+'.'); }); }); }
+  if (t.id==='undo'){ $('confirmBox').innerHTML='<div class="notice warn">The log will go back to how it was before the last entry. Continue? <button class="ghost" id="yesUndo">Yes, undo</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
+  if (t.id==='yesUndo'){ $('confirmBox').innerHTML=''; get('logPrev').then(function(p){ if(!p||!p.bytes){ msg('warn','There is nothing to undo.'); return; }
+      return useLog(p.bytes, p.name, true).then(function(){ put('logPrev', null); deliver(S.logName, S.logBytes, XLSX, false); msg('good','Undone. Last IR in the log is now '+S.log.lastNum+'.'); }); }); }
 });
 document.addEventListener('input', function(ev){
   var el=ev.target, card=el.closest('.ir'); if(!card||!el.dataset.k) return;
@@ -337,8 +337,8 @@ document.addEventListener('change', function(ev){ if(ev.target.dataset && ev.tar
 $('req').addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); understand(); } });
 
 function readFile(input, cb){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ cb(new Uint8Array(r.result), f.name); input.value=''; }; r.readAsArrayBuffer(f); }
-['logFile','logFile2'].forEach(function(id){ $(id).addEventListener('change', function(){ readFile(this, function(b,n){ useLog(b,n,true).then(function(){ msg('good','اتقرا اللوج: '+S.log.rows.length+' طلب، آخر IR رقم '+S.log.lastNum); }).catch(function(e){ msg('err','الملف ده مش لوج IR مفهوم: '+e.message); render(); }); }); }); });
-$('tplFile').addEventListener('change', function(){ readFile(this, function(b){ S.tpl=b; put('tpl', b); msg('good','اتغيّر فورم الـ Word.'); render(); }); });
+['logFile','logFile2'].forEach(function(id){ $(id).addEventListener('change', function(){ readFile(this, function(b,n){ useLog(b,n,true).then(function(){ msg('good','Log loaded: '+S.log.rows.length+' requests, last IR '+S.log.lastNum); }).catch(function(e){ msg('err','This file is not a readable IR log: '+e.message); render(); }); }); }); });
+$('tplFile').addEventListener('change', function(){ readFile(this, function(b){ S.tpl=b; put('tpl', b); msg('good','Word form replaced.'); render(); }); });
 
 init();
 })();
