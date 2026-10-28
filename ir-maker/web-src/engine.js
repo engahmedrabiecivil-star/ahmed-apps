@@ -169,7 +169,7 @@
       var best = Object.keys(B.st).sort(function (a, b) { return B.st[b] - B.st[a]; })[0];
       if (B.fixed) { B.from = B.fixed[0]; B.to = B.fixed[1]; delete B.fixed; }
       else if (best) { var p = best.split('-'); B.from = +p[0]; B.to = +p[1]; }
-      B.loc = B.from != null ? ('فاصل رقم ' + B.n + ' من محطة\n ' + stationFormStr(B.from) + ' الي ' + stationFormStr(B.to)) : (B.locs.length ? B.locs[B.locs.length - 1] : ('فاصل رقم ' + B.n));
+      B.loc = B.from != null ? ('فاصل رقم ' + B.n + ' من محطة\n ' + stationStr(B.from) + 'الي ' + stationFormStr(B.to)) : (B.locs.length ? B.locs[B.locs.length - 1] : ('فاصل رقم ' + B.n));
       delete B.labels; delete B.st; delete B.locs;
     });
     log.blocks = blocks; log.lastNum = maxN; log.prefix = prefix; log.width = width;
@@ -486,23 +486,28 @@
     return { firstRow: lastNum + 1, lastRow: n };
   }
 
-  // rewrite every station in the log (location, from/to, description) as on the IR form: 9+140 -> 140+9
-  function toFormStations(text) {
-    return String(text).replace(/(^|[^\d+])(\d)\s*\+\s*(\d{3})(?![\d+])/g, function (m, pre, k, r) { return pre + r + '+' + k; });
+  // keep the log's own station style: From/To as 9+330, and Main Location as "9+330الي 360+9"
+  // (that is how it displays correctly in Excel). Also repairs logs changed by an earlier version.
+  function toLogStation(t) { return String(t).replace(/^(\s*)(\d{3})\s*\+\s*(\d)(\s*)$/, '$1$3+$2$4'); }
+  function fixLocation(t) {
+    return String(t).replace(/(\d{3}\+\d|\d\+\d{3})(\s*)(ال[يى])(\s*)(\d{3}\+\d|\d\+\d{3})/, function (m, a, s1, ali, s2, b) {
+      var A = parseStation(a), Z = parseStation(b);
+      return (A != null ? stationStr(A) : a) + s1 + ali + s2 + (Z != null ? stationFormStr(Z) : b);
+    });
   }
   async function normalizeStations(log) {
-    var col = log.col, cols = [col.loc, col.from, col.to, col.desc].map(idxToCol);
+    var col = log.col, fix = {}; fix[idxToCol(col.from)] = toLogStation; fix[idxToCol(col.to)] = toLogStation; fix[idxToCol(col.loc)] = fixLocation;
     var xml = await log.zip.file(log.sheetPath).async('string'), changed = 0;
     var sdS = xml.indexOf('<sheetData'), sdE = xml.indexOf('</sheetData>');
     var data = xml.slice(sdS, sdE).replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, function (cell, attrs, inner) {
       var ref = (attrs.match(/\br="([A-Z]+)(\d+)"/) || []);
-      if (!ref[1] || cols.indexOf(ref[1]) < 0 || +ref[2] < 2 || !inner) return cell;
+      if (!ref[1] || !fix[ref[1]] || +ref[2] < 2 || !inner) return cell;
       var t = (attrs.match(/\bt="([^"]+)"/) || [])[1], v = (inner.match(/<v>([\s\S]*?)<\/v>/) || [])[1], val = null;
       if (t === 's' && v != null) val = log.ss[+v];
       else if (t === 'inlineStr') { var tt = '', r3 = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g, m3; while ((m3 = r3.exec(inner))) tt += m3[1]; val = xmlDecode(tt); }
       else if (t === 'str' && v != null) val = xmlDecode(v);
       if (val == null) return cell;
-      var nv = toFormStations(val);
+      var nv = fix[ref[1]](val);
       if (nv === val) return cell;
       changed++;
       var keep = attrs.replace(/\s*\bt="[^"]*"/, '');
@@ -583,7 +588,7 @@
       return {
         n: nums[i].n, ir: nums[i].log, formIr: formIrNo(log, nums[i].n, d.rev), rev: d.rev || 0, sub: 'L', unit: d.unit || 'Civil',
         blockLabel: B ? B.label : (d.block != null ? 'Block no  ' + d.block : ''), loc: B ? B.loc : '',
-        from: B && B.from != null ? stationFormStr(B.from) : '', to: B && B.to != null ? stationFormStr(B.to) : '',
+        from: B && B.from != null ? stationStr(B.from) : '', to: B && B.to != null ? stationStr(B.to) : '',
         desc: d.desc, item: d.item, subItem: d.subItem, date: d.date, formItem: d.formItem || d.item,
         formLoc: d.formLoc || formLocation(B), attempt: (d.rev || 0) + 1, action: 'W', status: 'WAITING'
       };
@@ -625,7 +630,7 @@
   }
 
   var api = {
-    loadLog: loadLog, normalizeStations: normalizeStations, toFormStations: toFormStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
+    loadLog: loadLog, normalizeStations: normalizeStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
     recordFromRow: recordFromRow, formLocation: formLocation, norm: norm, fmtDate: fmtDate, stationStr: stationStr,
     nextIrNumbers: nextIrNumbers, formIrNo: formIrNo, irNum: irNum, blockNum: blockNum,
     saveLog: function (log) { return log.zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }

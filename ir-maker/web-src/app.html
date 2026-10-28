@@ -182,7 +182,7 @@ function msg(kind, text, keep){ var box=$('msgs'); if(!keep) box.innerHTML=''; v
 async function useLog(bytes, name, persist){
   var log = await E.loadLog(bytes, name || S.logName);
   if(name) S.logName = name;
-  // write every station in the log the way the IR form shows it (330+9)
+  // keep stations in the log in the log's own style (9+330); repairs logs changed by an earlier version
   var fixed = await E.normalizeStations(log);
   if (fixed) { bytes = await E.saveLog(log); log = await E.loadLog(bytes, S.logName); persist = true; S.stationFix = fixed; }
   S.log = log; S.logBytes = bytes;
@@ -196,7 +196,7 @@ async function init(){
   var saved = await get('log');
   if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); } catch(e){ setupMsg('err','The saved log could not be read. Please upload it again.'); } }
   S.ready = !!(S.log && S.tpl);
-  if (S.stationFix && S.ready){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were rewritten like the IR form (e.g. 330+9) in '+S.stationFix+' cells. Updated log saved to Download/IR Maker.'); S.stationFix=0; }
+  if (S.stationFix && S.ready){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved to Download/IR Maker.'); S.stationFix=0; }
   render();
 }
 
@@ -366,7 +366,7 @@ $('req').addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shift
 function readFile(input, cb){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ cb(new Uint8Array(r.result), f.name); input.value=''; }; r.readAsArrayBuffer(f); }
 $('logFile').addEventListener('change', function(){ readFile(this, function(b,n){ useLog(b,n,true).then(function(){ setupMsg(''); }).catch(function(e){ setupMsg('err','This file is not a readable IR log: '+e.message); render(); }); }); });
 $('tplFile0').addEventListener('change', function(){ readFile(this, function(b,n){ useTemplate(b,n).then(function(unknown){ setupMsg(unknown.length?'warn':'', unknown.length ? 'These form fields have no matching log column and will stay empty: '+unknown.join(', ') : ''); render(); }).catch(function(e){ setupMsg('err', e.message); }); }); });
-$('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; S.ready = true; render(); if (S.stationFix){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were rewritten like the IR form (e.g. 330+9) in '+S.stationFix+' cells. Updated log saved to Download/IR Maker.'); S.stationFix=0; } window.scrollTo(0,0); });
+$('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; S.ready = true; render(); if (S.stationFix){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved to Download/IR Maker.'); S.stationFix=0; } window.scrollTo(0,0); });
 $('changeProj').addEventListener('click', function(){ S.ready = false; S.drafts = []; render(); window.scrollTo(0,0); });
 
 init();
