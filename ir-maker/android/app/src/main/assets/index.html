@@ -303,7 +303,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         action: c[col.action], status: c[col.status]
       });
     });
-    var log = { zip: zip, sheetPath: sheetPath, sheetName: sheet.name, col: col, rows: rows, fileName: fileName || '', absPath: xmlDecode((wb.match(/absPath url="([^"]*)"/) || [])[1] || '') };
+    var log = { ss: ss, zip: zip, sheetPath: sheetPath, sheetName: sheet.name, col: col, rows: rows, fileName: fileName || '', absPath: xmlDecode((wb.match(/absPath url="([^"]*)"/) || [])[1] || '') };
     analyse(log);
     return log;
   }
@@ -653,6 +653,32 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return { firstRow: lastNum + 1, lastRow: n };
   }
 
+  // rewrite every station in the log (location, from/to, description) as on the IR form: 9+140 -> 140+9
+  function toFormStations(text) {
+    return String(text).replace(/(^|[^\d+])(\d)\s*\+\s*(\d{3})(?![\d+])/g, function (m, pre, k, r) { return pre + r + '+' + k; });
+  }
+  async function normalizeStations(log) {
+    var col = log.col, cols = [col.loc, col.from, col.to, col.desc].map(idxToCol);
+    var xml = await log.zip.file(log.sheetPath).async('string'), changed = 0;
+    var sdS = xml.indexOf('<sheetData'), sdE = xml.indexOf('</sheetData>');
+    var data = xml.slice(sdS, sdE).replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, function (cell, attrs, inner) {
+      var ref = (attrs.match(/\br="([A-Z]+)(\d+)"/) || []);
+      if (!ref[1] || cols.indexOf(ref[1]) < 0 || +ref[2] < 2 || !inner) return cell;
+      var t = (attrs.match(/\bt="([^"]+)"/) || [])[1], v = (inner.match(/<v>([\s\S]*?)<\/v>/) || [])[1], val = null;
+      if (t === 's' && v != null) val = log.ss[+v];
+      else if (t === 'inlineStr') { var tt = '', r3 = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g, m3; while ((m3 = r3.exec(inner))) tt += m3[1]; val = xmlDecode(tt); }
+      else if (t === 'str' && v != null) val = xmlDecode(v);
+      if (val == null) return cell;
+      var nv = toFormStations(val);
+      if (nv === val) return cell;
+      changed++;
+      var keep = attrs.replace(/\s*\bt="[^"]*"/, '');
+      return '<c' + keep + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(nv) + '</t></is></c>';
+    });
+    if (changed) log.zip.file(log.sheetPath, xml.slice(0, sdS) + data + xml.slice(sdE));
+    return changed;
+  }
+
   // ---------- filling the Word form ----------
   function fillFieldsXml(xml, values) {
     Object.keys(values).forEach(function (name) {
@@ -766,7 +792,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   var api = {
-    loadLog: loadLog, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
+    loadLog: loadLog, normalizeStations: normalizeStations, toFormStations: toFormStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
     recordFromRow: recordFromRow, formLocation: formLocation, norm: norm, fmtDate: fmtDate, stationStr: stationStr,
     nextIrNumbers: nextIrNumbers, formIrNo: formIrNo, irNum: irNum, blockNum: blockNum,
     saveLog: function (log) { return log.zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }
@@ -804,8 +830,13 @@ function msg(kind, text, keep){ var box=$('msgs'); if(!keep) box.innerHTML=''; v
 // ---------- load ----------
 async function useLog(bytes, name, persist){
   var log = await E.loadLog(bytes, name || S.logName);
-  S.log = log; S.logBytes = bytes; if(name) S.logName = name;
+  if(name) S.logName = name;
+  // write every station in the log the way the IR form shows it (330+9)
+  var fixed = await E.normalizeStations(log);
+  if (fixed) { bytes = await E.saveLog(log); log = await E.loadLog(bytes, S.logName); persist = true; S.stationFix = fixed; }
+  S.log = log; S.logBytes = bytes;
   if (persist){ await put('log', {bytes:bytes, name:S.logName}); }
+  if (fixed && S.ready) { deliver(S.logName, bytes, XLSX, false); }
   render();
 }
 async function init(){
@@ -814,6 +845,7 @@ async function init(){
   var saved = await get('log');
   if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); } catch(e){ setupMsg('err','The saved log could not be read. Please upload it again.'); } }
   S.ready = !!(S.log && S.tpl);
+  if (S.stationFix && S.ready){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were rewritten like the IR form (e.g. 330+9) in '+S.stationFix+' cells. Updated log saved to Download/IR Maker.'); S.stationFix=0; }
   render();
 }
 
@@ -983,7 +1015,7 @@ $('req').addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shift
 function readFile(input, cb){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ cb(new Uint8Array(r.result), f.name); input.value=''; }; r.readAsArrayBuffer(f); }
 $('logFile').addEventListener('change', function(){ readFile(this, function(b,n){ useLog(b,n,true).then(function(){ setupMsg(''); }).catch(function(e){ setupMsg('err','This file is not a readable IR log: '+e.message); render(); }); }); });
 $('tplFile0').addEventListener('change', function(){ readFile(this, function(b,n){ useTemplate(b,n).then(function(unknown){ setupMsg(unknown.length?'warn':'', unknown.length ? 'These form fields have no matching log column and will stay empty: '+unknown.join(', ') : ''); render(); }).catch(function(e){ setupMsg('err', e.message); }); }); });
-$('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; S.ready = true; render(); window.scrollTo(0,0); });
+$('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; S.ready = true; render(); if (S.stationFix){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were rewritten like the IR form (e.g. 330+9) in '+S.stationFix+' cells. Updated log saved to Download/IR Maker.'); S.stationFix=0; } window.scrollTo(0,0); });
 $('changeProj').addEventListener('click', function(){ S.ready = false; S.drafts = []; render(); window.scrollTo(0,0); });
 
 init();

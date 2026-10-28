@@ -136,7 +136,7 @@
         action: c[col.action], status: c[col.status]
       });
     });
-    var log = { zip: zip, sheetPath: sheetPath, sheetName: sheet.name, col: col, rows: rows, fileName: fileName || '', absPath: xmlDecode((wb.match(/absPath url="([^"]*)"/) || [])[1] || '') };
+    var log = { ss: ss, zip: zip, sheetPath: sheetPath, sheetName: sheet.name, col: col, rows: rows, fileName: fileName || '', absPath: xmlDecode((wb.match(/absPath url="([^"]*)"/) || [])[1] || '') };
     analyse(log);
     return log;
   }
@@ -486,6 +486,32 @@
     return { firstRow: lastNum + 1, lastRow: n };
   }
 
+  // rewrite every station in the log (location, from/to, description) as on the IR form: 9+140 -> 140+9
+  function toFormStations(text) {
+    return String(text).replace(/(^|[^\d+])(\d)\s*\+\s*(\d{3})(?![\d+])/g, function (m, pre, k, r) { return pre + r + '+' + k; });
+  }
+  async function normalizeStations(log) {
+    var col = log.col, cols = [col.loc, col.from, col.to, col.desc].map(idxToCol);
+    var xml = await log.zip.file(log.sheetPath).async('string'), changed = 0;
+    var sdS = xml.indexOf('<sheetData'), sdE = xml.indexOf('</sheetData>');
+    var data = xml.slice(sdS, sdE).replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, function (cell, attrs, inner) {
+      var ref = (attrs.match(/\br="([A-Z]+)(\d+)"/) || []);
+      if (!ref[1] || cols.indexOf(ref[1]) < 0 || +ref[2] < 2 || !inner) return cell;
+      var t = (attrs.match(/\bt="([^"]+)"/) || [])[1], v = (inner.match(/<v>([\s\S]*?)<\/v>/) || [])[1], val = null;
+      if (t === 's' && v != null) val = log.ss[+v];
+      else if (t === 'inlineStr') { var tt = '', r3 = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g, m3; while ((m3 = r3.exec(inner))) tt += m3[1]; val = xmlDecode(tt); }
+      else if (t === 'str' && v != null) val = xmlDecode(v);
+      if (val == null) return cell;
+      var nv = toFormStations(val);
+      if (nv === val) return cell;
+      changed++;
+      var keep = attrs.replace(/\s*\bt="[^"]*"/, '');
+      return '<c' + keep + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(nv) + '</t></is></c>';
+    });
+    if (changed) log.zip.file(log.sheetPath, xml.slice(0, sdS) + data + xml.slice(sdE));
+    return changed;
+  }
+
   // ---------- filling the Word form ----------
   function fillFieldsXml(xml, values) {
     Object.keys(values).forEach(function (name) {
@@ -599,7 +625,7 @@
   }
 
   var api = {
-    loadLog: loadLog, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
+    loadLog: loadLog, normalizeStations: normalizeStations, toFormStations: toFormStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
     recordFromRow: recordFromRow, formLocation: formLocation, norm: norm, fmtDate: fmtDate, stationStr: stationStr,
     nextIrNumbers: nextIrNumbers, formIrNo: formIrNo, irNum: irNum, blockNum: blockNum,
     saveLog: function (log) { return log.zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }
