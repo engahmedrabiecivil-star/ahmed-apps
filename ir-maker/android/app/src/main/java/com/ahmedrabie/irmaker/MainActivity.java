@@ -52,6 +52,8 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(true);
+        // always load the page shipped inside this APK, never a cached copy from an older version
+        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -78,6 +80,7 @@ public class MainActivity extends Activity {
             }
         });
 
+        web.clearCache(true);
         web.addJavascriptInterface(new Bridge(), "AndroidBridge");
         setContentView(web);
         if (savedInstanceState != null) web.restoreState(savedInstanceState);

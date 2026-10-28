@@ -24,6 +24,7 @@ body{font-family:var(--f-body);font-size:15px;line-height:1.65;margin:0;directio
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 .brand{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:32px;text-align:center}
 @media (min-width:760px){.brand{padding-top:48px}}
+.company{font-size:15px;font-weight:700;color:var(--navy);letter-spacing:.12em;text-transform:uppercase;line-height:1.35;max-width:100%;overflow-wrap:anywhere}
 .dept{font-size:13px;font-weight:600;color:var(--navy);margin:0;letter-spacing:.22em;text-transform:uppercase;line-height:1.3}
 .pill-proj{font-size:30px;font-weight:700;color:var(--navy);letter-spacing:-.02em;line-height:1.15;direction:ltr}
 .credit{text-align:center;font-size:14px;color:var(--muted);direction:ltr;font-weight:300}
@@ -93,7 +94,7 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
 
 </head><body>
 <div class="wrap">
-  <div class="brand"><h2 class="dept">Quality Department</h2><div class="pill-proj" id="proj">IR MAKER</div><div class="credit">Developed by: <b>Eng. Ahmed Rabie</b></div></div>
+  <div class="brand"><div class="company" id="companyLbl" hidden></div><h2 class="dept">Quality Department</h2><div class="pill-proj" id="proj">IR MAKER</div><div class="credit">Developed by: <b>Eng. Ahmed Rabie</b></div></div>
   <header>
     <div>
       <h1 id="title">Inspection Requests</h1>
@@ -107,6 +108,7 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
     <div class="small">Upload the project IR log and the project IR form once. Both stay on this phone.</div>
     <div class="step"><div><b>1 · IR Log</b><span class="small" id="stLog">Excel file (.xlsx)</span></div><label class="file-btn ghost"><span>Choose</span><input id="logFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label></div>
     <div class="step"><div><b>2 · IR Form</b><span class="small" id="stTpl">Word (.docx): a previous IR from this project, or a blank mail-merge form</span></div><label class="file-btn ghost"><span>Choose</span><input id="tplFile0" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label></div>
+    <div class="step"><div style="flex:1"><b>3 · Company name <span class="small">(optional)</span></b><input id="company0" maxlength="60" placeholder="e.g. Hassan Allam Construction" autocomplete="organization" style="margin-top:6px"></div></div>
     <div id="setupMsg" style="width:100%"></div>
     <button class="primary" id="start" disabled>Start</button>
   </div>
@@ -139,6 +141,9 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
         </div>
         <div class="row">
           <button class="ghost" id="changeProj">Change project (IR log &amp; form)</button>
+        </div>
+        <div class="field"><label for="company1">Company name</label>
+          <div class="row"><input id="company1" maxlength="60" placeholder="e.g. Hassan Allam Construction" style="flex:1"><button class="ghost" id="saveCompany">Save</button></div>
         </div>
         <div id="confirmBox"></div>
         <div class="small" id="info"></div>
@@ -977,6 +982,7 @@ async function useLog(bytes, name, persist){
 }
 async function init(){
   $('date').value = todayISO();
+  S.company = (await get('company')) || ''; showCompany();
   var t = await get('tpl'); S.tpl = t || null; S.tplName = await get('tplName'); if (t) { try { S.tplFields = await E.inspectTemplate(t); } catch(e){} }
   var saved = await get('log');
   if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); } catch(e){ setupMsg('err','The saved log could not be read. Please upload it again.'); } }
@@ -987,6 +993,13 @@ async function init(){
 
 function projName(){ return S.log && E.isUSection(S.log) ? 'Alex U \u2013 Section' : String(S.logName||'Project').replace(/\.xlsx$/i,'').replace(/^ir\s*log\s*[-–]?\s*/i,''); }
 function setupMsg(kind, text){ $('setupMsg').innerHTML = text ? '<div class="notice '+kind+'">'+esc(text)+'</div>' : ''; }
+function showCompany(){
+  var c = String(S.company||'').trim();
+  $('companyLbl').textContent = c; $('companyLbl').hidden = !c;
+  if (document.activeElement !== $('company0')) $('company0').value = c;
+  if (document.activeElement !== $('company1')) $('company1').value = c;
+}
+async function setCompany(v){ S.company = String(v||'').trim().slice(0,60); await put('company', S.company); showCompany(); }
 function renderSetup(){
   $('stLog').textContent = S.log ? '✓ '+S.logName+' · '+S.log.rows.length+' requests, last IR '+S.log.lastNum : 'Excel file (.xlsx)';
   $('stTpl').textContent = S.tpl ? '✓ '+(S.tplName||'saved form')+' · fields: '+((S.tplFields||[]).join(', ')||'none') : 'Word (.docx): a previous IR from this project, or a blank mail-merge form';
@@ -1161,7 +1174,9 @@ $('req').addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shift
 function readFile(input, cb){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ cb(new Uint8Array(r.result), f.name); input.value=''; }; r.readAsArrayBuffer(f); }
 $('logFile').addEventListener('change', function(){ readFile(this, function(b,n){ useLog(b,n,true).then(function(){ setupMsg(''); }).catch(function(e){ setupMsg('err','This file is not a readable IR log: '+e.message); render(); }); }); });
 $('tplFile0').addEventListener('change', function(){ readFile(this, function(b,n){ useTemplate(b,n).then(function(note){ setupMsg(note?note.kind:'', note?note.text:''); render(); }).catch(function(e){ setupMsg('err', e.message); }); }); });
-$('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; S.ready = true; render(); if (S.stationFix){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved in the IR Maker folder.'); S.stationFix=0; } window.scrollTo(0,0); });
+$('company0').addEventListener('change', function(){ setCompany(this.value); });
+$('saveCompany').addEventListener('click', function(){ setCompany($('company1').value).then(function(){ msg('good', S.company ? 'Company name saved: '+S.company : 'Company name removed.'); }); });
+$('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; setCompany($('company0').value); S.ready = true; render(); if (S.stationFix){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved in the IR Maker folder.'); S.stationFix=0; } window.scrollTo(0,0); });
 $('changeProj').addEventListener('click', function(){ S.ready = false; S.drafts = []; render(); window.scrollTo(0,0); });
 
 init();
