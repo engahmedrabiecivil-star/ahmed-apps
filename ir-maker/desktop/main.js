@@ -46,7 +46,7 @@ app.whenReady().then(() => {
     minWidth: 420,
     title: 'IR Maker',
     icon: path.join(__dirname, 'icon.png'),
-    backgroundColor: '#ece5d5',
+    backgroundColor: '#f4f8fc',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

@@ -36,15 +36,16 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-        getWindow().setStatusBarColor(0xFF0A2238);
-        getWindow().setNavigationBarColor(0xFF0A2238);
+        getWindow().setStatusBarColor(0xFFF7FAFD);
+        getWindow().setNavigationBarColor(0xFFFFFFFF);
+        getWindow().getDecorView().setSystemUiVisibility(android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
                 .build();
 
         web = new WebView(this);
-        web.setBackgroundColor(0xFF0A2238);
+        web.setBackgroundColor(0xFFF4F8FC);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
