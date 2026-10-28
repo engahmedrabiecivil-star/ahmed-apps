@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.ahmedrabie.irmaker'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.ahmedrabie.irmaker"
+        minSdk 29
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    // fixed key so every new build installs as an update and keeps the saved log
+    signingConfigs {
+        fixed {
+            storeFile file('irmaker.keystore')
+            storePassword 'irmaker123'
+            keyAlias 'irmaker'
+            keyPassword 'irmaker123'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.fixed
+        }
+        debug {
+            signingConfig signingConfigs.fixed
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

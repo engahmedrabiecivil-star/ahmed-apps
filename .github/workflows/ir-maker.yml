@@ -1,0 +1,45 @@
+name: Build IR Maker APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ir-maker/**"
+      - ".github/workflows/ir-maker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Check the app page is inside the APK
+        run: test -s ir-maker/android/app/src/main/assets/index.html
+
+      - name: Build APK
+        working-directory: ir-maker/android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Publish the APK as a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp ir-maker/android/app/build/outputs/apk/release/app-release.apk IR-Maker.apk
+          gh release delete ir-maker-latest --yes --cleanup-tag || true
+          gh release create ir-maker-latest IR-Maker.apk \
+            --title "IR Maker for Android (build ${{ github.run_number }})" \
+            --notes "Download IR-Maker.apk on your Android phone and open it to install. Allow 'Install unknown apps' when asked. Developed by Eng. Ahmed Rabie" \
+            --latest=false
