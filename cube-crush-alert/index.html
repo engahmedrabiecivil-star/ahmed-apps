@@ -48,7 +48,7 @@ h3{font-size:17px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
 .credit{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:.02em;color:var(--accent);text-align:end;line-height:1.1}
 .top .sub{font-size:13px;color:var(--muted)}
 select,input,button{font:inherit;color:inherit}
-select,input[type=time],input[type=number],input[type=text]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:42px;max-width:100%}
+select,input[type=time],input[type=date],input[type=number],input[type=text]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:42px;max-width:100%}
 button{cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);padding:9px 14px;min-height:42px;font-weight:600}
 button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 button.danger{background:var(--siren);color:#fff;border-color:var(--siren)}
@@ -186,9 +186,10 @@ function parseDate(v){
   return null;
 }
 /* ---------- state ---------- */
-const DEF_SET={t7:'07:30',t28:'07:30',eve:true,eveTime:'20:00',snooze:10,sound:'siren',vol:0.9,ring:60,offDays:[5],shift:'none',extra:''};
+const DEF_SET={t7:'07:30',t28:'07:30',eve:true,eveTime:'20:00',snooze:10,sound:'siren',vol:0.9,ring:60,offDays:[5],shift:'none',extra:'',t3on:true,t3from:null};
 let S={projects:[],active:0,marks:{},fired:{},settings:{...DEF_SET}};
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.projects){S=r;S.settings={...DEF_SET,...r.settings};S.fired=S.fired||{}}}catch(e){}
+  if(S.settings.t3on&&!S.settings.t3from){S.settings.t3from=todayYmd();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
   dropExamples();
   if(!S.projects.length){S.projects=[{name:'Example project',src:'Example data · import your register from the Register tab',sets:SAMPLE.map(r=>({id:r[0],card:r[1],el:r[2],loc:r[3],grade:r[4],pour:r[5],d7:r[6],d28:r[7],r7:!!r[8],r28:!!r[9]}))}]}}
 const isExample=p=>String(p.src||'').startsWith('Example data');
@@ -197,14 +198,15 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}syncNa
 let customSound=null;try{customSound=localStorage.getItem(KEY+'snd')}catch(e){}
 const proj=()=>S.projects[S.active]||S.projects[0];
 /* ---------- schedule ---------- */
-function ages(){return [7,28,...String(S.settings.extra).split(/[ ,]+/).map(Number).filter(n=>n>0&&n!==7&&n!==28)].sort((a,b)=>a-b)}
+function ages(){return [...(S.settings.t3on?[3]:[]),7,28,...String(S.settings.extra).split(/[ ,]+/).map(Number).filter(n=>n>0&&n!==3&&n!==7&&n!==28)].sort((a,b)=>a-b)}
 function shiftDay(y){const st=S.settings;if(st.shift==='none')return y;let g=0;while(st.offDays.includes(dow(y))&&g++<7)y=addD(y,st.shift==='next'?1:-1);return y}
 function tests(p=proj()){
   const out=[];
   for(const s of p.sets){for(const a of ages()){
-    let d=a===7&&s.d7?s.d7:a===28&&s.d28?s.d28:addD(s.pour,a);
+    if(a===3&&!s.d3&&!s.r3&&S.settings.t3from&&s.pour<S.settings.t3from)continue;
+    let d=a===3&&s.d3?s.d3:a===7&&s.d7?s.d7:a===28&&s.d28?s.d28:addD(s.pour,a);
     const orig=d;d=shiftDay(d);
-    const res=a===7?s.r7:a===28?s.r28:false;
+    const res=a===3?!!(s.r3||s.r7||s.r28):a===7?s.r7:a===28?s.r28:false;
     const mk=!!S.marks[p.name+'|'+s.id+'|'+a];
     out.push({s,a,d,orig,done:res||mk,fromReg:res,mk});
   }}
@@ -345,7 +347,7 @@ function vCal(){
    <div class="group" style="gap:14px">${groupHtml(sel,'No crushing scheduled on this day.')}</div>`;
 }
 let pending=null;
-const FIELDS=[['id','Sample / Set ID',1],['pour','Date of pouring',1],['card','Pour card no.'],['el','Element / item'],['loc','Unit / location'],['grade','Concrete grade'],['d7','7-day test date'],['r7','7-day result (avg)'],['d28','28-day test date'],['r28','28-day result (avg)']];
+const FIELDS=[['id','Sample / Set ID',1],['pour','Date of pouring',1],['card','Pour card no.'],['el','Element / item'],['loc','Unit / location'],['grade','Concrete grade'],['d3','3-day test date'],['r3','3-day result (avg)'],['d7','7-day test date'],['r7','7-day result (avg)'],['d28','28-day test date'],['r28','28-day result (avg)']];
 function vReg(){
   const p=proj();
   let h=`<div class="panel"><h2>Import a register</h2>
@@ -364,8 +366,8 @@ function vReg(){
   const tt=tests(p);
   const st=(id,a)=>{const x=tt.find(z=>z.s.id===id&&z.a===a);return x?(x.done?'✓ ':'')+x.d.slice(5):''};
   h+=`<div class="ghead"><h2>${esc(p.name)}</h2><span class="muted">${p.sets.length} sample sets</span></div>
-   <div class="tablewrap" style="max-height:60vh"><table><thead><tr><th>Set</th><th>Poured</th><th>7-day</th><th>28-day</th><th>Grade</th><th>Element</th></tr></thead><tbody>
-   ${p.sets.slice().reverse().map(s=>`<tr><td class="mono">${esc(s.id)}</td><td>${s.pour.slice(5)}</td><td>${st(s.id,7)}</td><td>${st(s.id,28)}</td><td>${esc(s.grade)}</td><td dir="auto">${esc(s.el)}</td></tr>`).join('')}
+   <div class="tablewrap" style="max-height:60vh"><table><thead><tr><th>Set</th><th>Poured</th>${S.settings.t3on?'<th>3-day</th>':''}<th>7-day</th><th>28-day</th><th>Grade</th><th>Element</th></tr></thead><tbody>
+   ${p.sets.slice().reverse().map(s=>`<tr><td class="mono">${esc(s.id)}</td><td>${s.pour.slice(5)}</td>${S.settings.t3on?`<td>${st(s.id,3)}</td>`:''}<td>${st(s.id,7)}</td><td>${st(s.id,28)}</td><td>${esc(s.grade)}</td><td dir="auto">${esc(s.el)}</td></tr>`).join('')}
    </tbody></table></div>
    ${S.projects.length>1?`<button id="delProj">Remove this project</button>`:''}`;
   return h;
@@ -381,9 +383,11 @@ function guessMap(hdr){
   m.el=find(/exact item|element|description|structural/);if(m.el<0)m.el=find(/item/);
   m.loc=find(/unit|location|station|zone|area/);
   m.grade=find(/grade|class|strength class/);
+  m.d3=find(/(^|[^0-9])0?3\s*-?\s*days?.*date|date.*(^|[^0-9])0?3\s*-?\s*days?|three\s*days?/);
   m.d7=find(/(7|07|seven)\s*-?\s*days?.*date|date.*(7|07)\s*-?\s*days?/);
   m.d28=find(/28\s*-?\s*days?.*date|date.*28\s*-?\s*days?/);
-  const res=(from,to)=>{let i=find(/ave|average|mean/,from,to);if(i<0)i=find(/result|strength/,from,to);return i};
+  const res=(from,to)=>{let i=find(/ave|avg|average|mean/,from,to);if(i<0)i=find(/result|strength/,from,to);return i};
+  m.r3=m.d3>=0?res(m.d3+1,m.d7>m.d3?m.d7:hdr.length):-1;
   m.r7=m.d7>=0?res(m.d7+1,m.d28>m.d7?m.d28:hdr.length):-1;
   m.r28=m.d28>=0?res(m.d28+1,hdr.length):-1;
   return m;
@@ -417,7 +421,7 @@ function doImport(){
     const pour=parseDate(cell(row,'pour'));if(!pour){skipped.noDate++;continue}
     if(seen.has(id)){dup++;continue}seen.add(id);
     const num=v=>{const n=parseFloat(v);return isFinite(n)&&n>0};
-    sets.push({id,card:String(cell(row,'card')).trim(),el:String(cell(row,'el')).trim(),loc:String(cell(row,'loc')).trim(),grade:String(cell(row,'grade')).trim(),pour,d7:parseDate(cell(row,'d7')),d28:parseDate(cell(row,'d28')),r7:num(cell(row,'r7')),r28:num(cell(row,'r28'))});
+    sets.push({id,card:String(cell(row,'card')).trim(),el:String(cell(row,'el')).trim(),loc:String(cell(row,'loc')).trim(),grade:String(cell(row,'grade')).trim(),pour,d3:parseDate(cell(row,'d3')),r3:num(cell(row,'r3')),d7:parseDate(cell(row,'d7')),d28:parseDate(cell(row,'d28')),r7:num(cell(row,'r7')),r28:num(cell(row,'r28'))});
   }
   if(!sets.length){toast('No sample sets found. Check the header row and the column matches.');return}
   S.projects=S.projects.filter(x=>!isExample(x));const i=S.projects.findIndex(p=>p.name===name);const p={name,src:pending.name,sets};
@@ -427,8 +431,11 @@ function doImport(){
 }
 function vSet(){
   const st=S.settings;
-  return `<div class="panel"><h2>When to ring</h2>
-   <div class="row"><label class="field"><span>7-day tests</span><input type="time" id="s-t7" value="${st.t7}"></label>
+  return `<div class="panel"><h2>Test ages</h2>
+   <div class="row"><label class="row" style="flex:none;min-width:0"><input type="checkbox" id="s-t3on" ${st.t3on?'checked':''} style="width:22px;height:22px"> 3-day test, for pours from</label><input type="date" id="s-t3from" value="${st.t3from||todayYmd()}" ${st.t3on?'':'disabled'}></div>
+   <p class="muted" style="margin:0">7-day and 28-day tests are always on. Older pours before this date get no 3-day alarm unless the register has a 3-day date or result for them.</p></div>
+  <div class="panel"><h2>When to ring</h2>
+   <div class="row"><label class="field"><span>${st.t3on?'3 & 7-day tests':'7-day tests'}</span><input type="time" id="s-t7" value="${st.t7}"></label>
    <label class="field"><span>28-day tests</span><input type="time" id="s-t28" value="${st.t28}"></label></div>
    <p class="muted" style="margin:0">Same time for both gives one combined alarm.</p>
    <div class="row"><label class="row" style="flex:none;min-width:0"><input type="checkbox" id="s-eve" ${st.eve?'checked':''} style="width:22px;height:22px"> Evening-before reminder at</label><input type="time" id="s-eveTime" value="${st.eveTime}"></div>
@@ -449,6 +456,8 @@ function bindSettings(){
   const st=S.settings,up=()=>{save();status()};
   for(const k of['t7','t28','eveTime','shift','extra'])$('#s-'+k).onchange=e=>{st[k]=e.target.value;up();if(k==='shift'||k==='extra')render()};
   $('#s-eve').onchange=e=>{st.eve=e.target.checked;up()};
+  $('#s-t3on').onchange=e=>{st.t3on=e.target.checked;if(st.t3on&&!st.t3from)st.t3from=todayYmd();up();render()};
+  $('#s-t3from').onchange=e=>{if(e.target.value){st.t3from=e.target.value;up();render()}};
   $('#s-snooze').onchange=e=>{st.snooze=+e.target.value;up()};
   $('#s-ring').onchange=e=>{st.ring=+e.target.value;up()};
   $('#s-sound').onchange=e=>{st.sound=e.target.value;if(NATIVE)Android.setSound(st.sound==='custom'&&customSound?customSound:'');up()};
