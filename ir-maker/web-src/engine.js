@@ -181,6 +181,45 @@
       S.count++; S.last = i; S.sample = r;
     });
   }
+  // ---------- duplicate check ----------
+  // Same work in the same block = same IR. Wording differences (ى/ي, spaces, the level line) are ignored.
+  function dupKey(desc) {
+    return norm(desc)
+      .replace(/(?:علي|على|عند)?\s*منسوب\s*[-–]?\s*[\d.\s]+[-–]?/g, ' ')
+      .replace(/[^؀-ۿa-z0-9+ ]/g, ' ')
+      .replace(/\b(رقم|ال)\b/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+  function pileNums(t) { var out = [], re = /p\s*-?\s*(\d{1,4})/gi, m; t = toArabicDigitsLatin(String(t)); while ((m = re.exec(t))) if (out.indexOf(+m[1]) < 0) out.push(+m[1]); return out; }
+  function pileKind(t) { t = norm(t); return /احداثيات/.test(t) ? 'survey' : 'civil'; }
+  function statusOf(log, n) {
+    var same = log.rows.filter(function (r) { return irNum(r.ir) === n; });
+    var last = same.reduce(function (a, r) { return (+r.rev || 0) >= (+a.rev || 0) ? r : a; }, same[0]);
+    var a = String(last.action || '').trim().toUpperCase();
+    return { row: last, n: n, rev: +last.rev || 0, action: a, rejected: a === 'C',
+      status: a === 'A' ? 'Approved' : a === 'B' ? 'Approved as noted' : a === 'C' ? 'Rejected' : a === 'W' ? 'Waiting' : (last.status || '—') };
+  }
+  function findDuplicate(log, d) {
+    var b = d.block == null || d.block === '' ? null : +d.block, k = dupKey(d.desc);
+    if (!k) return null;
+    // piles: any pile number already requested (same block, same kind: coordinates or civil) is a repeat
+    if (/خازوق|خوازيق/.test(norm(d.desc))) {
+      var mine = pileNums(d.desc), kind = pileKind(d.desc), seen = {}, irs = [];
+      if (mine.length) {
+        log.rows.forEach(function (r) {
+          if (!/خازوق|خوازيق/.test(norm(r.desc)) || pileKind(r.desc) !== kind || (b != null && blockNum(r.block) !== b)) return;
+          pileNums(r.desc).forEach(function (p) { if (mine.indexOf(p) >= 0 && !seen[p]) { seen[p] = irNum(r.ir); if (irs.indexOf(seen[p]) < 0) irs.push(seen[p]); } });
+        });
+        var piles = Object.keys(seen).map(Number);
+        if (piles.length) { var st = statusOf(log, irs[irs.length - 1]); st.piles = piles.map(function (p) { return 'P' + p + ' (IR ' + seen[p] + ')'; }); st.allIrs = irs; return st; }
+      }
+      return null;
+    }
+    var hits = log.rows.filter(function (r) { return dupKey(r.desc) === k && (b == null || blockNum(r.block) === b); });
+    if (!hits.length) return null;
+    // the latest submission of that IR decides what the user can do
+    return statusOf(log, irNum(hits[hits.length - 1].ir));
+  }
   function shapeKey(desc) { return norm(desc).replace(/[\d.]+/g, '#').replace(/[^؀-ۿa-z# ]/g, ' ').replace(/\s+/g, ' ').trim(); }
 
   function nextIrNumbers(log, count) {
@@ -756,7 +795,7 @@
   }
 
   var api = {
-    loadLog: loadLog, learnFromFilledIr: learnFromFilledIr, normalizeStations: normalizeStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
+    loadLog: loadLog, findDuplicate: findDuplicate, dupKey: dupKey, learnFromFilledIr: learnFromFilledIr, normalizeStations: normalizeStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
     recordFromRow: recordFromRow, formLocation: formLocation, norm: norm, fmtDate: fmtDate, stationStr: stationStr,
     nextIrNumbers: nextIrNumbers, formIrNo: formIrNo, irNum: irNum, blockNum: blockNum,
     saveLog: function (log) { return log.zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }

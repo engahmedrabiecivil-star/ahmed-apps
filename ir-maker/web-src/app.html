@@ -50,6 +50,7 @@ button{font:inherit;cursor:pointer;border-radius:14px;border:1px solid transpare
 .ghost{background:var(--sheet);border-color:var(--line);color:var(--navy);font-weight:500}
 .danger{background:transparent;color:var(--bad);border-color:transparent;padding:6px 8px}
 .notice{border-radius:14px;padding:11px 14px;font-size:14px}
+#msgs{gap:8px}
 .warn{background:var(--amber-soft);color:var(--amber)}
 .good{background:var(--ok-soft);color:var(--ok)}
 .err{background:var(--bad-soft);color:var(--bad)}
@@ -291,6 +292,30 @@ function renderDrafts(){
   $('save').textContent = S.drafts.length>1 ? 'Add '+S.drafts.length+' IRs to log & print' : 'Add to log & print';
 }
 
+// ---------- duplicate check ----------
+function dupHtml(d, x){
+  var desc = '<div dir="rtl" style="font-weight:600;margin:4px 0">'+esc(d.desc.replace(/\s+/g,' ').trim())+'</div>';
+  if (!x) return '<b>Not added — already in this list</b>'+desc;
+  var when = x.row.date ? E.fmtDate(x.row.date) : '', irLabel = E.formIrNo(S.log, x.n, x.rev);
+  var head = '<b>Not added — done before as <span class="mono">'+esc(irLabel)+'</span></b><div class="small" style="color:inherit">'+(when?esc(when)+' · ':'')+'Status: '+esc(x.status)+'</div>';
+  var hint = x.piles ? 'Already requested: <span dir="ltr">'+esc(x.piles.join(', '))+'</span>. Remove these piles from the request.'
+    : x.rejected ? 'It was rejected. Use <b>Log tools → Resubmit (new Rev)</b> with IR '+x.n+'.'
+    : 'To print it again, use <b>Log tools → Print</b> with IR '+x.n+'.';
+  return head+desc+'<div>'+hint+'</div>';
+}
+function msgHtml(kind, html){ var d=document.createElement('div'); d.className='notice '+kind; d.innerHTML=html; $('msgs').appendChild(d); }
+// splits drafts into new ones and repeats (repeats of the log, or of another draft in the same batch)
+function checkDuplicates(list, against){
+  var ok = [], seen = (against||[]).map(function(d){ return (d.block||'')+'|'+E.dupKey(d.desc); }), notes = [];
+  list.forEach(function(d){
+    var x = E.findDuplicate(S.log, d), key = (d.block||'')+'|'+E.dupKey(d.desc);
+    if (x) { notes.push(dupHtml(d, x)); return; }
+    if (seen.indexOf(key) >= 0) { notes.push(dupHtml(d, null)); return; }
+    seen.push(key); ok.push(d);
+  });
+  return { ok: ok, notes: notes };
+}
+
 // ---------- actions ----------
 function understand(){
   var text=$('req').value.trim(); if(!text){ msg('warn','Type the request first, e.g. حدادة حائط بحري فاصل 20'); return; }
@@ -298,7 +323,9 @@ function understand(){
   $('msgs').innerHTML='';
   if (!u.drafts.length) msg('warn','The type of work was not recognised. Write it the way it appears in the log, or pick a suggestion below.');
   u.warnings.forEach(function(w){ msg('warn', w, true); });
-  S.drafts = S.drafts.concat(u.drafts);
+  var chk = checkDuplicates(u.drafts, S.drafts);
+  chk.notes.forEach(function(t){ msgHtml('err', t); });
+  S.drafts = S.drafts.concat(chk.ok);
   if (u.rule) u.alternatives = [];
   S.alts = u.alternatives;
   $('alts').innerHTML = (u.alternatives.length? '<span class="small" style="width:100%">Similar entries from the log:</span>':'') + u.alternatives.map(function(r,i){ return '<button class="chip" dir="auto" data-alt="'+i+'">'+esc(r.desc.replace(/\s+/g,' ').slice(0,70))+'</button>'; }).join('');
@@ -310,6 +337,8 @@ async function save(){
   if (!S.drafts.length) return;
   var bad = S.drafts.filter(function(d){ return d.block==null || d.block==='' || /…/.test(d.desc); });
   if (bad.length){ msg('err','One IR is incomplete (missing block, or a value shown as …). Complete it first.'); return; }
+  var again = checkDuplicates(S.drafts, []);
+  if (again.notes.length){ $('msgs').innerHTML=''; again.notes.forEach(function(t){ msgHtml('err', t); }); msg('warn','Nothing was saved. Remove the repeated IRs above, then try again.', true); return; }
   $('save').disabled = true;
   try{
     var date = isoToDate($('date').value);
@@ -366,7 +395,9 @@ document.addEventListener('click', function(ev){
   if (t.dataset.ex){ $('req').value = t.dataset.ex; $('req').focus(); return; }
   if (t.dataset.del!=null){ S.drafts.splice(+t.dataset.del,1); renderDrafts(); return; }
   if (t.dataset.alt!=null){ var r=S.alts[+t.dataset.alt]; var b = S.drafts.length? S.drafts[S.drafts.length-1].block : E.blockNum(r.block);
-    S.drafts.push({desc:r.desc, item:r.item||'', subItem:r.subItem||'', unit:r.unit||'Civil', block:b, rev:0, formItem:r.item||'', date:isoToDate($('date').value)}); renderDrafts(); return; }
+    var nd={desc:r.desc, item:r.item||'', subItem:r.subItem||'', unit:r.unit||'Civil', block:b, rev:0, formItem:r.item||'', date:isoToDate($('date').value)};
+    var c2=checkDuplicates([nd], S.drafts); if (c2.notes.length){ $('msgs').innerHTML=''; msgHtml('err', c2.notes[0]); return; }
+    S.drafts.push(nd); renderDrafts(); return; }
   if (t.dataset.reprint){ var p=t.dataset.reprint.split('|'); reprint(p[0],p[1]); return; }
   if (t.id==='go') understand();
   if (t.id==='save') save();
