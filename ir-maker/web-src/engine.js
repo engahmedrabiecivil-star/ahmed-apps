@@ -145,7 +145,7 @@
   function blockNum(s) { var m = String(s || '').match(/(\d+)/); return m ? +m[1] : null; }
   function irNum(s) { var m = String(s || '').match(/(\d+)\s*$/); return m ? +m[1] : null; }
 
-  function isUSection(log) { return /u[\s._-]*section/i.test((log.absPath || '') + ' ' + (log.fileName || '')); }
+  function isUSection(log) { return /u[\s._-]*section/i.test((log.absPath || '') + ' ' + (log.fileName || '')) || /HYDRO-IR-US-$/.test(log.prefix || ''); }
   function analyse(log) {
     var blocks = {}, maxN = 0, prefix = 'HAC-HYDRO-IR-US-', width = 3, lastIr = null;
     log.rows.forEach(function (r) {

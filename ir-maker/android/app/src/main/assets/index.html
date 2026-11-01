@@ -137,7 +137,7 @@ details .inner{display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
           <div class="row"><input id="reNo" class="mono" inputmode="numeric" placeholder="558" style="flex:1;min-width:90px"><button class="ghost" id="rePrint">Print</button><button class="ghost" id="reSubmit">Resubmit (new Rev)</button></div>
         </div>
         <div class="row">
-          <button class="ghost" id="exportLog">Save a copy of the log</button>
+          <button class="ghost" id="exportLog">Save the log</button>
           <button class="ghost" id="undo">Undo last entry</button>
         </div>
         <div class="row">
@@ -323,7 +323,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function blockNum(s) { var m = String(s || '').match(/(\d+)/); return m ? +m[1] : null; }
   function irNum(s) { var m = String(s || '').match(/(\d+)\s*$/); return m ? +m[1] : null; }
 
-  function isUSection(log) { return /u[\s._-]*section/i.test((log.absPath || '') + ' ' + (log.fileName || '')); }
+  function isUSection(log) { return /u[\s._-]*section/i.test((log.absPath || '') + ' ' + (log.fileName || '')) || /HYDRO-IR-US-$/.test(log.prefix || ''); }
   function analyse(log) {
     var blocks = {}, maxN = 0, prefix = 'HAC-HYDRO-IR-US-', width = 3, lastIr = null;
     log.rows.forEach(function (r) {
@@ -1001,6 +1001,16 @@ function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMo
 function isoToDate(s){ var p=(s||todayISO()).split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
 
 var DOCX='application/vnd.openxmlformats-officedocument.wordprocessingml.document', XLSX='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+// One log file only: every save overwrites the same file in the IR Maker folder.
+function logOutName(){
+  var p = projName() || 'Project';
+  return 'IR Log - ' + String(p).replace(/\s*[–—]\s*/g,'-').replace(/[\\/:*?"<>|]/g,'-').replace(/\s+/g,' ').trim() + '.xlsx';
+}
+function saveLogFile(bytes){
+  var r = deliver(logOutName(), bytes, XLSX, false);
+  if (BR && BR.saveFile && !r) msg('err','The log file was not updated. If it is open in Excel, close it, then use Log tools → Save the log. Your entries are kept in the app.', true);
+  return r;
+}
 function deliver(name, bytes, mime, open){
   if (BR && BR.saveFile) { try { return BR.saveFile(name, bytesToB64(bytes), mime, !!open); } catch(e) { msg('err','Could not save the file: '+e.message); return null; } }
   var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([bytes],{type:mime})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},4000); return name;
@@ -1017,7 +1027,7 @@ async function useLog(bytes, name, persist){
   if (fixed) { bytes = await E.saveLog(log); log = await E.loadLog(bytes, S.logName); persist = true; S.stationFix = fixed; }
   S.log = log; S.logBytes = bytes;
   if (persist){ await put('log', {bytes:bytes, name:S.logName}); }
-  if (fixed && S.ready) { deliver(S.logName, bytes, XLSX, false); }
+  if (fixed && S.ready) { saveLogFile(bytes); }
   render();
 }
 async function init(){
@@ -1027,7 +1037,7 @@ async function init(){
   var saved = await get('log');
   if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); } catch(e){ setupMsg('err','The saved log could not be read. Please upload it again.'); } }
   S.ready = !!(S.log && S.tpl);
-  if (S.stationFix && S.ready){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved in the IR Maker folder.'); S.stationFix=0; }
+  if (S.stationFix && S.ready){ saveLogFile(S.logBytes); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved in the IR Maker folder.'); S.stationFix=0; }
   render();
 }
 
@@ -1171,7 +1181,7 @@ async function save(){
     var form = await E.buildForm(S.tpl, recs);
     var fname = recs.length===1 ? recs[0].formIr+'.docx' : 'IR '+recs[0].n+'-'+recs[recs.length-1].n+'.docx';
     S.lastFiles = {form:form, fname:fname};
-    deliver(S.logName, bytes, XLSX, false);
+    saveLogFile(bytes);
     deliver(fname, form, DOCX, true);
     S.drafts=[]; $('req').value=''; $('alts').innerHTML=''; $('msgs').innerHTML='';
     $('done').innerHTML = '<div class="notice good">'+(recs.length===1?'IR ':'IRs ')+'<span class="mono">'+recs[0].n+(recs.length>1?' → '+recs[recs.length-1].n:'')+'</span> added to the log. The form is ready to print.'+
@@ -1203,7 +1213,7 @@ async function resubmit(no){
   var bytes = await E.saveLog(S.log);
   await put('logPrev', {bytes:prev, name:S.logName});
   await useLog(bytes, S.logName, true);
-  deliver(S.logName, bytes, XLSX, false);
+  saveLogFile(bytes);
   deliver(rec.formIr+'.docx', await E.buildForm(S.tpl,[rec]), DOCX, true);
   msg('good',rec.formIr+' (submission '+(rev+1)+') added to the log.');
 }
@@ -1222,7 +1232,7 @@ document.addEventListener('click', function(ev){
   if (t.id==='save') save();
   if (t.id==='clear'){ S.drafts=[]; $('alts').innerHTML=''; $('msgs').innerHTML=''; renderDrafts(); }
   if (t.id==='reopen' && S.lastFiles) deliver(S.lastFiles.fname, S.lastFiles.form, DOCX, true);
-  if (t.id==='exportLog') { deliver(S.logName, S.logBytes, XLSX, false); msg('good','Log copy saved: '+S.logName); }
+  if (t.id==='exportLog') { saveLogFile(S.logBytes); msg('good','Log saved: IR Maker/'+logOutName()); }
   if (t.id==='rePrint'){ var rows=findRows($('reNo').value); if(!rows.length) msg('err','This IR number is not in the log'); else { var r2=rows[rows.length-1]; reprint(r2.ir, r2.rev); } }
   if (t.id==='reSubmit'){ var no=$('reNo').value; if(!findRows(no).length){ msg('err','This IR number is not in the log'); return; }
     $('confirmBox').innerHTML='<div class="notice warn">A new row will be added with IR '+esc(no)+' and the next Rev. Continue? <button class="ghost" id="yesRe">Yes, add it</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
@@ -1230,7 +1240,7 @@ document.addEventListener('click', function(ev){
   if (t.id==='noRe'){ $('confirmBox').innerHTML=''; }
   if (t.id==='undo'){ $('confirmBox').innerHTML='<div class="notice warn">The log will go back to how it was before the last entry. Continue? <button class="ghost" id="yesUndo">Yes, undo</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
   if (t.id==='yesUndo'){ $('confirmBox').innerHTML=''; get('logPrev').then(function(p){ if(!p||!p.bytes){ msg('warn','There is nothing to undo.'); return; }
-      return useLog(p.bytes, p.name, true).then(function(){ put('logPrev', null); deliver(S.logName, S.logBytes, XLSX, false); msg('good','Undone. Last IR in the log is now '+S.log.lastNum+'.'); }); }); }
+      return useLog(p.bytes, p.name, true).then(function(){ put('logPrev', null); saveLogFile(S.logBytes); msg('good','Undone. Last IR in the log is now '+S.log.lastNum+'.'); }); }); }
 });
 document.addEventListener('input', function(ev){
   var el=ev.target, card=el.closest('.ir'); if(!card||!el.dataset.k) return;
@@ -1246,7 +1256,7 @@ $('logFile').addEventListener('change', function(){ readFile(this, function(b,n)
 $('tplFile0').addEventListener('change', function(){ readFile(this, function(b,n){ useTemplate(b,n).then(function(note){ setupMsg(note?note.kind:'', note?note.text:''); render(); }).catch(function(e){ setupMsg('err', e.message); }); }); });
 $('company0').addEventListener('change', function(){ setCompany(this.value); });
 $('saveCompany').addEventListener('click', function(){ setCompany($('company1').value).then(function(){ msg('good', S.company ? 'Company name saved: '+S.company : 'Company name removed.'); }); });
-$('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; setCompany($('company0').value); S.ready = true; render(); if (S.stationFix){ deliver(S.logName, S.logBytes, XLSX, false); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved in the IR Maker folder.'); S.stationFix=0; } window.scrollTo(0,0); });
+$('start').addEventListener('click', function(){ if(!(S.log && S.tpl)) return; setCompany($('company0').value); S.ready = true; render(); if (S.stationFix){ saveLogFile(S.logBytes); msg('good','Stations in the log were set back to the log style (e.g. 9+330) in '+S.stationFix+' cells. Updated log saved in the IR Maker folder.'); S.stationFix=0; } window.scrollTo(0,0); });
 $('changeProj').addEventListener('click', function(){ S.ready = false; S.drafts = []; render(); window.scrollTo(0,0); });
 
 init();

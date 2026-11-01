@@ -109,6 +109,24 @@ public class MainActivity extends Activity {
         else super.onBackPressed();
     }
 
+    // Keep a single log in Download/IR Maker: any other .xlsx this app saved there
+    // (older names, "(1)" copies) is moved to Download/IR Maker/Old logs.
+    private void tidyOldLogs(ContentResolver cr, String keepName) {
+        Uri coll = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+        String sel = MediaStore.MediaColumns.RELATIVE_PATH + "=? AND " + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?";
+        try (Cursor c = cr.query(coll, new String[]{MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME}, sel, new String[]{FOLDER, "%.xlsx"}, null)) {
+            if (c == null) return;
+            while (c.moveToNext()) {
+                String n = c.getString(1);
+                if (n == null || n.equals(keepName)) continue;
+                Uri u = Uri.withAppendedPath(coll, String.valueOf(c.getLong(0)));
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.MediaColumns.RELATIVE_PATH, FOLDER + "Old logs/");
+                try { cr.update(u, v, null, null); } catch (Exception ignored) { }
+            }
+        } catch (Exception ignored) { }
+    }
+
     private Uri findExisting(ContentResolver cr, String name) {
         Uri coll = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
         String sel = MediaStore.MediaColumns.DISPLAY_NAME + "=? AND " + MediaStore.MediaColumns.RELATIVE_PATH + "=?";
@@ -140,6 +158,7 @@ public class MainActivity extends Activity {
                     if (os == null) throw new IllegalStateException("can't open file");
                     os.write(bytes);
                 }
+                if (name.toLowerCase().endsWith(".xlsx")) tidyOldLogs(cr, name);
                 final Uri fileUri = uri;
                 if (open) {
                     runOnUiThread(() -> {

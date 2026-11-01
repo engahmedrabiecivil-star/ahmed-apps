@@ -18,9 +18,27 @@ function safeName(name) {
 ipcMain.on('save-file', (event, { name, b64, open }) => {
   const dir = outDir();
   const base = safeName(name);
-  const ext = path.extname(base);
+  const ext = path.extname(base).toLowerCase();
   const stem = base.slice(0, base.length - ext.length);
   const data = Buffer.from(b64, 'base64');
+  if (ext === '.xlsx') {
+    // One log only: overwrite the same file every time; never create "(1)" copies.
+    const target = path.join(dir, base);
+    try { fs.writeFileSync(target, data); }
+    catch (err) { event.returnValue = ''; return; } // open in Excel: the page tells the user to close it
+    // move any other .xlsx in this folder (older names) to "Old logs"
+    try {
+      const old = path.join(dir, 'Old logs');
+      fs.readdirSync(dir).forEach((f) => {
+        if (f.toLowerCase().endsWith('.xlsx') && f !== base) {
+          fs.mkdirSync(old, { recursive: true });
+          try { fs.renameSync(path.join(dir, f), path.join(old, f)); } catch (e) { }
+        }
+      });
+    } catch (e) { }
+    event.returnValue = target;
+    return;
+  }
   let target = path.join(dir, base);
   for (let i = 1; i <= 50; i++) {
     try {
@@ -29,7 +47,7 @@ ipcMain.on('save-file', (event, { name, b64, open }) => {
       event.returnValue = target;
       return;
     } catch (err) {
-      // the file is open in Excel/Word: save next to it with a number instead
+      // the form is open in Word: save next to it with a number instead
       target = path.join(dir, `${stem} (${i})${ext}`);
     }
   }
