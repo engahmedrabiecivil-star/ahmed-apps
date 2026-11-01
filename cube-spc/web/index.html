@@ -161,14 +161,14 @@ function andersonDarling(a){const n=a.length;if(n<8)return null;const m=ST.mean(
   return{A2:A,p:Math.min(Math.max(p,0),1)}}
 function linreg(y){const n=y.length,x=y.map((_,i)=>i+1),mx=ST.mean(x),my=ST.mean(y);let sxx=0,sxy=0;for(let i=0;i<n;i++){sxx+=(x[i]-mx)**2;sxy+=(x[i]-mx)*(y[i]-my)}
   const b=sxy/sxx,a=my-b*mx;let sse=0;for(let i=0;i<n;i++)sse+=(y[i]-a-b*x[i])**2;const se=Math.sqrt(sse/(n-2)/sxx);const t=b/se;return{a,b,t,p:n>2&&se>0?tTwoSided(t,n-2):1}}
-const CONST={2:{A2:1.880,D3:0,D4:3.267,d2:1.128},3:{A2:1.023,D3:0,D4:2.574,d2:1.693},4:{A2:0.729,D3:0,D4:2.282,d2:2.059},5:{A2:0.577,D3:0,D4:2.114,d2:2.326}};
+const CONST={2:{A2:1.880,D3:0,D4:3.267,d2:1.128},3:{A2:1.023,D3:0,D4:2.574,d2:1.693},4:{A2:0.729,D3:0,D4:2.282,d2:2.059},5:{A2:0.577,D3:0,D4:2.114,d2:2.326},6:{A2:0.483,D3:0,D4:2.004,d2:2.534}};
 
 /* ================= storage ================= */
 const DEF={minDesc:5,minECP:15,finalECP:30,minSPC:20,minCap:25,minSup:10,minTrend:20,
   ecp:[8,11,14,17],rules:'all',usl:'',fcuOv:'',lslOv:'',title:'',autoTypo:true,spreadPct:20,binW:''};
-let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg'};
+let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{}};
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.set={...DEF,...r.set};S.ov=r.ov||{}}}catch(e){}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
+function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
 
 /* ================= reading files ================= */
 async function readXlsx(buf){
@@ -196,6 +196,10 @@ async function readXlsx(buf){
         if(t==='e')val='';
         arr[col]=val}}
     for(let i=0;i<aoa.length;i++)if(!aoa[i])aoa[i]=[];
+    const dec=ref=>{const m=ref.match(/^([A-Z]+)(\d+)$/);let c=0;for(const ch of m[1])c=c*26+ch.charCodeAt(0)-64;return[+m[2]-1,c-1]};
+    for(const mc of doc.getElementsByTagName('mergeCell')){const[a,b]=(mc.getAttribute('ref')||'').split(':');if(!b)continue;const[r0,c0]=dec(a),[r1,c1]=dec(b);
+      if((r1-r0+1)*(c1-c0+1)>5000)continue;const v=(aoa[r0]||[])[c0];if(v===''||v==null)continue;
+      for(let r=r0;r<=r1;r++){if(!aoa[r])aoa[r]=[];for(let c=c0;c<=c1;c++)if(aoa[r][c]===''||aoa[r][c]==null)aoa[r][c]=v}}
     out[s.name]=aoa}
   return{names:sheets.map(s=>s.name).filter(n=>out[n]),sheets:out}}
 function readCsv(text){const rows=[];let row=[],f='',q=false;const delim=(text.split('\n')[0].match(/;/g)||[]).length>(text.split('\n')[0].match(/,/g)||[]).length?';':',';
@@ -215,35 +219,144 @@ function parseDate(v){
   return null}
 const num=v=>{if(v===''||v==null||typeof v==='boolean')return null;const n=typeof v==='number'?v:parseFloat(String(v).replace(/,/g,''));return isFinite(n)?n:null};
 
-/* ================= column matching ================= */
-const FIELDS=[['id','Sample / Set ID',1],['pour','Date of pouring',1],['sup','Supplier / Plant'],['item','Item (PC, RC Raft…)'],['grade','Concrete grade'],['mix','Mix ID'],['cem','Cement type'],['el','Element / description'],
-  ['c1','28-day cube 1',1],['c2','28-day cube 2'],['c3','28-day cube 3'],['avg','28-day average (register)']];
-function guessMap(hdr){
-  const L=hdr.map(h=>String(h).toLowerCase().replace(/\s+/g,' ').trim());const used=new Set();const m={};
-  const find=(rx,from=0,to=L.length)=>{for(let i=Math.max(0,from);i<to;i++){if(used.has(i))continue;if(rx.test(L[i])){used.add(i);return i}}return -1};
-  m.id=find(/sample|set ?#|set ?no|set id|cube ?(id|no)|specimen/);
-  m.pour=find(/date of pour|pour(ing)? ?date|cast(ing)? ?date|date of cast|placing date/);if(m.pour<0)m.pour=find(/^date$/);
-  m.sup=find(/supplier|plant|batching|producer|vendor|station name/);
-  m.grade=find(/grade|strength class|concrete class/);
-  m.mix=find(/mix/);
-  m.cem=find(/cement/);
-  m.item=find(/^items?$/);
-  m.el=find(/exact item|element|description|structural/);
-  let d28=L.findIndex(h=>/28/.test(h)&&/date/.test(h));
-  let from=d28>=0?d28+1:L.findIndex(h=>/28/.test(h));
-  if(from<0)from=0;
-  m.c1=-1;m.c2=-1;m.c3=-1;m.avg=-1;
-  for(let i=from;i<L.length;i++){if(/strength|cube|result|kg|mpa|n\/mm/.test(L[i])&&!/ave|avg|average|mean|date|report|ir$/.test(L[i])){m.c1=i;break}}
-  if(m.c1>=0){used.add(m.c1);
-    const ok=i=>i<L.length&&!used.has(i)&&(L[i]===''||/strength|cube|result|kg/.test(L[i]))&&!/ave|avg|average|mean|date|report/.test(L[i]);
-    if(ok(m.c1+1)){m.c2=m.c1+1;used.add(m.c2)}if(m.c2>=0&&ok(m.c1+2)){m.c3=m.c1+2;used.add(m.c3)}
-    for(let i=(m.c3>=0?m.c3:m.c1)+1;i<Math.min(L.length,m.c1+6);i++)if(/ave|avg|average|mean|result/.test(L[i])&&!/report|date/.test(L[i])){m.avg=i;used.add(i);break}}
-  else{for(let i=from;i<L.length;i++)if(/ave|avg|average|mean|result/.test(L[i])&&!/report|date/.test(L[i])){m.avg=i;used.add(i);break}}
-  return m}
-function detectHeader(aoa){let best=0,bs=-1;const rx=/sample|set|pour|date|grade|supplier|mix|strength|cube|item/i;
-  for(let r=0;r<Math.min(30,aoa.length);r++){const sc=(aoa[r]||[]).filter(c=>typeof c==='string'&&rx.test(c)).length;if(sc>bs){bs=sc;best=r}}return best}
-const colName=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=(i-m-1)/26|0}return s};
-function projectTitle(aoa,hr){for(let r=0;r<hr;r++)for(const c of aoa[r]||[])if(typeof c==='string'&&c.trim().length>3&&!/log|register|date/i.test(c))return c.trim().replace(/\.\s*/,'. ').replace(/\s+/g,' ');return ''}
+/* ================= understanding any register ================= */
+// Core rule: find the 28-day cube strengths by their numbers, then confirm with headers, test dates and the average column.
+const RX={
+  id:/sample|set ?#|set ?no|set ?id|specimen|cube ?(id|no|ref)|lab ?(no|ref)|رقم العين|العينة|رقم المجموع|رقم المكعب|كود العين/,
+  pour:/date of pour|pour(ing)? ?date|cast(ing)? ?date|date of cast|placing date|تاريخ الصب|تاريخ صب|يوم الصب/,
+  sup:/supplier|plant|batching|producer|ready ?mix|vendor|المورد|مورد|محطة|المحطة/,
+  grade:/grade|strength class|concrete class|^class$|^fcu|الرتبة|رتبة|درجة الخرسانة|مقاومة التصميم/,
+  mix:/mix|design no|الخلطة|خلطة|تصميم/,
+  cem:/cement|أسمنت|اسمنت|الأسمنت|الاسمنت/,
+  item:/^items?$|concrete type|type of concrete|نوع الخرسانة|^البند$|^النوع$/,
+  el:/exact item|element|description|structural|العنصر|الوصف|الجزء/,
+  age:/^age|age ?\(|عمر|^days?$|^يوم$|test age/,
+};
+const STRL=/strength|result|cube|crush|comp|kg|mpa|n\/mm|مقاوم|اجهاد|إجهاد|مكعب|كسر|نتيجة|^#?\d$|^c\d$|^s\d$|^no\.? ?\d$/;
+const AVGL=/ave|avg|average|mean|متوسط/;
+const SEC=/day|يوم|أيام|ايام|age|عمر|test|اختبار|result|نتائج|record|strength|مقاوم|cube|مكعب|كسر|28|\b7\b/;
+const EXCL=/qty|quantity|volume|m3|م3|كمية|slump|هبوط|temp|حرار|unit|^no\.?$|number|report|تقرير|^age|عمر|load|kn|حمل|weight|وزن|density|كثاف|sr\.?$|serial|مسلسل|^م$|cost|price|سعر|ir$|ncr|area|مساحة|thick|سمك|level|منسوب|station|km|كم/;
+const AR_NUM=s=>String(s).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+const lc=s=>AR_NUM(String(s??'')).toLowerCase().replace(/\s+/g,' ').trim();
+const isNum=v=>typeof v==='number'&&isFinite(v)||(typeof v==='string'&&/^\s*-?\d+([.,]\d+)?\s*$/.test(AR_NUM(v)));
+const toNum=v=>{if(v===''||v==null||typeof v==='boolean')return null;if(typeof v==='number')return isFinite(v)?v:null;const s=AR_NUM(v).replace(/,/g,'.').trim();return/^-?\d+(\.\d+)?$/.test(s)?+s:null};
+const empty=v=>v===''||v==null||(typeof v==='string'&&!v.trim());
+const median=a=>{if(!a.length)return NaN;const b=[...a].sort((x,y)=>x-y);return b[b.length>>1]};
+const dayNo=y=>Date.UTC(+y.slice(0,4),+y.slice(5,7)-1,+y.slice(8,10))/864e5;
+const AGE_OF=t=>{t=lc(t);if(/(^|\D)28(\D|$)|twenty.?eight|٢٨/.test(t))return 28;if(/(^|\D)0?7(\D|$)|seven|سبع/.test(t))return 7;if(/(^|\D)0?3(\D|$)|three|ثلاث/.test(t))return 3;if(/(^|\D)56(\D|$)/.test(t))return 56;return null};
+
+function headerScore(row){let s=0;for(const c of row||[]){if(typeof c!=='string'||!c.trim())continue;const t=lc(c);
+  for(const k of['id','pour','sup','grade','mix','cem'])if(RX[k].test(t))s+=2;if(STRL.test(t)||/date|تاريخ/.test(t))s++}return s}
+const textRow=r=>{const ne=(r||[]).filter(v=>!empty(v));if(!ne.length)return false;if(ne.some(v=>typeof v==='string'&&parseDate(v)))return false;const nums=ne.filter(v=>typeof v==='number'||isNum(v)).length;return ne.length-nums>=Math.max(1,nums*2)};
+function headerBlock(aoa){
+  let hr=0,bs=-1;for(let r=0;r<Math.min(40,aoa.length);r++){const s=headerScore(aoa[r]);if(s>bs){bs=s;hr=r}}
+  let top=hr,bot=hr;
+  while(top>0&&hr-top<2&&textRow(aoa[top-1])&&(aoa[top-1]||[]).filter(v=>!empty(v)).length>=1)top--;
+  while(bot+1<aoa.length&&bot-hr<2&&textRow(aoa[bot+1])&&headerScore(aoa[bot+1])<=bs&&!(aoa[bot+1]||[]).some(v=>parseDate(v)&&typeof v==='number'))bot++;
+  return{hr,top,bot}}
+function buildLabels(aoa,top,hr,bot){
+  const w=Math.max(...aoa.slice(top,Math.min(aoa.length,bot+60)).map(r=>(r||[]).length),0);const par=[],chi=[];
+  for(let j=0;j<w;j++){par[j]='';chi[j]=''}
+  for(let r=top;r<=bot;r++){const row=aoa[r]||[];let last='';
+    for(let j=0;j<w;j++){let v=empty(row[j])?'':String(row[j]).replace(/\s+/g,' ').trim();
+      if(r<hr){if(typeof row[j]==='number'||(v&&!SEC.test(lc(v))))v='';if(v)last=v;else v=last;par[j]=(par[j]?par[j]+' | ':'')+v}   // section titles (7 days / 28 days…) carry right until the next one
+      else chi[j]=(chi[j]?chi[j]+' ':'')+v}}
+  return{par,chi,w}}
+
+function colStats(rows,j){let ne=0,nums=[],dates=0,texts=[];for(const r of rows){const v=r[j];if(empty(v))continue;ne++;const n=toNum(v);
+    if(n!=null&&!(typeof v==='number'&&v>20000&&v<80000))nums.push(n);else if(parseDate(v))dates++;else texts.push(String(v).trim())}
+  return{ne,nums,dates,texts,med:median(nums),numF:ne?nums.length/ne:0,dateF:ne?dates/ne:0}}
+
+function detectMap(P){
+  const{aoa,start,par,chi,w}=P;const rows=aoa.slice(start,start+500).filter(r=>r&&r.some(v=>!empty(v)));
+  const L=j=>lc(chi[j]),F=j=>lc(par[j]+' '+chi[j]);const st=[];for(let j=0;j<w;j++)st[j]=colStats(rows,j);
+  const notes=[],m={layout:'wide',id:-1,pour:-1,sup:-1,item:-1,grade:-1,mix:-1,cem:-1,el:-1,c1:-1,n:0,avg:-1,age:-1,ageVal:28,unit:'kg'};
+  const used=new Set();
+  const byLabel=(k,ok=()=>true)=>{for(const pass of[L,F])for(let j=0;j<w;j++)if(!used.has(j)&&RX[k].test(pass(j))&&ok(j)){used.add(j);return j}return -1};
+  // 1. strength candidates by content
+  const cand=j=>{const s=st[j];if(s.ne<3||s.numF<0.6)return false;const md=s.med;if(!(md>=5&&md<=120||md>=50&&md<=1500))return false;
+    if(EXCL.test(L(j))&&!STRL.test(L(j)))return false;if(RX.id.test(L(j))||RX.pour.test(L(j))||RX.grade.test(L(j)))return false;
+    const ints=s.nums.every(v=>Number.isInteger(v)),distinct=new Set(s.nums).size;if(ints&&md<60&&distinct<=s.nums.length*0.3&&!STRL.test(F(j)))return false;
+    return !L(j)||STRL.test(L(j))||STRL.test(F(j))||AVGL.test(L(j))};
+  const runs=[];let cur=null;for(let j=0;j<w;j++){if(cand(j)){
+      const cont=cur&&cur.e===j-1&&sameScale(st[cur.s].med,st[j].med)&&par[j]===par[cur.s]&&!AVGL.test(L(j-1))&&!(L(j)&&L(j)!==L(j-1)&&Array.from({length:j-cur.s},(_,k)=>L(cur.s+k)).includes(L(j)));
+      if(cont)cur.e=j;else runs.push(cur={s:j,e:j})}else cur=null}
+  function sameScale(a,b){return a/b<2.2&&b/a<2.2}
+  // 2. split off an average column inside each run, by checking row by row
+  for(const r of runs){r.avg=-1;const cols=[];for(let j=r.s;j<=r.e;j++)cols.push(j);
+    const isAvgOf=(a,list)=>{let ok=0,tot=0;for(const row of rows){const vs=list.map(j=>toNum(row[j]));const av=toNum(row[a]);if(av==null||vs.some(v=>v==null))continue;tot++;if(Math.abs(av-vs.reduce((x,y)=>x+y,0)/vs.length)<=Math.max(0.6,0.012*av))ok++}return tot>=2&&ok/tot>=0.8};
+    if(cols.length>=3&&(isAvgOf(r.e,cols.slice(0,-1))||AVGL.test(L(r.e))&&!AVGL.test(L(r.s)))){r.avg=r.e;r.e--}
+    else if(r.e+1<w&&!cand(r.e+1)&&st[r.e+1].numF>0.6&&isAvgOf(r.e+1,cols))r.avg=r.e+1;
+    else if(cols.length===1&&AVGL.test(L(r.s))){r.avg=r.s;r.e=r.s-1}
+    r.k=r.e-r.s+1;
+    const vals=[];for(let j=r.s;j<=Math.max(r.e,r.avg);j++)vals.push(...st[j].nums);r.med=median(vals);
+    // age: section title / header words, else the test-date column just before, else decided below
+r.age=AGE_OF(par[r.s])??(/day|يوم|age|عمر|d$/.test(lc(chi[r.s]))?AGE_OF(chi[r.s]):null);
+    r.ageWhy=r.age?'header':'';r.testDate=-1;
+    for(let j=r.s-1;j>=Math.max(0,r.s-3);j--)if(st[j].dateF>0.6||/date|تاريخ/.test(L(j))&&st[j].ne){r.testDate=j;break}}
+  // 3. pouring date
+  m.pour=byLabel('pour');
+  if(m.pour<0){const first=runs.length?runs[0].s:w;for(let j=0;j<first;j++)if(!used.has(j)&&st[j].dateF>=0.6&&!/test|crush|اختبار|كسر/.test(F(j))&&runs.every(r=>r.testDate!==j)){m.pour=j;used.add(j);notes.push(`Pouring date taken from column ${colName(j)} (first date column).`);break}}
+  // ages from test dates
+  if(m.pour>=0)for(const r of runs)if(!r.age&&r.testDate>=0&&r.testDate!==m.pour){const ds=[];for(const row of rows){const a=parseDate(row[m.pour]),b=parseDate(row[r.testDate]);if(a&&b)ds.push(dayNo(b)-dayNo(a))}
+    const d=median(ds);if(isFinite(d)){r.age=Math.abs(d-28)<=3?28:Math.abs(d-7)<=2?7:Math.abs(d-3)<=1?3:Math.round(d);r.ageWhy='test dates'}}
+  // 4. long layout: an age column with 7 / 28 values
+  for(let j=0;j<w;j++){const s=st[j];if(s.nums.length<4)continue;const okAges=s.nums.filter(v=>[1,3,7,14,21,28,56,90].includes(v)).length/s.nums.length;
+    if(okAges>0.9&&s.nums.includes(28)&&new Set(s.nums).size>=2&&(RX.age.test(L(j))||/day|يوم|age|عمر/.test(F(j)))){m.age=j;used.add(j);break}}
+  if(m.age>=0)for(let i=runs.length-1;i>=0;i--)if(runs[i].s<=m.age&&runs[i].e>=m.age)runs.splice(i,1);
+  // 5. choose the 28-day run
+  const real=runs.filter(r=>r.k>=1||r.avg>=0);
+  let pick=null;
+  if(m.age>=0){pick=real.sort((a,b)=>b.k-a.k)[0];if(pick){m.layout=pick.k>=2?'wide':'long';notes.push(`Rows with age 28 in column ${colName(m.age)} are used.`)}}
+  else{pick=real.filter(r=>r.age===28).sort((a,b)=>b.k-a.k)[0];
+    if(!pick){const un=real.filter(r=>!r.age);if(un.length){pick=un.sort((a,b)=>b.med-a.med)[0];
+      notes.push(real.length>1?`The 28-day columns were not labelled; the group with the highest strengths (${colName(pick.s)}) was taken as 28-day. Check it.`:`No age is written above the strength columns; they are assumed to be 28-day results. Check it.`)}}}
+  if(pick){if(pick.k>=1){m.c1=pick.s;m.n=pick.k}m.avg=pick.avg;m.unit=pick.med<150?'mpa':'kg';
+    for(let j=pick.s;j<=Math.max(pick.e,pick.avg);j++)used.add(j);
+    const ign=real.filter(r=>r!==pick&&r.age&&r.age!==28);if(ign.length)notes.push(`Ignored ${ign.map(r=>r.age+'-day ('+colName(r.s)+(r.k>1?'–'+colName(r.e):'')+')').join(', ')} results.`);
+    if(pick.ageWhy==='test dates')notes.push(`Columns ${colName(pick.s)}${pick.k>1?'–'+colName(pick.e):''} identified as 28-day from their test dates (crushed about 28 days after pouring).`);
+    if(m.unit==='mpa')notes.push('Strengths are in N/mm² (MPa); the report uses N/mm².')}
+  for(const r of runs)for(let j=r.s;j<=Math.max(r.e,r.avg);j++)used.add(j);
+  // 6. the descriptive columns
+  m.id=byLabel('id',j=>st[j].ne>=2);
+  m.sup=byLabel('sup',j=>st[j].texts.length>=st[j].ne*0.6);
+  m.grade=byLabel('grade');
+  if(m.grade<0)for(let j=0;j<w;j++)if(!used.has(j)&&st[j].ne>=3){const g=st[j].texts.filter(t=>/^\s*(c|b|k|f|fcu)?\s*-?\s*\d{2,3}\b/i.test(t)).length;if(g/st[j].ne>0.7&&new Set(st[j].texts).size<=12){m.grade=j;used.add(j);break}}
+  m.mix=byLabel('mix');m.cem=byLabel('cem');m.item=byLabel('item');m.el=byLabel('el');
+  if(m.id<0){for(let j=0;j<w;j++)if(!used.has(j)&&st[j].texts.length>=st[j].ne*0.8&&st[j].ne>=3&&new Set(st[j].texts).size>=st[j].ne*0.9&&st[j].texts.some(t=>/\d/.test(t))){m.id=j;used.add(j);notes.push(`Sample ID taken from column ${colName(j)} (unique codes).`);break}}
+  return{m,notes,runs}}
+
+function buildRecs(P,m){
+  const rows=P.aoa.slice(P.start);const recs=[];const skip={noDate:0,noId:0};const s=(row,k)=>m[k]>=0?String(row[m[k]]??'').trim():'';
+  const keep={};const ff=['id','pour','sup','item','grade','mix','cem','el'];
+  const long=m.layout==='long';
+  rows.forEach((row,i)=>{if(!row||!row.some(v=>!empty(v)))return;
+    if(long||m.age>=0)for(const k of ff)if(m[k]>=0){if(empty(row[m[k]])&&keep[k]!=null)row=Object.assign([],row,{[m[k]]:keep[k]});else keep[k]=row[m[k]]}
+    if(m.age>=0){const a=toNum(row[m.age]);if(a!==m.ageVal)return}
+    let id=s(row,'id');if(m.id<0)id='Row '+(P.start+i+1);
+    if(!id||/^(total|sum|avg|average|mean|الاجمالي|الإجمالي|المتوسط)/i.test(id)){skip.noId++;return}
+    const pour=parseDate(m.pour>=0?row[m.pour]:'');if(!pour){skip.noDate++;return}
+    const c=m.c1>=0?Array.from({length:long?1:m.n},(_,k)=>toNum(row[m.c1+k])):[];
+    const base={r:P.start+i+1,id,pour,sup:s(row,'sup'),item:s(row,'item'),grade:s(row,'grade'),mix:s(row,'mix'),cem:s(row,'cem'),el:s(row,'el'),c,avg:m.avg>=0?toNum(row[m.avg]):null};
+    if(long){const prev=recs.find(r=>r.id===id&&r.pour===pour);if(prev){prev.c.push(...c);return}}
+    recs.push(base)});
+  let n=m.n||0;if(long){const cnt={};recs.forEach(r=>{const k=r.c.filter(v=>v!=null).length;cnt[k]=(cnt[k]||0)+1});n=+Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||1;recs.forEach(r=>{if(r.c.length>n)r.c=r.c.slice(0,n)})}
+  const mode=m.c1>=0&&n>=2?'cubes':'avg';
+  if(mode==='avg')recs.forEach(r=>{if(r.avg==null&&r.c.length)r.avg=r.c[0]});
+  return{recs,skip,n:mode==='cubes'?n:1,mode}}
+
+const sig=(sheet,P)=>{let h=7;for(const ch of sheet+'|'+P.chi.join('|'))h=(h*31+ch.charCodeAt(0))|0;return 'p'+(h>>>0).toString(36)};
+function prep(sheet,hr){
+  const aoa=pending.book.sheets[sheet];let hb=headerBlock(aoa);if(hr!=null)hb={hr,top:hr,bot:hr};
+  const lab=buildLabels(aoa,hb.top,hb.hr,hb.bot);
+  Object.assign(pending,{sheet,aoa,hr:hb.hr,top:hb.top,bot:hb.bot,start:hb.bot+1,...lab,title:projectTitle(aoa,hb.hr)});
+  pending.sig=sig(sheet,pending);
+  const saved=S.profiles&&S.profiles[pending.sig];
+  const d=detectMap(pending);pending.notes=d.notes;pending.map=saved?{...d.m,...saved}:d.m;pending.fromProfile=!!saved;
+  pending.built=buildRecs(pending,pending.map)}
+function sheetScore(book,n){const aoa=book.sheets[n];const hb=headerBlock(aoa);const lab=buildLabels(aoa,hb.top,hb.hr,hb.bot);const d=detectMap({aoa,start:hb.bot+1,...lab});
+  return(d.m.c1>=0||d.m.avg>=0?100:0)+(d.m.pour>=0?20:0)+(d.m.id>=0?10:0)+Math.min(50,aoa.length/10)}
+function projectTitle(aoa,top){for(let r=0;r<top;r++)for(const c of aoa[r]||[])if(typeof c==='string'&&c.trim().length>3&&!/log|register|سجل|date|تاريخ|records|testing/i.test(c))return c.trim().replace(/\s+/g,' ');return ''}
 
 let pending=null;
 async function onFile(f){
@@ -251,44 +364,43 @@ async function onFile(f){
     if(/\.csv$/i.test(f.name))book=readCsv(await f.text());
     else if(/\.xls$/i.test(f.name)){toast('Old .xls format: open it in Excel and save as .xlsx, then load it again.');return}
     else book=await readXlsx(await f.arrayBuffer());
-    let best=book.names[0],bc=-1;for(const n of book.names){const c=book.sheets[n].filter(r=>r.length).length;if(c>bc&&!/list/i.test(n)){bc=c;best=n}}
-    pending={book,file:f.name};prep(best);S.tab='reg';render();
+    let best=book.names[0],bs=-1;for(const n of book.names){const sc=sheetScore(book,n);if(sc>bs){bs=sc;best=n}}
+    pending={book,file:f.name};prep(best);S.tab='reg';render();scrollTo(0,0);
   }catch(e){console.error(e);toast('Could not read that file. Save it as .xlsx or .csv and try again.')}}
-function prep(sheet,hr){const aoa=pending.book.sheets[sheet];if(hr==null)hr=detectHeader(aoa);
-  const hdr=(aoa[hr]||[]).map(c=>String(c??'').replace(/\s+/g,' ').trim());const w=Math.max(hdr.length,...aoa.slice(hr,hr+40).map(r=>r.length));while(hdr.length<w)hdr.push('');
-  Object.assign(pending,{sheet,aoa,hr,hdr,map:guessMap(hdr),title:projectTitle(aoa,hr)})}
+function readMapForm(){const m={...pending.map};
+  for(const k of['id','pour','sup','item','grade','mix','cem','el','c1','avg','age']){const e=$('#m-'+k);if(e)m[k]=+e.value}
+  const n=$('#m-n');if(n)m.n=Math.max(1,Math.min(6,+n.value||1));const ly=$('#m-layout');if(ly)m.layout=ly.value;const u=$('#m-unit');if(u)m.unit=u.value;
+  return m}
 function doImport(){
-  const map={};FIELDS.forEach(([k])=>map[k]=+$('#m-'+k).value);
-  if(map.id<0||map.pour<0){toast('Choose the Sample ID and pouring date columns first.');return}
-  if(map.c1<0&&map.avg<0){toast('Choose the 28-day cube columns (or the 28-day average column).');return}
-  const recs=[];let noId=0,noDate=0;
-  const cell=(row,k)=>map[k]>=0?row[map[k]]:'';
-  pending.aoa.slice(pending.hr+1).forEach((row,i)=>{
-    const id=String(cell(row,'id')??'').trim();if(!id||/^(total|sum|avg|average)/i.test(id)){if(row.some(v=>v!==''&&v!=null))noId++;return}
-    const pour=parseDate(cell(row,'pour'));if(!pour){noDate++;return}
-    const s=k=>String(cell(row,k)??'').trim();
-    recs.push({r:pending.hr+2+i,id,pour,sup:s('sup'),item:s('item'),grade:s('grade'),mix:s('mix'),cem:s('cem'),el:s('el'),
-      c:map.c1>=0?['c1','c2','c3'].filter(k=>map[k]>=0).map(k=>num(cell(row,k))):[],avg:num(cell(row,'avg'))})});
-  if(!recs.length){toast('No samples found. Check the header row and the column matches.');return}
-  const mode=map.c1>=0?'cubes':'avg';
-  const title=$('#ptitle').value.trim();
-  S.reg={file:pending.file,sheet:pending.sheet,title,mode,n:mode==='cubes'?['c1','c2','c3'].filter(k=>map[k]>=0).length:1,recs,loaded:new Date().toISOString().slice(0,10)};
-  S.set.title=title;S.filt=null;
-  pending=null;save();
-  const withRes=recs.filter(hasResult).length;
-  toast(`${recs.length} samples read · ${withRes} have 28-day results`+(noDate?` · ${noDate} rows skipped (no pour date)`:''));
-  S.tab='rep';render()}
+  const m=pending.map,B=pending.built;
+  if(m.pour<0){toast('Choose the pouring date column first.');return}
+  if(m.c1<0&&m.avg<0){toast('Choose the 28-day cube columns (or the 28-day average column).');return}
+  if(!B.recs.length){toast('No samples found. Check the header row and the columns.');return}
+  const title=($('#ptitle')?.value||'').trim()||pending.title||pending.file.replace(/\.[^.]+$/,'');
+  S.profiles=S.profiles||{};S.profiles[pending.sig]={...m};
+  stash();
+  S.reg={file:pending.file,sheet:pending.sheet,title,mode:B.mode,n:B.n,unit:m.unit,recs:B.recs,loaded:new Date().toISOString().slice(0,10)};
+  const old=S.projs&&S.projs[title];S.filt=old?old.filt:null;S.ov=old?old.ov||{}:{};S.set.title=title;
+  pending=null;stash();save();
+  const withRes=B.recs.filter(hasResult).length;
+  toast(`${B.recs.length} samples read · ${withRes} have 28-day results`+(B.skip.noDate?` · ${B.skip.noDate} rows skipped (no pour date)`:''));
+  S.tab='rep';render();scrollTo(0,0)}
+function stash(){if(!S.reg)return;S.projs=S.projs||{};S.projs[S.reg.title]={reg:S.reg,filt:S.filt,ov:S.ov}}
+function switchProj(t){stash();const p=S.projs[t];if(!p)return;S.reg=p.reg;S.filt=p.filt;S.ov=p.ov||{};S.set.title=t;S.set.fcuOv='';save();render()}
 const hasResult=r=>S.reg.mode==='cubes'?r.c.some(v=>v!=null):r.avg!=null;
+const hasResultB=r=>pending&&pending.built.mode==='cubes'?r.c.some(v=>v!=null):r.avg!=null;
+const U=()=>S.reg&&S.reg.unit==='mpa'?'N/mm²':'kg/cm²';
+const colName=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=(i-m-1)/26|0}return s};
 
 /* ================= grouping & validation ================= */
 const FK=['sup','item','grade','mix','cem'];
 const FL={sup:'Supplier / Plant',item:'Item',grade:'Grade',mix:'Mix ID',cem:'Cement'};
 function groups(){const g=new Map();for(const r of S.reg.recs){if(!hasResult(r))continue;const k=JSON.stringify([r.sup,r.item,r.grade,r.mix,r.cem]);g.set(k,(g.get(k)||0)+1)}
   return[...g.entries()].sort((a,b)=>b[1]-a[1]).map(([k,n])=>{const v=JSON.parse(k);return{f:{sup:v[0],item:v[1],grade:v[2],mix:v[3],cem:v[4]},n}})}
-function curFilt(){if(!S.filt){const g=groups()[0];S.filt={...(g?g.f:{}),from:'',to:''}}return S.filt}
+function curFilt(){if(S.filt&&!S.reg.recs.some(r=>hasResult(r)&&match(r,S.filt)))S.filt=null;if(!S.filt){const g=groups()[0];S.filt={...(g?g.f:{}),from:'',to:''}}return S.filt}
 function match(r,f,skip=[]){for(const k of FK){if(skip.includes(k))continue;if(f[k]!=='*'&&f[k]!=null&&r[k]!==f[k])return false}
   if(f.from&&r.pour<f.from)return false;if(f.to&&r.pour>f.to)return false;return true}
-function fcuOf(f){if(S.set.fcuOv!=='')return +S.set.fcuOv;const m=String(f.grade||'').match(/(\d+(\.\d+)?)/);if(!m)return NaN;const v=+m[1];return v<100?v*10:v}
+function fcuOf(f){if(S.set.fcuOv!=='')return +S.set.fcuOv;const m=String(f.grade||'').match(/(\d+(\.\d+)?)/);if(!m)return NaN;const v=+m[1];return U()==='N/mm²'?(v>=100?v/10:v):(v<100?v*10:v)}
 function classify(r,fcu){
   // returns {use:true/false, why, flags:[]}
   const flags=[];let x,R=null;
@@ -384,7 +496,7 @@ function lineChart({ys,ids,cl,ucl,lcl,flags,yl,lines=[],w=640,h=250,label,lab1})
   return g+'</svg>'}
 function histChart(x,A,w=520,h=300){
   const ml=46,mr=14,mt=14,mb=40,W=w-ml-mr,H=h-mt-mb;
-  let bw=+S.set.binW||0;if(!bw){const raw=(A.max-A.min)/Math.max(5,Math.ceil(Math.sqrt(x.length)));bw=[1,2,2.5,5,10,20,25,50].find(s=>s>=raw)||raw}
+  let bw=+S.set.binW||0;if(!bw){const raw=(A.max-A.min)/Math.max(5,Math.ceil(Math.sqrt(x.length)));bw=[0.5,1,2,2.5,5,10,20,25,50].find(s=>s>=raw)||raw}
   const b0=Math.floor(A.min/bw)*bw;const nb=Math.max(1,Math.ceil((A.max-b0)/bw+1e-9));const cnt=Array(nb).fill(0);x.forEach(v=>cnt[Math.min(nb-1,Math.floor((v-b0)/bw))]++);
   const near=v=>v!=null&&isFinite(v)&&Math.abs(v-A.mean)<=4.5*A.sd;let lo=Math.min(b0,A.mean-3.2*A.sd,near(A.lsl)?A.lsl:Infinity),hi=Math.max(b0+nb*bw,A.mean+3.2*A.sd,near(A.usl)?A.usl:-Infinity);const pd=(hi-lo)*0.03;lo-=pd;hi+=pd;
   const peak=x.length*bw/(A.sd*Math.sqrt(2*Math.PI));const top=Math.max(...cnt,peak)*1.12;
@@ -399,10 +511,10 @@ function histChart(x,A,w=520,h=300){
   vl(A.lsl,`LSL ${f1(A.lsl)}`,'#d32f2f');vl(A.usl,`USL ${f1(A.usl)}`,'#d32f2f');
   const bx=ml+W-112;g+=`<rect x="${bx}" y="${mt+6}" width="106" height="64" fill="#fff" stroke="#999"/>`;
   [['Mean',f1(A.mean)],['StDev',f2(A.sd)],['N',A.N],['CoV',f2(A.cv)+'%']].forEach(([k,v],i)=>g+=`<text x="${bx+6}" y="${mt+20+i*14}" font-family="Consolas,monospace" font-size="10.5">${k}</text><text x="${bx+100}" y="${mt+20+i*14}" text-anchor="end" font-family="Consolas,monospace" font-size="10.5">${v}</text>`);
-  g+=`<text x="${ml+W/2}" y="${h-6}" text-anchor="middle" fill="#333">28-Day Strength (kg/cm²)</text><text transform="translate(12 ${mt+H/2}) rotate(-90)" text-anchor="middle" fill="#333">Frequency</text></svg>`;return g}
+  g+=`<text x="${ml+W/2}" y="${h-6}" text-anchor="middle" fill="#333">28-Day Strength (${U()})</text><text transform="translate(12 ${mt+H/2}) rotate(-90)" text-anchor="middle" fill="#333">Frequency</text></svg>`;return g}
 function trendChart(x,ids,A,w=640,h=240){
   const ma=x.map((_,i)=>i<4?null:ST.mean(x.slice(i-4,i+1)));
-  let svg=lineChart({ys:x,ids,flags:null,yl:'Result (kg/cm²)',label:'Trend',w,h,lines:[{v:A.fcu,c:'#d32f2f',t:`fcu ${f1(A.fcu)}`}]});
+  let svg=lineChart({ys:x,ids,flags:null,yl:'Result ('+U()+')',label:'Trend',w,h,lines:[{v:A.fcu,c:'#d32f2f',t:`fcu ${f1(A.fcu)}`}]});
   const ml=52,mr=82,mt=14,mb=34,W=w-ml-mr,H=h-mt-mb;const vals=[...x,A.fcu];let lo=Math.min(...vals),hi=Math.max(...vals);const pd=(hi-lo)*0.08||1;lo-=pd;hi+=pd;
   const X=i=>ml+i*W/(x.length-1),Y=v=>mt+H-(v-lo)/(hi-lo)*H;let d='';ma.forEach((v,i)=>{if(v==null)return;d+=(d?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)});
   let extra=`<path d="${d}" fill="none" stroke="#1f6b4a" stroke-width="2.4" opacity=".85"/>`;
@@ -417,7 +529,7 @@ function report(){
   const f=curFilt(),D=dataset(f),A=analyze(D),T=S.set,u=D.used,N=A.N,x=u.map(o=>o.x),ids=u.map(o=>o.id);
   const mixed=FK.filter(k=>['grade','mix','sup'].includes(k)&&f[k]==='*');
   const title=T.title||S.reg.title||'Project';
-  const lab=[f.item&&f.item!=='*'?f.item:'',f.grade&&f.grade!=='*'?`${f.grade} (fcu = ${f1(D.fcu).replace('.0','')} kg/cm²)`:'',f.mix&&f.mix!=='*'?f.mix:'',f.cem&&f.cem!=='*'?f.cem:''].filter(Boolean).join(' · ');
+  const lab=[f.item&&f.item!=='*'?f.item:'',f.grade&&f.grade!=='*'?`${f.grade} (fcu = ${f1(D.fcu).replace('.0','')} ${U()})`:'',f.mix&&f.mix!=='*'?f.mix:'',f.cem&&f.cem!=='*'?f.cem:''].filter(Boolean).join(' · ');
   const nlab=S.reg.mode==='cubes'?`(n = ${S.reg.n} cubes)`:'(individual results)';
   const supT=f.sup&&f.sup!=='*'?`Concrete Plant ${f.sup}`:'All Plants';
   let h=`<div class="rep" id="report"><div class="rhead"><p class="proj">${esc(title)}</p><div class="b1">${esc(supT)} — Statistical Analysis of 28-Day Cube Strength</div><div class="b2">${esc(lab)} — Subgroups N = ${N} ${nlab}${f.from||f.to?` · ${f.from||'start'} to ${f.to||'latest'}`:''}</div></div>`;
@@ -434,11 +546,11 @@ function report(){
   if(N<T.minDesc){h+=`<section class="sec"><h2>2. Descriptive Statistics</h2>${insuf(N,T.minDesc,'Any statistical analysis')}</section></div>`;return h}
   // 2 descriptive
   h+=`<section class="sec"><h2>2. Descriptive Statistics</h2><div class="kpis">
-   <div class="kpi"><div class="l">Mean</div><div class="v">${f1(A.mean)}</div><div class="s">kg/cm²</div></div>
-   <div class="kpi"><div class="l">Standard deviation</div><div class="v">${f2(A.sd)}</div><div class="s">kg/cm² (between samples)</div></div>
+   <div class="kpi"><div class="l">Mean</div><div class="v">${f1(A.mean)}</div><div class="s">${U()}</div></div>
+   <div class="kpi"><div class="l">Standard deviation</div><div class="v">${f2(A.sd)}</div><div class="s">${U()} (between samples)</div></div>
    <div class="kpi"><div class="l">CV</div><div class="v">${f2(A.cv)}%</div><div class="s">SD ÷ mean</div></div>
    <div class="kpi"><div class="l">Min / Max</div><div class="v" style="font-size:16px">${f1(A.min)} / ${f1(A.max)}</div><div class="s">median ${f1(A.median)}</div></div>
-   <div class="kpi"><div class="l">Mean − fcu</div><div class="v">${f1(A.margin)}</div><div class="s">fcu = ${f1(D.fcu)} kg/cm²</div></div>
+   <div class="kpi"><div class="l">Mean − fcu</div><div class="v">${f1(A.margin)}</div><div class="s">fcu = ${f1(D.fcu)} ${U()}</div></div>
    <div class="kpi"><div class="l">Results &lt; fcu</div><div class="v">${A.below.length}</div><div class="s">${A.below.length?esc(A.below.map(o=>o.id).join(', ')):'all results ≥ fcu'}</div></div></div>
    ${A.ad?`<p class="note">Normality (Anderson-Darling): A² = ${f2(A.ad.A2)}, p = ${A.ad.p<0.001?'< 0.001':A.ad.p.toFixed(3)} → ${A.ad.p>=0.05?'consistent with a normal distribution.':'<b>not normal</b>; capability indices below are approximate.'}</p>`:''}</section>`;
   // 3 charts
@@ -483,7 +595,7 @@ function report(){
     <tr><td>% below LSL (expected)</td><td class="n">${A.pBelow*100<0.0001?'< 0.0001':(A.pBelow*100).toFixed(4)}%</td><td>Observed: ${A.obsBelow} of ${N}</td></tr>
     <tr><td>% above USL (expected)</td><td class="n">${one?na1:(A.pAbove*100).toFixed(4)+'%'}</td><td>${one?'One-sided specification':`Observed: ${A.obsAbove} of ${N}`}</td></tr>
     <tr><td>Estimated nonconforming</td><td class="n">${A.pNC*100<0.0001?'< 0.0001':(A.pNC*100).toFixed(4)}%</td><td>${A.dpmo<0.5?'≈ 0':A.dpmo.toFixed(1)} PPM (normal model, overall σ)</td></tr></tbody></table></div>
-    <p class="note">LSL = ${f1(A.lsl)} kg/cm²${T.lslOv===''?' (= fcu)':''}${one?'; no upper limit (USL) set, so Cp, Cpu, Pp and % above USL do not apply':`; USL = ${f1(A.usl)} kg/cm²`}. σ<sub>within</sub> of a sample result = R̄/d2/√n = ${f2(A.sigW)}; σ<sub>overall</sub> = ${f2(A.sd)}. ${A.capState!=='ok'?'<b>Cp/Cpk are withheld</b> because the process is not stable; Pp/Ppk describe past performance only.':''} ${A.ad&&A.ad.p<0.05?'<b>Data not normal</b>: indices are approximate.':''}</p>`}
+    <p class="note">LSL = ${f1(A.lsl)} ${U()}${T.lslOv===''?' (= fcu)':''}${one?'; no upper limit (USL) set, so Cp, Cpu, Pp and % above USL do not apply':`; USL = ${f1(A.usl)} ${U()}`}. σ<sub>within</sub> of a sample result = R̄/d2/√n = ${f2(A.sigW)}; σ<sub>overall</sub> = ${f2(A.sd)}. ${A.capState!=='ok'?'<b>Cp/Cpk are withheld</b> because the process is not stable; Pp/Ppk describe past performance only.':''} ${A.ad&&A.ad.p<0.05?'<b>Data not normal</b>: indices are approximate.':''}</p>`}
   h+=`</section>`;
   // 7 six sigma
   h+=`<section class="sec"><h2>7. Six Sigma Analysis</h2>`;
@@ -497,7 +609,7 @@ function report(){
   if(N<T.minTrend)h+=insuf(N,T.minTrend,'The trend analysis');
   else{const tc={improving:'ok',steady:'na',deteriorating:'bad'}[A.trend];
     h+=`<div class="row" style="align-items:center"><span class="big" style="font-size:28px">${chip(A.trend[0].toUpperCase()+A.trend.slice(1),tc)}</span>
-    <span class="muted">Strength level is <b>${A.meanDir}</b> (${f2(A.lr.b*10)} kg/cm² per 10 samples, p = ${A.lr.p.toFixed(3)}); variability is <b>${A.varDir==='same'?'unchanged':A.varDir}</b> (CV ${f2(A.h1.cv)}% → ${f2(A.h2.cv)}%, first vs second half, F-test p = ${A.fp.toFixed(3)}).</span></div>
+    <span class="muted">Strength level is <b>${A.meanDir}</b> (${f2(A.lr.b*10)} ${U()} per 10 samples, p = ${A.lr.p.toFixed(3)}); variability is <b>${A.varDir==='same'?'unchanged':A.varDir}</b> (CV ${f2(A.h1.cv)}% → ${f2(A.h2.cv)}%, first vs second half, F-test p = ${A.fp.toFixed(3)}).</span></div>
     <div class="chart" style="max-width:760px">${trendChart(x,ids,A)}</div><p class="foot">Black: sample results · green: 5-sample moving average · amber dashed: linear trend · red dashed: fcu</p>`}
   if(A.months.length>1)h+=`<h3>By month</h3><div class="tw"><table><thead><tr><th>Month</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP level</th></tr></thead><tbody>
     ${A.months.map(m=>{const cv=m.s/m.m*100;const l=m.n>=T.minDesc?ecpLevel(cv):null;return`<tr><td>${m.k}</td><td class="n">${m.n}</td><td class="n">${f1(m.m)}</td><td class="n">${m.n>1?f2(m.s):'–'}</td><td class="n">${m.n>1?f2(cv):'–'}</td><td>${l==null?chip('few data','na'):chip(ECPN[l],ECPC[l])}</td></tr>`}).join('')}</tbody></table></div>`;
@@ -513,8 +625,8 @@ function report(){
   const dRow=(k,v,c)=>`<tr><td>${k}</td><td class="n"><b>${v}</b></td><td>${c||''}</td></tr>`;
   const ecpTxt=N<T.minECP?'Insufficient Data':ECPN[lv]+(N<T.finalECP?' (provisional)':'');
   h+=`<section class="sec"><h2>9. Final Assessment Dashboard</h2><div class="tw"><table class="dash"><thead><tr><th>Indicator</th><th class="n">Final Result</th><th>Status</th></tr></thead><tbody>
-   ${dRow('Mean Strength',f1(A.mean)+' kg/cm²',A.margin>=0?chip(`${f1(A.margin)} above fcu`,'ok'):chip('below fcu','bad'))}
-   ${dRow('Standard Deviation',f2(A.sd)+' kg/cm²')}
+   ${dRow('Mean Strength',f1(A.mean)+' '+U(),A.margin>=0?chip(`${f1(A.margin)} above fcu`,'ok'):chip('below fcu','bad'))}
+   ${dRow('Standard Deviation',f2(A.sd)+' '+U())}
    ${dRow('CV%',f2(A.cv)+'%')}
    ${dRow('ECP Quality Level',ecpTxt,N<T.minECP?chip('Insufficient','na'):chip(ECPN[lv],ECPC[lv]))}
    ${dRow('Process Stability',A.stab==='insufficient'?'Insufficient Data':A.stab==='stable'?'Stable':'Unstable',chip(A.stab==='insufficient'?'Insufficient':A.stab==='stable'?'Stable':'Unstable',A.stab==='stable'?'ok':A.stab==='unstable'?'bad':'na'))}
@@ -524,7 +636,7 @@ function report(){
    ${dRow('Performance Trend',N<T.minTrend?'Insufficient Data':A.trend[0].toUpperCase()+A.trend.slice(1))}
    </tbody></table></div>`;
   const ans=[
-   ['Does the concrete meet the specified strength?',A.below.length?`${A.below.length} of ${N} results are below fcu (${esc(A.below.map(o=>o.id).join(', '))}). Review against the ECP acceptance criteria.`:`Yes. All ${N} results are at or above fcu = ${f1(D.fcu)}; mean is ${f1(A.margin)} kg/cm² above it.`,A.below.length?'warn':'ok'],
+   ['Does the concrete meet the specified strength?',A.below.length?`${A.below.length} of ${N} results are below fcu (${esc(A.below.map(o=>o.id).join(', '))}). Review against the ECP acceptance criteria.`:`Yes. All ${N} results are at or above fcu = ${f1(D.fcu)}; mean is ${f1(A.margin)} ${U()} above it.`,A.below.length?'warn':'ok'],
    ['Is production stable?',A.stab==='insufficient'?`Not enough data yet (${N} of ${T.minSPC}).`:A.stab==='stable'?'Yes, no special-cause signals.':`No, ${A.viol.length} type(s) of out-of-control signal. See section 5.`,A.stab==='stable'?'ok':A.stab==='unstable'?'bad':'na'],
    ['Can the plant reliably produce the required strength?',A.capState==='insufficient'?'Not enough data yet.':A.capState==='unstable'?`Not confirmed: the process is unstable. Past performance Ppk = ${f2(A.Ppk)}.`:A.Cpk>=1.33?`Yes, Cpk = ${f2(A.Cpk)} (≥ 1.33).`:`Marginal, Cpk = ${f2(A.Cpk)}.`,A.capState==='ok'&&A.Cpk>=1.33?'ok':A.capState==='insufficient'?'na':'warn'],
    ['How much variation is there?',N<T.minECP?`CV = ${f2(A.cv)}% (too few results for an ECP grade).`:`CV = ${f2(A.cv)}%, ECP level ${ECPN[lv]}.`,N<T.minECP?'na':ECPC[lv]],
@@ -536,17 +648,46 @@ function report(){
 
 /* ================= views ================= */
 function vReg(){
-  let h=`<div class="card"><h2>Load the concrete pouring register</h2><div class="drop" id="drop"><p style="margin:0 0 10px">Excel (.xlsx) or CSV. Any layout: you confirm the columns in the next step.</p>
+  let h=`<div class="card"><h2>Load the concrete pouring register</h2><div class="drop" id="drop"><p style="margin:0 0 10px">Excel (.xlsx) or CSV, from any project. The app finds the 28-day cube strengths itself; you check what it found before the analysis.</p>
     <button class="btn primary" id="pick">Choose register file</button></div>
+    ${S.projs&&Object.keys(S.projs).length>1&&!pending?`<div class="row" style="margin-top:12px"><label class="f" style="flex:1"><span>Project</span><select id="projSel">${Object.keys(S.projs).map(t=>`<option ${S.reg&&t===S.reg.title?'selected':''}>${esc(t)}</option>`).join('')}</select></label><button class="btn" id="delProj">Remove this project</button></div>`:''}
     ${S.reg?`<p class="note">Loaded: <b>${esc(S.reg.file)}</b> · sheet ${esc(S.reg.sheet)} · ${S.reg.recs.length} samples · ${S.reg.recs.filter(hasResult).length} with 28-day results · read ${S.reg.loaded}</p>`:''}</div>`;
-  if(pending){const p=pending;
-    h+=`<div class="card"><h2>Match the columns</h2><div class="grid">
-     <label class="f"><span>Sheet</span><select id="sheetSel">${p.book.names.map(n=>`<option ${n===p.sheet?'selected':''}>${esc(n)}</option>`).join('')}</select></label>
-     <label class="f"><span>Header row</span><input type="number" id="hdrRow" min="1" value="${p.hr+1}"></label>
-     <label class="f" style="grid-column:span 2"><span>Project name (report title)</span><input type="text" id="ptitle" value="${esc(S.set.title||p.title)}"></label></div>
-     <p class="note">Matches are filled in from the header. Check the 28-day cube columns: they must be the 28-day strengths, not the 7-day ones.</p>
-     <div class="map">${FIELDS.map(([k,l,r])=>`<span class="${r?'req':''}">${l}</span><select id="m-${k}"><option value="-1">— not in this register —</option>${p.hdr.map((c,i)=>`<option value="${i}" ${p.map[k]===i?'selected':''}>${colName(i)} · ${esc(String(c).slice(0,40))||'(blank)'}</option>`).join('')}</select>`).join('')}</div>
-     <div class="row"><button class="btn primary" id="doImport">Analyse this register</button><button class="btn" id="cancel">Cancel</button></div></div>`}
+  if(pending){const p=pending,m=p.map,B=p.built;
+    const lbl=j=>j<0?'':`${colName(j)} · ${esc(((p.par[j]&&p.par[j]!==p.chi[j]?p.par[j].split(' | ').pop()+' › ':'')+(p.chi[j]||'(blank)')).slice(0,48))}`;
+    const opt=(k,v)=>`<select id="m-${k}"><option value="-1">— not in this register —</option>${p.chi.map((_,i)=>`<option value="${i}" ${v===i?'selected':''}>${lbl(i)}</option>`).join('')}</select>`;
+    const cubeTxt=m.c1>=0?(m.layout==='long'?`column ${colName(m.c1)}, one row per cube (${B.n} per sample)`:`${colName(m.c1)}${m.n>1?'–'+colName(m.c1+m.n-1):''} (${m.n} cube${m.n>1?'s':''} per sample)`):m.avg>=0?`average only, column ${colName(m.avg)}`:'<b style="color:var(--bad)">not found: set it below</b>';
+    const found=[['28-day strengths',cubeTxt+(m.c1>=0&&m.avg>=0?` · checked against average column ${colName(m.avg)}`:'')+` · ${m.unit==='mpa'?'N/mm²':'kg/cm²'}`,m.c1>=0||m.avg>=0],
+      ['Sample ID',m.id>=0?lbl(m.id):'not found: row numbers used',m.id>=0],['Pouring date',m.pour>=0?lbl(m.pour):'<b style="color:var(--bad)">not found: set it below</b>',m.pour>=0],
+      ['Supplier / plant',lbl(m.sup)||'not found',m.sup>=0],['Grade',lbl(m.grade)||'not found: enter fcu in the report settings',m.grade>=0],['Mix ID',lbl(m.mix)||'not found',m.mix>=0],['Cement',lbl(m.cem)||'not found',m.cem>=0],['Item',lbl(m.item)||'not found',m.item>=0]];
+    if(m.age>=0)found.splice(1,0,['Test age',`column ${lbl(m.age)}, rows with ${m.ageVal} days`,true]);
+    const prev=B.recs.filter(r=>B.mode==='cubes'?r.c.some(v=>v!=null):r.avg!=null).slice(0,6);
+    h+=`<div class="card"><h2>What the app found in ${esc(p.file)}</h2>
+     ${p.fromProfile?'<p class="note"><b>Same layout as before:</b> using the columns you confirmed last time.</p>':''}
+     <div class="tw"><table><tbody>${found.map(([k,v,ok])=>`<tr><td><span class="chip ${ok?'ok':'na'}">${ok?'✓':'–'}</span> ${k}</td><td style="white-space:normal">${v}</td></tr>`).join('')}</tbody></table></div>
+     ${p.notes.length?`<ul class="note">${p.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}
+     <h3>First samples as the app reads them</h3>
+     ${prev.length?`<div class="tw"><table><thead><tr><th>Sample</th><th>Poured</th>${B.mode==='cubes'?Array.from({length:B.n},(_,i)=>`<th class="n">Cube ${i+1}</th>`).join(''):''}<th class="n">${B.mode==='cubes'?'Average':'Result'}</th><th>Plant</th><th>Grade</th><th>Mix</th></tr></thead><tbody>
+      ${prev.map(r=>{const g=r.c.filter(v=>v!=null);const av=B.mode==='cubes'?(g.length?g.reduce((a,b)=>a+b,0)/g.length:null):r.avg;return`<tr><td><b>${esc(r.id)}</b></td><td>${r.pour}</td>${B.mode==='cubes'?r.c.map(v=>`<td class="n">${v??'–'}</td>`).join(''):''}<td class="n"><b>${av==null?'–':av.toFixed(1)}</b></td><td>${esc(r.sup)}</td><td>${esc(r.grade)}</td><td>${esc(r.mix)}</td></tr>`}).join('')}</tbody></table></div>
+      <p class="note">${B.recs.length} samples in the register, ${B.recs.filter(hasResultB).length} with 28-day results${B.skip.noDate?`, ${B.skip.noDate} rows skipped (no pouring date)`:''}.</p>`
+      :'<div class="insuf"><b>No 28-day results read yet.</b> Set the columns below.</div>'}
+     <label class="f" style="margin-top:10px"><span>Project name (report title)</span><input type="text" id="ptitle" value="${esc(p.title||p.file.replace(/\.[^.]+$/,''))}"></label>
+     <div class="row" style="margin-top:10px"><button class="btn primary" id="doImport">Looks right: analyse</button><button class="btn" id="cancel">Cancel</button></div>
+     <details style="margin-top:12px" ${prev.length&&m.pour>=0?'':'open'}><summary>Adjust columns</summary>
+      <div class="grid" style="margin-top:8px">
+       <label class="f"><span>Sheet</span><select id="sheetSel">${p.book.names.map(n=>`<option ${n===p.sheet?'selected':''}>${esc(n)}</option>`).join('')}</select></label>
+       <label class="f"><span>Header row</span><input type="number" id="hdrRow" min="1" value="${p.hr+1}"></label>
+       <label class="f"><span>Layout</span><select id="m-layout"><option value="wide" ${m.layout==='wide'?'selected':''}>One row per sample (cubes side by side)</option><option value="long" ${m.layout==='long'?'selected':''}>One row per cube</option></select></label>
+       <label class="f"><span>Strength unit</span><select id="m-unit"><option value="kg" ${m.unit==='kg'?'selected':''}>kg/cm²</option><option value="mpa" ${m.unit==='mpa'?'selected':''}>N/mm² (MPa)</option></select></label></div>
+      <div class="map">
+       <span class="req">${m.layout==='long'?'28-day strength column':'First 28-day cube column'}</span>${opt('c1',m.c1)}
+       ${m.layout==='long'?'':`<span>Cubes per sample</span><input type="number" id="m-n" min="1" max="6" value="${m.n||3}">`}
+       <span>28-day average column</span>${opt('avg',m.avg)}
+       <span>Test age column (if rows hold 7 and 28 days)</span>${opt('age',m.age)}
+       <span class="req">Date of pouring</span>${opt('pour',m.pour)}
+       <span>Sample / set ID</span>${opt('id',m.id)}
+       <span>Supplier / plant</span>${opt('sup',m.sup)}<span>Item (PC, RC…)</span>${opt('item',m.item)}<span>Concrete grade</span>${opt('grade',m.grade)}
+       <span>Mix ID</span>${opt('mix',m.mix)}<span>Cement type</span>${opt('cem',m.cem)}<span>Element / description</span>${opt('el',m.el)}</div>
+      <p class="note">The app remembers these columns for this layout, so the next update of the same register opens straight away.</p></details></div>`}
   if(S.reg&&!pending){const f=curFilt(),D=dataset(f);
     h+=`<div class="card"><h2>Samples in the selected group (${D.rows.length})</h2><p class="note">Tap a row to exclude it from the analysis or bring it back. Rows the app excluded automatically show the reason.</p>
     <div class="tw" style="max-height:60vh;overflow:auto"><table><thead><tr><th>#</th><th>Sample</th><th>Poured</th>${S.reg.mode==='cubes'?Array.from({length:S.reg.n},(_,i)=>`<th class="n">Cube ${i+1}</th>`).join(''):''}<th class="n">Result</th><th class="n">Range</th><th>Status</th></tr></thead><tbody>
@@ -562,8 +703,8 @@ function vRep(){
    <div class="grid" style="margin-top:8px">${FK.map(k=>`<label class="f"><span>${FL[k]}</span><select id="f-${k}">${opts(k)}</select></label>`).join('')}
     <label class="f"><span>Poured from</span><input type="date" id="f-from" value="${f.from||''}"></label><label class="f"><span>Poured to</span><input type="date" id="f-to" value="${f.to||''}"></label></div>
    <div class="grid" style="margin-top:10px">
-    <label class="f"><span>fcu (kg/cm²)</span><input type="number" id="s-fcuOv" placeholder="from grade: ${f1(fcuOf({...f})).replace('NaN','?')}" value="${T.fcuOv}"></label>
-    <label class="f"><span>LSL (kg/cm²)</span><input type="number" id="s-lslOv" placeholder="= fcu" value="${T.lslOv}"></label>
+    <label class="f"><span>fcu (${U()})</span><input type="number" id="s-fcuOv" placeholder="from grade: ${f1(fcuOf({...f})).replace('NaN','?')}" value="${T.fcuOv}"></label>
+    <label class="f"><span>LSL (${U()})</span><input type="number" id="s-lslOv" placeholder="= fcu" value="${T.lslOv}"></label>
     <label class="f"><span>USL (optional)</span><input type="number" id="s-usl" placeholder="none" value="${T.usl}"></label>
     <label class="f"><span>Histogram bin width</span><input type="number" id="s-binW" placeholder="auto" value="${T.binW}"></label>
     <label class="f"><span>Project name</span><input type="text" id="s-title" value="${esc(T.title||S.reg.title)}"></label></div>
@@ -585,7 +726,8 @@ function render(){
 function bind(){
   const pick=$('#pick');if(pick)pick.onclick=()=>$('#file').click();
   const dr=$('#drop');if(dr){dr.ondragover=e=>{e.preventDefault();dr.classList.add('over')};dr.ondragleave=()=>dr.classList.remove('over');dr.ondrop=e=>{e.preventDefault();dr.classList.remove('over');if(e.dataTransfer.files[0])onFile(e.dataTransfer.files[0])}}
-  if(pending){$('#sheetSel').onchange=e=>{prep(e.target.value);render()};$('#hdrRow').onchange=e=>{prep(pending.sheet,Math.max(0,+e.target.value-1));render()};
+  if(pending){$('#sheetSel').onchange=e=>{prep(e.target.value);render();reopenAdj()};$('#hdrRow').onchange=e=>{prep(pending.sheet,Math.max(0,+e.target.value-1));render();reopenAdj()};
+    document.querySelectorAll('[id^="m-"]').forEach(e=>e.onchange=()=>{pending.map=readMapForm();pending.built=buildRecs(pending,pending.map);pending.fromProfile=false;render();reopenAdj()});
     $('#doImport').onclick=doImport;$('#cancel').onclick=()=>{pending=null;render()}}
   document.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{const id=tr.dataset.id;const D=dataset(curFilt());const o=D.rows.find(z=>z.id===id);if(!o)return;
     if(o.use)S.ov[id]='out';else if(S.ov[id]==='out')delete S.ov[id];else{if(o.R==null&&S.reg.mode==='cubes'){toast('This set is incomplete and can\'t be analysed.');return}S.ov[id]='in'}
@@ -599,7 +741,10 @@ function bind(){
   const at=$('#s-autoTypo');if(at)at.onchange=()=>{S.set.autoTypo=at.value==='1';save();render();reopen()};
   const rs=$('#resetSet');if(rs)rs.onclick=()=>{S.set={...DEF,ecp:[...DEF.ecp],title:S.set.title};save();render();reopen();toast('Settings reset')};
   const ro=$('#resetOv');if(ro)ro.onclick=()=>{S.ov={};save();render();reopen()};
+  const ps=$('#projSel');if(ps)ps.onchange=()=>switchProj(ps.value);
+  const dp=$('#delProj');if(dp)dp.onclick=()=>{if(dp.dataset.sure!=='1'){dp.dataset.sure='1';dp.textContent='Tap again to remove';return}const t=S.reg.title;delete S.projs[t];const k=Object.keys(S.projs)[0];S.reg=null;if(k){const q=S.projs[k];S.reg=q.reg;S.filt=q.filt;S.ov=q.ov||{};S.set.title=k}save();render();toast(t+' removed')};
   const pdf=$('#pdf');if(pdf)pdf.onclick=savePdf}
+function reopenAdj(){const d=document.querySelector('#app details');if(d)d.open=true}
 function reopen(){const d=document.querySelector('details');if(d)d.open=true}
 function savePdf(){
   const f=curFilt();const name=`Concrete SPC - ${[f.sup,f.item,f.grade,f.mix].filter(v=>v&&v!=='*').join(' ')} - ${new Date().toISOString().slice(0,10)}`.replace(/[\\/:*?"<>|]/g,'_');
