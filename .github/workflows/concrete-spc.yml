@@ -1,0 +1,48 @@
+name: Build Concrete SPC APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cube-spc/web/**"
+      - "cube-spc/android/**"
+      - ".github/workflows/concrete-spc.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Put the app page inside the APK (works offline)
+        run: |
+          mkdir -p cube-spc/android/app/src/main/assets
+          cp cube-spc/web/index.html cube-spc/web/jszip.min.js cube-spc/android/app/src/main/assets/
+
+      - name: Build APK
+        working-directory: cube-spc/android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Publish the APK as a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp cube-spc/android/app/build/outputs/apk/release/app-release.apk Concrete-SPC.apk
+          gh release delete concrete-spc-latest --yes --cleanup-tag || true
+          gh release create concrete-spc-latest Concrete-SPC.apk \
+            --title "Concrete SPC for Android (build ${{ github.run_number }})" \
+            --notes "Download Concrete-SPC.apk on your Android phone and open it to install. Allow 'Install unknown apps' when asked. Developed by Eng. Ahmed Rabie" \
+            --latest=false

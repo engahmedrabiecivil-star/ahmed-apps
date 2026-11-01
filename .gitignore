@@ -7,3 +7,10 @@ android/app/src/main/assets/
 ir-maker/desktop/node_modules/
 ir-maker/desktop/dist/
 ir-maker/desktop/index.html
+cube-spc/android/.gradle/
+cube-spc/android/build/
+cube-spc/android/app/build/
+cube-spc/android/app/src/main/assets/
+cube-spc/desktop/node_modules/
+cube-spc/desktop/dist/
+cube-spc/desktop/app/
