@@ -603,6 +603,15 @@
     });
   }
 
+  // drop the last paragraph of the body only if it is empty, so copies don't add a blank page
+  function stripTrailingEmptyPara(body) {
+    var i = Math.max(body.lastIndexOf('<w:p '), body.lastIndexOf('<w:p>'));
+    if (i < 0) return body;
+    var lastP = body.slice(i);
+    if (!/^<w:p\b[^>]*(\/>|>[\s\S]*<\/w:p>)\s*$/.test(lastP)) return body;
+    if (/<w:t[\s>]|<w:drawing|<w:pict|<mc:AlternateContent|<w:br\b|<w:tbl/.test(lastP)) return body;
+    return body.slice(0, i);
+  }
   async function buildForm(templateBytes, irs) {
     var zip = await JSZipRef.loadAsync(templateBytes);
     var docPath = 'word/document.xml', xml = await zip.file(docPath).async('string');
@@ -610,7 +619,7 @@
     if (sect < bStart) sect = bodyEnd;
     var body = xml.slice(bStart, sect), head = xml.slice(0, bStart), tail = xml.slice(sect);
     // strip trailing empty paragraph(s) so copies don't add blank pages
-    var core = body.replace(/(<w:p\b[^>]*\/>|<w:p\b[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?<\/w:p>)\s*$/, '');
+    var core = stripTrailingEmptyPara(body);
     var trailing = body.slice(core.length) || '<w:p/>';
     var pageBreak = '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r></w:p>';
     var meta = null, mf = zip.file('irmaker.json');
@@ -798,6 +807,9 @@
     loadLog: loadLog, findDuplicate: findDuplicate, dupKey: dupKey, learnFromFilledIr: learnFromFilledIr, normalizeStations: normalizeStations, inspectTemplate: inspectTemplate, isUSection: isUSection, understand: understand, finalize: finalize, appendRows: appendRows, buildForm: buildForm,
     recordFromRow: recordFromRow, formLocation: formLocation, norm: norm, fmtDate: fmtDate, stationStr: stationStr,
     nextIrNumbers: nextIrNumbers, formIrNo: formIrNo, irNum: irNum, blockNum: blockNum,
+    _i: { JSZip: JSZipRef, xmlDecode: xmlDecode, xmlEsc: xmlEsc, sharedStringsFrom: sharedStringsFrom, parseRows: parseRows, relsMap: relsMap,
+      colToIdx: colToIdx, idxToCol: idxToCol, serialToDate: serialToDate, dateToSerial: dateToSerial, tokens: tokens, toArabicDigitsLatin: toArabicDigitsLatin,
+      fillFieldsXml: fillFieldsXml, templateFieldNames: templateFieldNames, paraText: paraText },
     saveLog: function (log) { return log.zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); }
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.IREngine = api;

@@ -214,7 +214,7 @@ async function useLog(bytes, name, persist){
 async function init(){
   $('date').value = todayISO();
   S.company = (await get('company')) || ''; showCompany();
-  var t = await get('tpl'); S.tpl = t || null; S.tplName = await get('tplName'); if (t) { try { S.tplFields = await E.inspectTemplate(t); } catch(e){} }
+  var t = await get('tpl'); S.tpl = t || null; S.tplName = await get('tplName'); if (t) { try { S.tplFields = await E.inspectTemplate(t); S.tplMeta = await B.readTemplateMeta(t); } catch(e){} }
   var saved = await get('log');
   if (saved && saved.bytes) { try { await useLog(saved.bytes, saved.name, false); } catch(e){ setupMsg('err','The saved log could not be read. Please upload it again.'); } }
   S.ready = !!(S.log && S.tpl);
@@ -222,7 +222,18 @@ async function init(){
   render();
 }
 
-function projName(){ return S.log && E.isUSection(S.log) ? 'Alex U \u2013 Section' : String(S.logName||'Project').replace(/\.xlsx$/i,'').replace(/^ir\s*log\s*[-–]?\s*/i,''); }
+var B = E.block;
+function isB(){ return !!(S.log && B && B.isBlock(S.log)); }
+function tabKind(name){ var t = isB() ? S.log.tabs.filter(function(x){ return x.name===name; })[0] : null; return t ? t.kind : ''; }
+function applyDefaults(d, force){
+  var fd = B.formDefaults(S.tplMeta, { desc: d.desc, unit: d.unit, kind: tabKind(d.tab) });
+  if (force || !d._subj) d.subject = fd.subject;
+  if (force || !d._loc) d.formLoc = fd.loc;
+  d.attach = fd.attach;
+  if (force || !d._type) d.insType = fd.insType;
+  return d;
+}
+function projName(){ if (S.log && S.log.project) return S.log.project; return S.log && E.isUSection(S.log) ? 'Alex U \u2013 Section' : String(S.logName||'Project').replace(/\.xlsx$/i,'').replace(/^ir\s*log\s*[-–]?\s*/i,''); }
 function setupMsg(kind, text){ $('setupMsg').innerHTML = text ? '<div class="notice '+kind+'">'+esc(text)+'</div>' : ''; }
 function showCompany(){
   var c = String(S.company||'').trim();
@@ -232,12 +243,13 @@ function showCompany(){
 }
 async function setCompany(v){ S.company = String(v||'').trim().slice(0,60); await put('company', S.company); showCompany(); }
 function renderSetup(){
-  $('stLog').textContent = S.log ? '✓ '+S.logName+' · '+S.log.rows.length+' requests, last IR '+S.log.lastNum : 'Excel file (.xlsx)';
+  $('stLog').textContent = S.log ? '✓ '+S.logName+' · '+S.log.rows.length+' requests'+(isB() ? ' in '+S.log.tabs.length+' tabs' : ', last IR '+S.log.lastNum) : 'Excel file (.xlsx)';
   $('stTpl').textContent = S.tpl ? '✓ '+(S.tplName||'saved form')+' · fields: '+((S.tplFields||[]).join(', ')||'none') : 'Word (.docx): a previous IR from this project, or a blank mail-merge form';
   $('start').disabled = !(S.log && S.tpl);
 }
 var KNOWN = /^(irno|irnumber|ir|irnum|requestno|item|element|elementtype|submitteddate|date|submissiondate|irdate|description|desc|works|workdescription|mainlocation|location|loc|blockno|block|fromst|from|fromstation|tost|to|tostation|subitem|unitplantno|unit|discipline|revno|rev|revision)$/;
 var FIELD_LABEL = { IR_No:'IR number', Submitted__Date:'Date', Item:'Element type', Description:'Works', Main_Location:'Location' };
+var LABEL_FIELDS = { IR_No:'Reference no.', Submitted__Date:'Date', Insp_Date:'Date of inspection', Description:'Subject', Main_Location:'Location', Attachment:'Attachment', type:'Type of inspection boxes', insp:'1st / 2nd inspection boxes' };
 async function useTemplate(bytes, name){
   var fields = await E.inspectTemplate(bytes), note = null;
   if (!fields.length) {
@@ -246,12 +258,13 @@ async function useTemplate(bytes, name){
     var L = await E.learnFromFilledIr(bytes, S.log);
     bytes = L.bytes; fields = await E.inspectTemplate(bytes);
     var ok = [], miss = [];
-    Object.keys(FIELD_LABEL).forEach(function(k){ (L.report[k] && L.report[k] !== 'not found' ? ok : miss).push(FIELD_LABEL[k]); });
+    var FL = isB() ? LABEL_FIELDS : FIELD_LABEL;
+    Object.keys(FL).forEach(function(k){ (L.report[k] && L.report[k] !== 'not found' ? ok : miss).push(FL[k]); });
     note = { kind: miss.length ? 'warn' : 'good', text: 'Learned the form from '+L.sourceIr+'. Found: '+ok.join(', ')+'.'+(miss.length ? ' Not found, will stay as in the old IR: '+miss.join(', ')+'.' : '') };
   }
   var unknown = fields.filter(function(f){ return !KNOWN.test(String(f).toLowerCase().replace(/[^a-z0-9]/g,'')); });
   if (!note && unknown.length) note = { kind:'warn', text:'These form fields have no matching log column and will stay empty: '+unknown.join(', ') };
-  S.tpl = bytes; S.tplName = name; S.tplFields = fields;
+  S.tpl = bytes; S.tplName = name; S.tplFields = fields; S.tplMeta = await B.readTemplateMeta(bytes);
   await put('tpl', bytes); await put('tplName', name);
   return note;
 }
@@ -262,8 +275,24 @@ function render(){
   $('main').style.display = has ? 'contents' : 'none';
   if (!has){ $('proj').textContent = S.log ? projName() : 'IR MAKER'; $('sub').textContent='Upload the project IR log and IR form to start'; return; }
   var L=S.log;
-  $('lastIr').textContent = String(L.lastNum);
   $('proj').textContent = projName();
+  if (isB()) {
+    var nx = L.tabs.map(function(t){ return { k: t.kind, n: t.slots.length ? t.slots[0].n : t.lastNum + 1 }; });
+    $('counter').querySelector('span').textContent = 'Next IR';
+    $('lastIr').innerHTML = nx.map(function(x){ return '<span style="display:inline-block;font-size:13px;font-weight:600;margin-right:10px;letter-spacing:0;text-transform:none;color:var(--navy)">'+esc(x.k)+' '+x.n+'</span>'; }).join('');
+    $('sub').textContent = L.rows.length+' requests in log · '+L.tabs.length+' tabs';
+    $('req').placeholder = 'e.g. RFT for GF columns 445'; $('req').dir = 'auto';
+    var seenEx = {}, exB = [];
+    L.rows.slice().reverse().forEach(function(r){ var x = r.desc.replace(/\(?\s*\d{3}\s*\)?/g,' ').replace(/\s+/g,' ').trim(); var k = x.toLowerCase(); if (x && !seenEx[k] && exB.length < 6) { seenEx[k] = 1; exB.push(x); } });
+    $('examples').innerHTML = exB.map(function(x){return '<button class="chip" dir="auto" data-ex="'+esc(x+' ')+'">'+esc(x)+'</button>';}).join('');
+    $('reNo').placeholder = 'e.g. Civil 70'; $('reNo').setAttribute('inputmode','text');
+    renderRecent(); renderDrafts();
+    $('info').textContent = 'Log: '+S.logName+' · Form: '+(S.tplName||'saved form');
+    return;
+  }
+  $('counter').querySelector('span').textContent = 'Last IR in log';
+  $('lastIr').textContent = String(L.lastNum);
+  $('req').placeholder = 'مثلاً: حدادة ونجارة حائط بحري فاصل 20'; $('req').dir = 'rtl';
   $('sub').textContent = L.rows.length+' requests in log · '+Object.keys(L.blocks).length+' blocks';
   var ex=['حدادة حائط بحري فاصل 20','نجارة حائط قبلي فاصل 11 منسوب 3.207','حدادة لبشة رقة سفلية فاصل 21','صب لبشة فاصل 21','هونش فاصل 4 منسوب -2.43','خوازيق فاصل 22 P54 P61 P112'];
   $('examples').innerHTML = ex.map(function(x){return '<button class="chip" dir="rtl" data-ex="'+esc(x)+'">'+esc(x)+'</button>';}).join('');
@@ -275,14 +304,34 @@ function renderRecent(){
   var rows = S.log.rows.slice(-8).reverse();
   $('recent').innerHTML = rows.map(function(r){
     var a = String(r.action||'').trim().toUpperCase();
-    return '<div class="li"><span class="mono" style="font-size:13px;font-weight:700">'+E.irNum(r.ir)+(+r.rev?'<small>-R'+r.rev+'</small>':'')+'</span><span class="d" dir="auto" title="'+esc(r.desc)+'">'+esc(r.desc.replace(/\s+/g,' '))+'</span><span class="row" style="gap:6px"><span class="pill '+esc(a)+'">'+esc(a||'—')+'</span><button class="ghost" style="padding:4px 10px;font-size:12px" data-reprint="'+esc(r.ir)+'|'+r.rev+'">Print</button></span></div>';
+    return '<div class="li"><span class="mono" style="font-size:13px;font-weight:700">'+(r.label ? esc(r.label) : E.irNum(r.ir))+(+r.rev?'<small>-R'+r.rev+'</small>':'')+'</span><span class="d" dir="auto" title="'+esc(r.desc)+'">'+esc(r.desc.replace(/\s+/g,' '))+'</span><span class="row" style="gap:6px"><span class="pill '+esc(a)+'">'+esc(a||'—')+'</span><button class="ghost" style="padding:4px 10px;font-size:12px" data-reprint="'+esc(r.ir)+'|'+r.rev+'">Print</button></span></div>';
   }).join('');
 }
 
 function blockOptions(sel){
   return '<option value="">—</option>'+Object.keys(S.log.blocks).map(Number).sort(function(a,b){return a-b;}).map(function(n){return '<option value="'+n+'"'+(n===sel?' selected':'')+'>Block '+n+'</option>';}).join('');
 }
+var INS_TYPES = ['Architectural','Civil/Struct.','Electrical','HVAC','Plumbing','Fire Protection','Survey','Others'];
+function renderDraftsBlock(){
+  var ser = B.preview(S.log, S.drafts);
+  $('drafts').innerHTML = S.drafts.map(function(d,i){
+    var opt = function(list, sel){ return list.map(function(v){ return '<option'+(v===sel?' selected':'')+'>'+esc(v)+'</option>'; }).join(''); };
+    return '<article class="ir" data-i="'+i+'">'+
+      '<div class="ir-head"><span class="ir-no">'+esc(B.refOf(S.tplMeta, ser[i], 0))+'</span><button class="danger" data-del="'+i+'" aria-label="Remove">Remove ✕</button></div>'+
+      '<div class="ir-body">'+
+        '<div class="field full"><label for="d-desc-'+i+'">Description (log)</label><textarea dir="auto" id="d-desc-'+i+'" data-k="desc">'+esc(d.desc)+'</textarea></div>'+
+        '<div class="field"><label for="d-tab-'+i+'">Tab</label><select id="d-tab-'+i+'" data-k="tab">'+opt(S.log.tabs.map(function(t){return t.name;}), d.tab)+'</select></div>'+
+        '<div class="field"><label for="d-unit-'+i+'">Unit / plot</label><input id="d-unit-'+i+'" data-k="unit" inputmode="numeric" value="'+esc(d.unit||'')+'"></div>'+
+        '<div class="field full"><label for="d-subj-'+i+'">Subject (on form)</label><input dir="auto" id="d-subj-'+i+'" data-k="subject" value="'+esc(d.subject||'')+'"></div>'+
+        '<div class="field"><label for="d-loc-'+i+'">Location (on form)</label><input dir="auto" id="d-loc-'+i+'" data-k="formLoc" value="'+esc(d.formLoc||'')+'"></div>'+
+        '<div class="field"><label for="d-type-'+i+'">Type of inspection</label><select id="d-type-'+i+'" data-k="insType">'+opt(INS_TYPES, d.insType)+'</select></div>'+
+      '</div></article>';
+  }).join('');
+  $('bar').hidden = !S.drafts.length;
+  $('save').textContent = S.drafts.length>1 ? 'Add '+S.drafts.length+' IRs to log & print' : 'Add to log & print';
+}
 function renderDrafts(){
+  if (isB()) return renderDraftsBlock();
   var nums = E.nextIrNumbers(S.log, S.drafts.length);
   $('drafts').innerHTML = S.drafts.map(function(d,i){
     var B=S.log.blocks[d.block];
@@ -304,21 +353,21 @@ function renderDrafts(){
 
 // ---------- duplicate check ----------
 function dupHtml(d, x){
-  var desc = '<div dir="rtl" style="font-weight:600;margin:4px 0">'+esc(d.desc.replace(/\s+/g,' ').trim())+'</div>';
+  var desc = '<div dir="auto" style="font-weight:600;margin:4px 0">'+esc(d.desc.replace(/\s+/g,' ').trim())+'</div>';
   if (!x) return '<b>Not added — already in this list</b>'+desc;
-  var when = x.row.date ? E.fmtDate(x.row.date) : '', irLabel = E.formIrNo(S.log, x.n, x.rev);
+  var when = x.row.date ? E.fmtDate(x.row.date) : '', irLabel = x.label || E.formIrNo(S.log, x.n, x.rev), key = x.printKey ? (tabKind(d.tab)+' '+x.n) : x.n;
   var head = '<b>Not added — done before as <span class="mono">'+esc(irLabel)+'</span></b><div class="small" style="color:inherit">'+(when?esc(when)+' · ':'')+'Status: '+esc(x.status)+'</div>';
   var hint = x.piles ? 'Already requested: <span dir="ltr">'+esc(x.piles.join(', '))+'</span>. Remove these piles from the request.'
-    : x.rejected ? 'It was rejected. Use <b>Log tools → Resubmit (new Rev)</b> with IR '+x.n+'.'
-    : 'To print it again, use <b>Log tools → Print</b> with IR '+x.n+'.';
+    : x.rejected ? 'It was rejected. Use <b>Log tools → Resubmit (new Rev)</b> with IR '+esc(key)+'.'
+    : 'To print it again, use <b>Log tools → Print</b> with IR '+esc(key)+'.';
   return head+desc+'<div>'+hint+'</div>';
 }
 function msgHtml(kind, html){ var d=document.createElement('div'); d.className='notice '+kind; d.innerHTML=html; $('msgs').appendChild(d); }
 // splits drafts into new ones and repeats (repeats of the log, or of another draft in the same batch)
 function checkDuplicates(list, against){
-  var ok = [], seen = (against||[]).map(function(d){ return (d.block||'')+'|'+E.dupKey(d.desc); }), notes = [];
+  var ok = [], seen = (against||[]).map(function(d){ return (d.tab||d.block||'')+'|'+E.dupKey(d.desc, S.log); }), notes = [];
   list.forEach(function(d){
-    var x = E.findDuplicate(S.log, d), key = (d.block||'')+'|'+E.dupKey(d.desc);
+    var x = E.findDuplicate(S.log, d), key = (d.tab||d.block||'')+'|'+E.dupKey(d.desc, S.log);
     if (x) { notes.push(dupHtml(d, x)); return; }
     if (seen.indexOf(key) >= 0) { notes.push(dupHtml(d, null)); return; }
     seen.push(key); ok.push(d);
@@ -328,8 +377,9 @@ function checkDuplicates(list, against){
 
 // ---------- actions ----------
 function understand(){
-  var text=$('req').value.trim(); if(!text){ msg('warn','Type the request first, e.g. حدادة حائط بحري فاصل 20'); return; }
+  var text=$('req').value.trim(); if(!text){ msg('warn', isB() ? 'Type the request first, e.g. RFT for GF columns 445' : 'Type the request first, e.g. حدادة حائط بحري فاصل 20'); return; }
   var u = E.understand(S.log, text, isoToDate($('date').value));
+  if (isB()) u.drafts.forEach(function(d){ applyDefaults(d, true); });
   $('msgs').innerHTML='';
   if (!u.drafts.length) msg('warn','The type of work was not recognised. Write it the way it appears in the log, or pick a suggestion below.');
   u.warnings.forEach(function(w){ msg('warn', w, true); });
@@ -345,7 +395,7 @@ function understand(){
 
 async function save(){
   if (!S.drafts.length) return;
-  var bad = S.drafts.filter(function(d){ return d.block==null || d.block==='' || /…/.test(d.desc); });
+  var bad = S.drafts.filter(function(d){ return isB() ? (!d.tab || !String(d.desc||'').trim()) : (d.block==null || d.block==='' || /…/.test(d.desc)); });
   if (bad.length){ msg('err','One IR is incomplete (missing block, or a value shown as …). Complete it first.'); return; }
   var again = checkDuplicates(S.drafts, []);
   if (again.notes.length){ $('msgs').innerHTML=''; again.notes.forEach(function(t){ msgHtml('err', t); }); msg('warn','Nothing was saved. Remove the repeated IRs above, then try again.', true); return; }
@@ -354,18 +404,20 @@ async function save(){
     var date = isoToDate($('date').value);
     S.drafts.forEach(function(d){ d.date = date; });
     var recs = E.finalize(S.log, S.drafts);
+    if (isB()) recs.forEach(function(r){ r.formIr = B.refOf(S.tplMeta, r.serial, 0); });
     var prev = S.logBytes;
     await E.appendRows(S.log, recs);
     var bytes = await E.saveLog(S.log);
     await put('logPrev', {bytes:prev, name:S.logName, undoOf: recs.map(function(r){return r.ir;})});
     await useLog(bytes, S.logName, true);
     var form = await E.buildForm(S.tpl, recs);
-    var fname = recs.length===1 ? recs[0].formIr+'.docx' : 'IR '+recs[0].n+'-'+recs[recs.length-1].n+'.docx';
+    var fname = recs.length===1 ? recs[0].formIr+'.docx' : (isB() ? 'IRs '+todayISO()+' ('+recs.length+').docx' : 'IR '+recs[0].n+'-'+recs[recs.length-1].n+'.docx');
     S.lastFiles = {form:form, fname:fname};
     saveLogFile(bytes);
     deliver(fname, form, DOCX, true);
     S.drafts=[]; $('req').value=''; $('alts').innerHTML=''; $('msgs').innerHTML='';
-    $('done').innerHTML = '<div class="notice good">'+(recs.length===1?'IR ':'IRs ')+'<span class="mono">'+recs[0].n+(recs.length>1?' → '+recs[recs.length-1].n:'')+'</span> added to the log. The form is ready to print.'+
+    var doneLbl = isB() ? recs.map(function(r){ return r.kind+' '+r.n; }).join(', ') : recs[0].n+(recs.length>1?' → '+recs[recs.length-1].n:'');
+    $('done').innerHTML = '<div class="notice good">'+(recs.length===1?'IR ':'IRs ')+'<span class="mono">'+esc(doneLbl)+'</span> added to the log. The form is ready to print.'+
       '<div class="row" style="margin-top:8px"><button class="ghost" id="reopen">Open the form again</button></div></div>';
     renderDrafts();
   } catch(e){ msg('err','Could not add to the log: '+e.message); }
@@ -373,6 +425,7 @@ async function save(){
 }
 
 function findRows(no){
+  if (isB()) { var hits = B.findRecs(S.log, no); return S.log.rows.filter(function(r){ return hits.some(function(h){ return h.rec.serial===r.ir; }); }); }
   var n = parseInt(String(no).replace(/[^\d]/g,''),10); if(!n) return [];
   return S.log.rows.filter(function(r){ return E.irNum(r.ir)===n; });
 }
@@ -380,11 +433,25 @@ async function reprint(irStr, rev){
   var rows = S.log.rows.filter(function(r){ return r.ir===irStr && String(r.rev)===String(rev); });
   var r = rows[rows.length-1] || S.log.rows.filter(function(x){return x.ir===irStr;}).pop();
   if(!r){ msg('err','This IR number is not in the log'); return; }
+  if (isB()) { var br = E.recordFromRow(S.log, r, S.tplMeta); deliver(br.formIr+'.docx', await E.buildForm(S.tpl, [br]), DOCX, true); return; }
   var form = await E.buildForm(S.tpl, rows.length>1 ? rows.map(function(x){return E.recordFromRow(S.log,x);}) : [E.recordFromRow(S.log, r)]);
   deliver(E.formIrNo(S.log,E.irNum(r.ir),r.rev)+'.docx', form, DOCX, true);
 }
 async function resubmit(no){
   var rows = findRows(no); if(!rows.length){ msg('err','This IR number is not in the log'); return; }
+  if (isB()) {
+    if (rows.length > 1) { msg('err','More than one tab has this number. Write the tab too, e.g. Civil 70.'); return; }
+    try {
+      var prevB = S.logBytes, rb = await E.block.resubmit(S.log, rows[0].ir, isoToDate($("date").value), S.tplMeta);
+      var bytesB = await E.saveLog(S.log);
+      await put('logPrev', {bytes:prevB, name:S.logName});
+      await useLog(bytesB, S.logName, true);
+      saveLogFile(bytesB);
+      deliver(rb.formIr+'.docx', await E.buildForm(S.tpl,[rb]), DOCX, true);
+      msg('good', rb.formIr+' (submission '+(rb.rev+1)+') added to the log.');
+    } catch(e){ msg('err', 'Could not resubmit: '+e.message); }
+    return;
+  }
   var last = rows[rows.length-1], rev = Math.max.apply(null, rows.map(function(r){return +r.rev||0;})) + 1;
   var B = S.log.blocks[E.blockNum(last.block)];
   var rec = { n:E.irNum(last.ir), ir:last.ir, rev:rev, sub:'L', unit:last.unit, blockLabel:last.block, loc:last.loc, from:last.from, to:last.to, desc:last.desc, item:last.item, subItem:last.subItem,
@@ -416,16 +483,28 @@ document.addEventListener('click', function(ev){
   if (t.id==='exportLog') { saveLogFile(S.logBytes); msg('good','Log saved: IR Maker/'+logOutName()); }
   if (t.id==='rePrint'){ var rows=findRows($('reNo').value); if(!rows.length) msg('err','This IR number is not in the log'); else { var r2=rows[rows.length-1]; reprint(r2.ir, r2.rev); } }
   if (t.id==='reSubmit'){ var no=$('reNo').value; if(!findRows(no).length){ msg('err','This IR number is not in the log'); return; }
-    $('confirmBox').innerHTML='<div class="notice warn">A new row will be added with IR '+esc(no)+' and the next Rev. Continue? <button class="ghost" id="yesRe">Yes, add it</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
+    $('confirmBox').innerHTML='<div class="notice warn">'+(isB() ? 'The next revision of IR '+esc(no)+' will be added to the log.' : 'A new row will be added with IR '+esc(no)+' and the next Rev.')+' Continue? <button class="ghost" id="yesRe">Yes, add it</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
   if (t.id==='yesRe'){ $('confirmBox').innerHTML=''; resubmit($('reNo').value); }
   if (t.id==='noRe'){ $('confirmBox').innerHTML=''; }
   if (t.id==='undo'){ $('confirmBox').innerHTML='<div class="notice warn">The log will go back to how it was before the last entry. Continue? <button class="ghost" id="yesUndo">Yes, undo</button> <button class="ghost" id="noRe">Cancel</button></div>'; }
   if (t.id==='yesUndo'){ $('confirmBox').innerHTML=''; get('logPrev').then(function(p){ if(!p||!p.bytes){ msg('warn','There is nothing to undo.'); return; }
-      return useLog(p.bytes, p.name, true).then(function(){ put('logPrev', null); saveLogFile(S.logBytes); msg('good','Undone. Last IR in the log is now '+S.log.lastNum+'.'); }); }); }
+      return useLog(p.bytes, p.name, true).then(function(){ put('logPrev', null); saveLogFile(S.logBytes); msg('good', isB() ? 'Undone. The log is back to how it was before the last entry.' : 'Undone. Last IR in the log is now '+S.log.lastNum+'.'); }); }); }
 });
 document.addEventListener('input', function(ev){
   var el=ev.target, card=el.closest('.ir'); if(!card||!el.dataset.k) return;
   var d=S.drafts[+card.dataset.i]; var k=el.dataset.k;
+  if (isB()) {
+    d[k] = el.value;
+    if (k==='subject') d._subj = 1; if (k==='formLoc') d._loc = 1; if (k==='insType') d._type = 1;
+    if (k==='desc' || k==='unit' || k==='tab') {
+      if (k==='desc') { var u3 = B.unitOf(d.desc); if (u3) d.unit = u3; }
+      if (k==='unit' && /^\d{3}$/.test(d.unit)) { var cur = B.unitOf(d.desc); d.desc = cur ? d.desc.replace(cur, d.unit) : d.desc + ' ( ' + d.unit + ' )'; card.querySelector('[data-k=desc]').value = d.desc; }
+      applyDefaults(d, false);
+      ['subject','formLoc','unit'].forEach(function(f){ var inp = card.querySelector('[data-k='+f+']'); if (inp && inp !== el) inp.value = d[f] || ''; });
+      if (k==='tab') renderDrafts(); else { var ts = card.querySelector('[data-k=insType]'); if (ts && !d._type) ts.value = d.insType; }
+    }
+    return;
+  }
   d[k] = k==='block' ? (el.value===''?null:+el.value) : el.value;
   if (k==='block') renderDrafts();
 });
