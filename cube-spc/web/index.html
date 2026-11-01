@@ -95,6 +95,8 @@ section.sec>h2{border-bottom:2px solid var(--accent);padding-bottom:4px;color:va
 .foot{font-size:11px;color:var(--muted);font-style:italic}
 .viol li{margin:2px 0}
 .bar{height:10px;border-radius:3px;background:var(--c-bar)}
+tr.pick{cursor:pointer}tr.pick:hover td,tr.pick:focus-visible td{background:var(--accent-soft)}tr.out2 td{color:var(--muted)}tr.gh td{background:var(--soft);border-top:2px solid var(--line)}
+.ovt td,.ovt th{padding:5px 7px}
 
 @media (max-width:560px){.map{grid-template-columns:1fr}.big{font-size:32px}.rep{padding:12px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -164,11 +166,11 @@ function linreg(y){const n=y.length,x=y.map((_,i)=>i+1),mx=ST.mean(x),my=ST.mean
 const CONST={2:{A2:1.880,D3:0,D4:3.267,d2:1.128},3:{A2:1.023,D3:0,D4:2.574,d2:1.693},4:{A2:0.729,D3:0,D4:2.282,d2:2.059},5:{A2:0.577,D3:0,D4:2.114,d2:2.326},6:{A2:0.483,D3:0,D4:2.004,d2:2.534}};
 
 /* ================= storage ================= */
-const DEF={minDesc:5,minECP:15,finalECP:30,minSPC:20,minCap:25,minSup:10,minTrend:20,
+const DEF={v:2,minDesc:10,minECP:10,finalECP:30,minSPC:20,minCap:25,minSup:10,minTrend:20,
   ecp:[8,11,14,17],rules:'all',usl:'',fcuOv:'',lslOv:'',title:'',autoTypo:true,spreadPct:20,binW:''};
-let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{}};
-function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.set={...DEF,...r.set};S.ov=r.ov||{}}}catch(e){}}
-function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
+let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{},view:'all'};
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.set={...DEF,...r.set};if(!r.set||r.set.v!==2){S.set.v=2;S.set.minDesc=Math.max(10,S.set.minDesc);S.set.minECP=Math.max(10,Math.min(S.set.minECP,10))}S.ov=r.ov||{}}}catch(e){}}
+function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,view:S.view,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
 
 /* ================= reading files ================= */
 async function readXlsx(buf){
@@ -395,7 +397,7 @@ const colName=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode
 /* ================= grouping & validation ================= */
 const FK=['sup','item','grade','mix','cem'];
 const FL={sup:'Supplier / Plant',item:'Item',grade:'Grade',mix:'Mix ID',cem:'Cement'};
-function groups(){const g=new Map();for(const r of S.reg.recs){if(!hasResult(r))continue;const k=JSON.stringify([r.sup,r.item,r.grade,r.mix,r.cem]);g.set(k,(g.get(k)||0)+1)}
+function groups(){const g=new Map();for(const r of S.reg.recs){if(!hasResult(r))continue;const k=JSON.stringify([r.sup,'*',r.grade,r.mix,r.cem]);g.set(k,(g.get(k)||0)+1)}
   return[...g.entries()].sort((a,b)=>b[1]-a[1]).map(([k,n])=>{const v=JSON.parse(k);return{f:{sup:v[0],item:v[1],grade:v[2],mix:v[3],cem:v[4]},n}})}
 function curFilt(){if(S.filt&&!S.reg.recs.some(r=>hasResult(r)&&match(r,S.filt)))S.filt=null;if(!S.filt){const g=groups()[0];S.filt={...(g?g.f:{}),from:'',to:''}}return S.filt}
 function match(r,f,skip=[]){for(const k of FK){if(skip.includes(k))continue;if(f[k]!=='*'&&f[k]!=null&&r[k]!==f[k])return false}
@@ -525,14 +527,14 @@ function trendChart(x,ids,A,w=640,h=240){
 const insuf=(N,need,what)=>`<div class="insuf"><b>Insufficient Data</b> — ${what} needs at least <b>${need}</b> samples (subgroups); this selection has <b>${N}</b>. No result is shown so the report doesn't give a misleading figure.</div>`;
 const chip=(t,c)=>`<span class="chip ${c}">${t}</span>`;
 function capChip(v){if(v==null||!isFinite(v))return chip('–','na');return v>=1.33?chip('Capable (≥ 1.33)','ok'):v>=1.0?chip('Marginal (1.00–1.33)','warn'):chip('Not capable (< 1.00)','bad')}
-function report(){
-  const f=curFilt(),D=dataset(f),A=analyze(D),T=S.set,u=D.used,N=A.N,x=u.map(o=>o.x),ids=u.map(o=>o.id);
+function report(f=curFilt(),k=0){
+  const D=dataset(f),A=analyze(D),T=S.set,u=D.used,N=A.N,x=u.map(o=>o.x),ids=u.map(o=>o.id);
   const mixed=FK.filter(k=>['grade','mix','sup'].includes(k)&&f[k]==='*');
   const title=T.title||S.reg.title||'Project';
   const lab=[f.item&&f.item!=='*'?f.item:'',f.grade&&f.grade!=='*'?`${f.grade} (fcu = ${f1(D.fcu).replace('.0','')} ${U()})`:'',f.mix&&f.mix!=='*'?f.mix:'',f.cem&&f.cem!=='*'?f.cem:''].filter(Boolean).join(' · ');
   const nlab=S.reg.mode==='cubes'?`(n = ${S.reg.n} cubes)`:'(individual results)';
   const supT=f.sup&&f.sup!=='*'?`Concrete Plant ${f.sup}`:'All Plants';
-  let h=`<div class="rep" id="report"><div class="rhead"><p class="proj">${esc(title)}</p><div class="b1">${esc(supT)} — Statistical Analysis of 28-Day Cube Strength</div><div class="b2">${esc(lab)} — Subgroups N = ${N} ${nlab}${f.from||f.to?` · ${f.from||'start'} to ${f.to||'latest'}`:''}</div></div>`;
+  let h=`<div class="rep ${k?'pb':''}" ${k?'':'id="report"'}><div class="rhead"><p class="proj">${esc(title)}</p><div class="b1">${esc(supT)} — Statistical Analysis of 28-Day Cube Strength</div><div class="b2">${esc(lab)} — Subgroups N = ${N} ${nlab}${f.from||f.to?` · ${f.from||'start'} to ${f.to||'latest'}`:''}</div></div>`;
   if(mixed.length)h+=`<div class="insuf"><b>Mixed population:</b> this selection combines more than one ${mixed.map(k=>FL[k].toLowerCase()).join(' / ')}. ECP and SPC results are only meaningful for one plant, one grade and one mix. Pick a single group above.</div>`;
   // 1 data
   h+=`<section class="sec"><h2>1. Data Basis</h2><div class="kpis">
@@ -614,12 +616,12 @@ function report(){
   if(A.months.length>1)h+=`<h3>By month</h3><div class="tw"><table><thead><tr><th>Month</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP level</th></tr></thead><tbody>
     ${A.months.map(m=>{const cv=m.s/m.m*100;const l=m.n>=T.minDesc?ecpLevel(cv):null;return`<tr><td>${m.k}</td><td class="n">${m.n}</td><td class="n">${f1(m.m)}</td><td class="n">${m.n>1?f2(m.s):'–'}</td><td class="n">${m.n>1?f2(cv):'–'}</td><td>${l==null?chip('few data','na'):chip(ECPN[l],ECPC[l])}</td></tr>`}).join('')}</tbody></table></div>`;
   // supplier comparison: same item/grade/cement & dates, any supplier/mix
-  const sf={...f};const sups=[...new Set(S.reg.recs.filter(r=>match(r,{...f,sup:'*',mix:'*'})&&hasResult(r)).map(r=>r.sup))];
-  if(sups.length){h+=`<h3>Supplier Performance — ${esc([f.item,f.grade].filter(v=>v&&v!=='*').join(' · '))}</h3><div class="tw"><table><thead><tr><th>Supplier</th><th>Mixes</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP</th><th class="n">&lt; fcu</th><th>Stability</th><th class="n">Ppk</th><th class="n">σ level</th></tr></thead><tbody>`;
-    const rowsS=sups.map(s=>{const DD=dataset({...sf,sup:s,mix:'*'});const AA=analyze(DD);return{s,AA,mixes:[...new Set(DD.used.map(o=>o.mix))].join(', ')}}).sort((a,b)=>(b.AA.N>=T.minSup)-(a.AA.N>=T.minSup)||(a.AA.cv||99)-(b.AA.cv||99));
-    for(const{s,AA,mixes}of rowsS){const ok=AA.N>=T.minSup;const l=ok?ecpLevel(AA.cv):null;
-      h+=`<tr class="${s===f.sup?'flag':''}"><td><b>${esc(s||'(blank)')}</b></td><td>${esc(mixes)}</td><td class="n">${AA.N}</td>${ok?`<td class="n">${f1(AA.mean)}</td><td class="n">${f2(AA.sd)}</td><td class="n">${f2(AA.cv)}</td><td>${chip(ECPN[l],ECPC[l])}</td><td class="n">${AA.below.length}</td><td>${AA.stab==='insufficient'?chip('Insufficient','na'):chip(AA.stab==='stable'?'Stable':'Unstable',AA.stab==='stable'?'ok':'bad')}</td><td class="n">${AA.N>=T.minCap?f2(AA.Ppk):'–'}</td><td class="n">${AA.N>=T.minCap?(AA.sigma>9?'> 9':AA.sigma.toFixed(1)):'–'}</td>`:`<td colspan="8" class="muted">Insufficient Data (needs ≥ ${T.minSup} samples)</td>`}</tr>`}
-    h+=`</tbody></table></div><p class="note">Suppliers ranked by CV (lowest variability first). Each supplier's mixes for this item and grade are pooled; compare one mix at a time from the group list for a strict comparison.</p>`}
+  const pairs=[...new Map(S.reg.recs.filter(r=>match(r,{...f,sup:'*',mix:'*'})&&hasResult(r)).map(r=>[r.sup+'\u0001'+r.mix,[r.sup,r.mix]])).values()];
+  if(pairs.length>1){h+=`<h3>Plant Performance — all ${esc(f.grade&&f.grade!=='*'?f.grade:'')} mixes, one row per plant per mix</h3><div class="tw"><table><thead><tr><th>Plant</th><th>Mix</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP</th><th class="n">&lt; fcu</th><th>Stability</th><th class="n">Ppk</th><th class="n">σ level</th></tr></thead><tbody>`;
+    const rowsS=pairs.map(([s,mx])=>{const AA=analyze(dataset({...f,sup:s,mix:mx}));return{s,mx,AA}}).sort((a,b)=>(b.AA.N>=T.minSup)-(a.AA.N>=T.minSup)||(a.AA.cv||99)-(b.AA.cv||99)||b.AA.N-a.AA.N);
+    for(const{s,mx,AA}of rowsS){const ok=AA.N>=T.minSup;const l=ok?ecpLevel(AA.cv):null;
+      h+=`<tr class="${s===f.sup&&mx===f.mix?'flag':''}"><td><b>${esc(s||'(blank)')}</b></td><td>${esc(mx||'–')}</td><td class="n">${AA.N}</td>${ok?`<td class="n">${f1(AA.mean)}</td><td class="n">${f2(AA.sd)}</td><td class="n">${f2(AA.cv)}</td><td>${chip(ECPN[l],ECPC[l])}</td><td class="n">${AA.below.length}</td><td>${AA.stab==='insufficient'?chip('Insufficient','na'):chip(AA.stab==='stable'?'Stable':'Unstable',AA.stab==='stable'?'ok':'bad')}</td><td class="n">${AA.N>=T.minCap?f2(AA.Ppk):'–'}</td><td class="n">${AA.N>=T.minCap?(AA.sigma>9?'> 9':AA.sigma.toFixed(1)):'–'}</td>`:`<td colspan="8" class="muted">Insufficient Data (needs ≥ ${T.minSup} samples)</td>`}</tr>`}
+    h+=`</tbody></table></div><p class="note">Ranked by CV (lowest variability first). The highlighted row is this report's mix. Mixes are not pooled.</p>`}
   h+=`</section>`;
   // 9 dashboard
   const dRow=(k,v,c)=>`<tr><td>${k}</td><td class="n"><b>${v}</b></td><td>${c||''}</td></tr>`;
@@ -698,7 +700,8 @@ function vRep(){
   if(!S.reg)return`<div class="card"><h2>No register loaded</h2><p>Load the concrete pouring register from the Register tab to see the report.</p><button class="btn primary" id="pick">Choose register file</button></div>`;
   const f=curFilt(),T=S.set;const gs=groups();
   const opts=k=>{const vals=[...new Set(S.reg.recs.filter(hasResult).map(r=>r[k]))].sort();return`<option value="*" ${f[k]==='*'?'selected':''}>All</option>`+vals.map(v=>`<option ${f[k]===v?'selected':''} value="${esc(v)}">${esc(v||'(blank)')}</option>`).join('')};
-  let h=`<div class="card noprint"><h2>Group to analyse</h2><div class="groups">${gs.slice(0,14).map((g,i)=>{const on=FK.every(k=>f[k]===g.f[k]);return`<button data-g="${i}" class="${on?'on':''}">${esc([g.f.sup,g.f.item,g.f.grade,g.f.mix].filter(Boolean).join(' · '))} <b>(${g.n})</b></button>`}).join('')}</div>
+  const list=mixList();const okN=list.filter(g=>g.ok).length;
+  let h=`<div class="card noprint"><h2>Report</h2><div class="groups"><button id="vAll" class="${S.view==='all'?'on':''}">All mixes · ${okN} full report${okN===1?'':'s'}</button><button id="vOne" class="${S.view==='one'?'on':''}">Selected mix only: ${esc([f.sup,f.grade,f.mix].filter(v=>v&&v!=='*').join(' · ')||'custom filter')}</button></div>
    <details style="margin-top:10px"><summary>Filters, limits and settings</summary>
    <div class="grid" style="margin-top:8px">${FK.map(k=>`<label class="f"><span>${FL[k]}</span><select id="f-${k}">${opts(k)}</select></label>`).join('')}
     <label class="f"><span>Poured from</span><input type="date" id="f-from" value="${f.from||''}"></label><label class="f"><span>Poured to</span><input type="date" id="f-to" value="${f.to||''}"></label></div>
@@ -709,7 +712,7 @@ function vRep(){
     <label class="f"><span>Histogram bin width</span><input type="number" id="s-binW" placeholder="auto" value="${T.binW}"></label>
     <label class="f"><span>Project name</span><input type="text" id="s-title" value="${esc(T.title||S.reg.title)}"></label></div>
    <h3>Minimum samples (Insufficient Data below these)</h3><div class="grid">
-    ${[['minDesc','Any statistics'],['minECP','ECP assessment'],['finalECP','ECP final (else provisional)'],['minSPC','Control limits & stability'],['minCap','Capability & sigma'],['minTrend','Trend'],['minSup','Supplier row']].map(([k,l])=>`<label class="f"><span>${l}</span><input type="number" min="2" id="s-${k}" value="${T[k]}"></label>`).join('')}</div>
+    ${[['minDesc','Minimum samples per mix'],['minECP','ECP assessment'],['finalECP','ECP final (else provisional)'],['minSPC','Control limits & stability'],['minCap','Capability & sigma'],['minTrend','Trend'],['minSup','Plant comparison row']].map(([k,l])=>`<label class="f"><span>${l}</span><input type="number" min="2" id="s-${k}" value="${T[k]}"></label>`).join('')}</div>
    <h3>ECP 203-2020 Table (8-3) CV limits, %</h3><div class="grid">${['Excellent below','Very good below','Good below','Acceptable up to'].map((l,i)=>`<label class="f"><span>${l}</span><input type="number" step="0.5" id="s-ecp${i}" value="${T.ecp[i]}"></label>`).join('')}</div>
    <p class="note">Defaults: &lt;8 Excellent, 8–11 Very Good, 11–14 Good, 14–17 Acceptable, &gt;17 Poor. Check them against your approved copy of the code.</p>
    <h3>Stability rules</h3><div class="grid"><label class="f"><span>Out-of-control tests on the X̄ chart</span><select id="s-rules"><option value="all" ${T.rules==='all'?'selected':''}>Western Electric / Nelson 1, 2, 3, 5, 6</option><option value="r1" ${T.rules==='r1'?'selected':''}>Rule 1 only (points beyond 3σ)</option></select></label></div>
@@ -717,7 +720,46 @@ function vRep(){
     <label class="f"><span>Flag set range above (% of mean)</span><input type="number" id="s-spreadPct" value="${T.spreadPct}"></label></div>
    <div class="row" style="margin-top:10px"><button class="btn" id="resetSet">Reset settings</button>${Object.keys(S.ov).length?`<button class="btn" id="resetOv">Clear my ${Object.keys(S.ov).length} include/exclude choices</button>`:''}</div></details>
    <div class="row" style="margin-top:12px"><button class="btn primary" id="pdf">${NATIVE&&window.AndroidBridge.platform==='desktop'?'Save report as PDF':NATIVE?'Save / print PDF':'Print / save PDF'}</button><button class="btn" id="pick">Load another register</button></div></div>`;
-  return h+report()}
+  h+=overview(list);
+  if(S.view==='all'){const ok=list.filter(g=>g.ok);if(!ok.length)h+=`<div class="insuf"><b>Insufficient Data</b> — no mix has ${T.minDesc} samples yet.</div>`;ok.forEach((g,i)=>h+=report(g.f,i+1))}
+  else h+=report(f,1);
+  return h}
+function mixList(){const T=S.set,fr=S.filt||{};
+  return groups().map(g=>{const f={...g.f,item:'*',from:fr.from||'',to:fr.to||''};const D=dataset(f);const A=analyze(D);return{f,D,A,ok:A.N>=T.minDesc}})
+    .sort((a,b)=>(fcuOf(a.f)||0)-(fcuOf(b.f)||0)||a.f.grade.localeCompare(b.f.grade)||a.f.mix.localeCompare(b.f.mix)||(b.A.N-a.A.N))}
+function overview(list){
+  const T=S.set,ok=list.filter(g=>g.ok);const cur=curFilt();
+  const grades=[...new Set(list.map(g=>g.f.grade))];const plants=[...new Set(list.map(g=>g.f.sup))];
+  let h=`<div class="rep"><div class="rhead"><p class="proj">${esc(T.title||S.reg.title)}</p><div class="b1">28-Day Cube Strength — Analysis by Mix and Plant</div>
+   <div class="b2">${list.length} mix/plant combinations · ${grades.length} grade${grades.length>1?'s':''} · ${plants.length} plant${plants.length>1?'s':''} · ${ok.length} analysed (N ≥ ${T.minDesc}) · ${list.length-ok.length} with fewer than ${T.minDesc} samples</div></div>
+   <section class="sec"><h2>Mix × Plant Overview</h2>
+   <p class="note noprint">Each row is one mix from one plant. Tap a row to open its full report.</p>
+   <div class="tw"><table class="ovt"><thead><tr><th>Plant</th><th>Grade</th><th>Mix</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP level</th><th class="n">&lt; fcu</th><th>Stability</th><th class="n">Cpk</th><th class="n">Ppk</th><th class="n">σ level</th><th>Trend</th></tr></thead><tbody>`;
+  let lastG=null;
+  for(const g of list){const{f,A}=g;
+    if(f.grade!==lastG){lastG=f.grade;h+=`<tr class="gh"><td colspan="14"><b>${esc(f.grade||'(no grade)')}</b> <span class="muted">fcu = ${f1(fcuOf(f))} ${U()}</span></td></tr>`}
+    const on=FK.every(k=>k==='item'||cur[k]===f[k])&&S.view==='one';
+    const key=esc(JSON.stringify([f.sup,f.grade,f.mix,f.cem]));
+    h+=`<tr class="pick ${g.ok?'':'out2'} ${on?'flag':''}" data-k="${key}" tabindex="0"><td><b>${esc(f.sup||'(blank)')}</b></td><td>${esc(f.grade)}</td><td>${esc(f.mix||'–')}${f.cem?`<div class="muted small">${esc(f.cem)}</div>`:''}</td><td class="n"><b>${A.N}</b></td>`;
+    if(!g.ok){h+=`<td colspan="10" class="muted">Insufficient Data: ${A.N} sample${A.N===1?'':'s'}, needs at least ${T.minDesc}</td></tr>`;continue}
+    const lv=ecpLevel(A.cv);
+    h+=`<td class="n">${f1(A.mean)}</td><td class="n">${f2(A.sd)}</td><td class="n">${f2(A.cv)}</td>
+     <td>${A.N>=T.minECP?chip(ECPN[lv]+(A.N<T.finalECP?' *':''),ECPC[lv]):chip('Insufficient','na')}</td>
+     <td class="n">${A.below.length?`<b style="color:var(--bad)">${A.below.length}</b>`:'0'}</td>
+     <td>${A.stab==='insufficient'?chip(`N < ${T.minSPC}`,'na'):chip(A.stab==='stable'?'Stable':'Unstable',A.stab==='stable'?'ok':'bad')}</td>
+     <td class="n">${A.capState==='ok'?f2(A.Cpk):A.capState==='unstable'?'<span class="muted">withheld</span>':'<span class="muted">–</span>'}</td>
+     <td class="n">${A.N>=T.minCap?f2(A.Ppk):'<span class="muted">–</span>'}</td>
+     <td class="n">${A.N>=T.minCap?(A.sigma>9?'> 9':A.sigma.toFixed(1)):'<span class="muted">–</span>'}</td>
+     <td>${A.trend?chip(A.trend[0].toUpperCase()+A.trend.slice(1),{improving:'ok',steady:'na',deteriorating:'bad'}[A.trend]):'<span class="muted">–</span>'}</td></tr>`}
+  h+=`</tbody></table></div>
+   <p class="note">* ECP level provisional (fewer than ${T.finalECP} samples). A mix needs ${T.minDesc} samples to be analysed, ${T.minSPC} for stability, ${T.minCap} for capability (Cpk, Ppk) and sigma level, ${T.minTrend} for the trend. Cpk is withheld when the mix is not stable. Each plant's mix is analysed on its own; mixes are never pooled.</p>`;
+  // plant comparison per grade, one line per plant per mix
+  const mg=grades.filter(gr=>list.filter(g=>g.f.grade===gr&&g.ok).length>=2);
+  if(mg.length){h+=`<h3>Plant comparison by grade (mixes with N ≥ ${T.minDesc})</h3><div class="charts">`;
+    for(const gr of mg){const rows=list.filter(g=>g.f.grade===gr&&g.ok).sort((a,b)=>a.A.cv-b.A.cv);const mx=Math.max(...rows.map(r=>r.A.cv),T.ecp[3]*0.6);
+      h+=`<div class="chart"><div class="t" style="text-align:left">${esc(gr)}: CV % (lower is better)</div>${rows.map(r=>{const lv=ecpLevel(r.A.cv);return`<div style="display:grid;grid-template-columns:minmax(90px,38%) 1fr 54px;gap:8px;align-items:center;margin:4px 0;font-size:12px"><span>${esc(r.f.sup)} · ${esc(r.f.mix||'')}</span><div style="background:var(--soft);border-radius:3px"><div class="bar" style="width:${(r.A.cv/mx*100).toFixed(1)}%;background:var(--${ECPC[lv]==='ok'?'ok':ECPC[lv]==='warn'?'warn':'bad'})"></div></div><span class="n" style="text-align:right">${f2(r.A.cv)}%</span></div>`}).join('')}</div>`}
+    h+=`</div>`}
+  return h+`</section></div>`}
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tab));
   $('#app').innerHTML=S.tab==='reg'?vReg():vRep();
@@ -732,8 +774,10 @@ function bind(){
   document.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{const id=tr.dataset.id;const D=dataset(curFilt());const o=D.rows.find(z=>z.id===id);if(!o)return;
     if(o.use)S.ov[id]='out';else if(S.ov[id]==='out')delete S.ov[id];else{if(o.R==null&&S.reg.mode==='cubes'){toast('This set is incomplete and can\'t be analysed.');return}S.ov[id]='in'}
     save();render();toast(S.ov[id]==='out'?`${id} excluded`:`${id} included`)});
-  document.querySelectorAll('.groups button').forEach(b=>b.onclick=()=>{const g=groups()[+b.dataset.g];S.filt={...g.f,from:S.filt?.from||'',to:S.filt?.to||''};S.set.fcuOv='';save();render()});
-  FK.forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;if(k==='grade')S.set.fcuOv='';save();render()}});
+  const openMix=tr=>{const[sup,grade,mix,cem]=JSON.parse(tr.dataset.k);S.filt={sup,item:'*',grade,mix,cem,from:S.filt?.from||'',to:S.filt?.to||''};S.set.fcuOv='';S.view='one';save();render();const r=$('#report');if(r)r.scrollIntoView({behavior:'smooth'})};
+  document.querySelectorAll('tr.pick').forEach(tr=>{tr.onclick=()=>openMix(tr);tr.onkeydown=e=>{if(e.key==='Enter')openMix(tr)}});
+  const va=$('#vAll');if(va)va.onclick=()=>{S.view='all';save();render()};const vo=$('#vOne');if(vo)vo.onclick=()=>{S.view='one';save();render()};
+  FK.forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;S.view='one';if(k==='grade')S.set.fcuOv='';save();render()}});
   ['from','to'].forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;save();render()}});
   ['fcuOv','lslOv','usl','binW','title','minDesc','minECP','finalECP','minSPC','minCap','minTrend','minSup','spreadPct'].forEach(k=>{const e=$('#s-'+k);if(e)e.onchange=()=>{const v=e.value.trim();S.set[k]=['fcuOv','lslOv','usl','binW','title'].includes(k)?v:Math.max(2,+v||DEF[k]);save();render();reopen()}});
   [0,1,2,3].forEach(i=>{const e=$('#s-ecp'+i);if(e)e.onchange=()=>{S.set.ecp[i]=+e.value||DEF.ecp[i];save();render();reopen()}});
@@ -747,7 +791,7 @@ function bind(){
 function reopenAdj(){const d=document.querySelector('#app details');if(d)d.open=true}
 function reopen(){const d=document.querySelector('details');if(d)d.open=true}
 function savePdf(){
-  const f=curFilt();const name=`Concrete SPC - ${[f.sup,f.item,f.grade,f.mix].filter(v=>v&&v!=='*').join(' ')} - ${new Date().toISOString().slice(0,10)}`.replace(/[\\/:*?"<>|]/g,'_');
+  const f=curFilt();const name=`Concrete SPC - ${S.view==='all'?'All mixes':[f.sup,f.grade,f.mix].filter(v=>v&&v!=='*').join(' ')} - ${new Date().toISOString().slice(0,10)}`.replace(/[\\/:*?"<>|]/g,'_');
   document.title=name;
   if(window.AndroidBridge&&window.AndroidBridge.printPdf){window.AndroidBridge.printPdf(name);setTimeout(()=>document.title='Concrete SPC',3000);return}
   window.print();setTimeout(()=>document.title='Concrete SPC',3000)}
