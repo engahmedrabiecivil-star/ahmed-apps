@@ -168,9 +168,9 @@ const CONST={2:{A2:1.880,D3:0,D4:3.267,d2:1.128},3:{A2:1.023,D3:0,D4:2.574,d2:1.
 /* ================= storage ================= */
 const DEF={v:2,minDesc:10,minECP:10,finalECP:30,minSPC:20,minCap:25,minSup:10,minTrend:20,
   ecp:[8,11,14,17],rules:'all',usl:'',fcuOv:'',lslOv:'',title:'',autoTypo:true,spreadPct:20,binW:''};
-let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{},view:'all'};
-function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.set={...DEF,...r.set};if(!r.set||r.set.v!==2){S.set.v=2;S.set.minDesc=Math.max(10,S.set.minDesc);S.set.minECP=Math.max(10,Math.min(S.set.minECP,10))}S.ov=r.ov||{}}}catch(e){}}
-function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,view:S.view,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
+let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{},pick:{sup:'*',grade:'*',mix:'*'}};
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.pick=r.pick||{sup:'*',grade:'*',mix:'*'};S.set={...DEF,...r.set};if(!r.set||r.set.v!==2){S.set.v=2;S.set.minDesc=Math.max(10,S.set.minDesc);S.set.minECP=Math.max(10,Math.min(S.set.minECP,10))}S.ov=r.ov||{}}}catch(e){}}
+function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,pick:S.pick,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
 
 /* ================= reading files ================= */
 async function readXlsx(buf){
@@ -701,9 +701,24 @@ function vRep(){
   const f=curFilt(),T=S.set;const gs=groups();
   const opts=k=>{const vals=[...new Set(S.reg.recs.filter(hasResult).map(r=>r[k]))].sort();return`<option value="*" ${f[k]==='*'?'selected':''}>All</option>`+vals.map(v=>`<option ${f[k]===v?'selected':''} value="${esc(v)}">${esc(v||'(blank)')}</option>`).join('')};
   const list=mixList();const okN=list.filter(g=>g.ok).length;
-  let h=`<div class="card noprint"><h2>Report</h2><div class="groups"><button id="vAll" class="${S.view==='all'?'on':''}">All mixes · ${okN} full report${okN===1?'':'s'}</button><button id="vOne" class="${S.view==='one'?'on':''}">Selected mix only: ${esc([f.sup,f.grade,f.mix].filter(v=>v&&v!=='*').join(' · ')||'custom filter')}</button></div>
+  const P=S.pick,inP=(g,ks)=>ks.every(k=>P[k]==='*'||g.f[k]===P[k]);
+  if(!list.some(g=>inP(g,['sup','grade','mix'])))S.pick=Object.assign(P,{sup:'*',grade:'*',mix:'*'});
+  const sel=list.filter(g=>inP(g,['sup','grade','mix']));const selOk=sel.filter(g=>g.ok);
+  const cnt=(arr)=>arr.reduce((s,g)=>s+g.A.N,0);
+  const optsP=[...new Set(list.map(g=>g.f.sup))].map(v=>{const a=list.filter(g=>g.f.sup===v);return`<option value="${esc(v)}" ${P.sup===v?'selected':''}>${esc(v||'(blank)')} · ${a.length} mix${a.length>1?'es':''}, ${cnt(a)} samples</option>`}).join('');
+  const lg=list.filter(g=>inP(g,['sup']));const optsG=[...new Set(lg.map(g=>g.f.grade))].map(v=>{const a=lg.filter(g=>g.f.grade===v);return`<option value="${esc(v)}" ${P.grade===v?'selected':''}>${esc(v||'(blank)')} · ${cnt(a)} samples</option>`}).join('');
+  const lm=list.filter(g=>inP(g,['sup','grade']));const optsM=[...new Set(lm.map(g=>g.f.mix))].map(v=>{const a=lm.filter(g=>g.f.mix===v);const n=cnt(a);return`<option value="${esc(v)}" ${P.mix===v?'selected':''}>${esc(v||'(no mix ID)')}${P.sup==='*'?' · '+esc([...new Set(a.map(g=>g.f.sup))].join(', ')):''} · ${n}${a.every(g=>!g.ok)?' (fewer than '+T.minDesc+')':''}</option>`}).join('');
+  const skipped=sel.length>1?sel.filter(g=>!g.ok):[];
+  let h=`<div class="card noprint"><h2>Choose the mix to analyse</h2><div class="grid">
+    <label class="f"><span>Plant</span><select id="p-sup"><option value="*">All plants</option>${optsP}</select></label>
+    <label class="f"><span>Grade</span><select id="p-grade"><option value="*">All grades</option>${optsG}</select></label>
+    <label class="f"><span>Mix</span><select id="p-mix"><option value="*">All mixes</option>${optsM}</select></label></div>
+   <p class="note">${sel.length===1?`Showing the full report for <b>${esc([sel[0].f.sup,sel[0].f.grade,sel[0].f.mix].filter(Boolean).join(' · '))}</b> (${sel[0].A.N} samples).`
+     :`Showing ${selOk.length} full report${selOk.length===1?'':'s'}: ${selOk.map(g=>`<b>${esc([g.f.sup,g.f.grade,g.f.mix].filter(Boolean).join(' · '))}</b>`).join(', ')||'none'}.${skipped.length?` Not analysed (fewer than ${T.minDesc} samples): ${skipped.map(g=>esc([g.f.sup,g.f.grade,g.f.mix].filter(Boolean).join(' · '))+' ('+g.A.N+')').join(', ')}.`:''}`}
+     You can also tap any row in the overview.</p>
+   <div class="row"><button class="btn" id="pAll" ${P.sup==='*'&&P.grade==='*'&&P.mix==='*'?'disabled':''}>Show all mixes</button><button class="btn" id="pOv">${S.hideOv?'Show':'Hide'} the overview</button></div>
    <details style="margin-top:10px"><summary>Filters, limits and settings</summary>
-   <div class="grid" style="margin-top:8px">${FK.map(k=>`<label class="f"><span>${FL[k]}</span><select id="f-${k}">${opts(k)}</select></label>`).join('')}
+   <div class="grid" style="margin-top:8px">
     <label class="f"><span>Poured from</span><input type="date" id="f-from" value="${f.from||''}"></label><label class="f"><span>Poured to</span><input type="date" id="f-to" value="${f.to||''}"></label></div>
    <div class="grid" style="margin-top:10px">
     <label class="f"><span>fcu (${U()})</span><input type="number" id="s-fcuOv" placeholder="from grade: ${f1(fcuOf({...f})).replace('NaN','?')}" value="${T.fcuOv}"></label>
@@ -720,14 +735,15 @@ function vRep(){
     <label class="f"><span>Flag set range above (% of mean)</span><input type="number" id="s-spreadPct" value="${T.spreadPct}"></label></div>
    <div class="row" style="margin-top:10px"><button class="btn" id="resetSet">Reset settings</button>${Object.keys(S.ov).length?`<button class="btn" id="resetOv">Clear my ${Object.keys(S.ov).length} include/exclude choices</button>`:''}</div></details>
    <div class="row" style="margin-top:12px"><button class="btn primary" id="pdf">${NATIVE&&window.AndroidBridge.platform==='desktop'?'Save report as PDF':NATIVE?'Save / print PDF':'Print / save PDF'}</button><button class="btn" id="pick">Load another register</button></div></div>`;
-  h+=overview(list);
-  if(S.view==='all'){const ok=list.filter(g=>g.ok);if(!ok.length)h+=`<div class="insuf"><b>Insufficient Data</b> — no mix has ${T.minDesc} samples yet.</div>`;ok.forEach((g,i)=>h+=report(g.f,i+1))}
-  else h+=report(f,1);
+  if(sel.length===1&&sel[0].f.mix!==(S.filt||{}).mix||sel.length===1&&sel[0].f.sup!==(S.filt||{}).sup){S.filt={...sel[0].f,from:S.filt?.from||'',to:S.filt?.to||''};S.set.fcuOv=''}
+  if(!S.hideOv)h+=overview(list,sel);
+  if(sel.length===1)h+=report(sel[0].f,1);
+  else{if(!selOk.length)h+=`<div class="insuf"><b>Insufficient Data</b> — none of the chosen mixes has ${T.minDesc} samples yet.</div>`;selOk.forEach((g,i)=>h+=report(g.f,i+1))}
   return h}
 function mixList(){const T=S.set,fr=S.filt||{};
   return groups().map(g=>{const f={...g.f,item:'*',from:fr.from||'',to:fr.to||''};const D=dataset(f);const A=analyze(D);return{f,D,A,ok:A.N>=T.minDesc}})
     .sort((a,b)=>(fcuOf(a.f)||0)-(fcuOf(b.f)||0)||a.f.grade.localeCompare(b.f.grade)||a.f.mix.localeCompare(b.f.mix)||(b.A.N-a.A.N))}
-function overview(list){
+function overview(list,sel=[]){
   const T=S.set,ok=list.filter(g=>g.ok);const cur=curFilt();
   const grades=[...new Set(list.map(g=>g.f.grade))];const plants=[...new Set(list.map(g=>g.f.sup))];
   let h=`<div class="rep"><div class="rhead"><p class="proj">${esc(T.title||S.reg.title)}</p><div class="b1">28-Day Cube Strength — Analysis by Mix and Plant</div>
@@ -738,7 +754,7 @@ function overview(list){
   let lastG=null;
   for(const g of list){const{f,A}=g;
     if(f.grade!==lastG){lastG=f.grade;h+=`<tr class="gh"><td colspan="14"><b>${esc(f.grade||'(no grade)')}</b> <span class="muted">fcu = ${f1(fcuOf(f))} ${U()}</span></td></tr>`}
-    const on=FK.every(k=>k==='item'||cur[k]===f[k])&&S.view==='one';
+    const on=sel.length<list.length&&sel.includes(g);
     const key=esc(JSON.stringify([f.sup,f.grade,f.mix,f.cem]));
     h+=`<tr class="pick ${g.ok?'':'out2'} ${on?'flag':''}" data-k="${key}" tabindex="0"><td><b>${esc(f.sup||'(blank)')}</b></td><td>${esc(f.grade)}</td><td>${esc(f.mix||'–')}${f.cem?`<div class="muted small">${esc(f.cem)}</div>`:''}</td><td class="n"><b>${A.N}</b></td>`;
     if(!g.ok){h+=`<td colspan="10" class="muted">Insufficient Data: ${A.N} sample${A.N===1?'':'s'}, needs at least ${T.minDesc}</td></tr>`;continue}
@@ -774,10 +790,11 @@ function bind(){
   document.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{const id=tr.dataset.id;const D=dataset(curFilt());const o=D.rows.find(z=>z.id===id);if(!o)return;
     if(o.use)S.ov[id]='out';else if(S.ov[id]==='out')delete S.ov[id];else{if(o.R==null&&S.reg.mode==='cubes'){toast('This set is incomplete and can\'t be analysed.');return}S.ov[id]='in'}
     save();render();toast(S.ov[id]==='out'?`${id} excluded`:`${id} included`)});
-  const openMix=tr=>{const[sup,grade,mix,cem]=JSON.parse(tr.dataset.k);S.filt={sup,item:'*',grade,mix,cem,from:S.filt?.from||'',to:S.filt?.to||''};S.set.fcuOv='';S.view='one';save();render();const r=$('#report');if(r)r.scrollIntoView({behavior:'smooth'})};
+  const openMix=tr=>{const[sup,grade,mix,cem]=JSON.parse(tr.dataset.k);S.pick={sup,grade,mix};S.filt={sup,item:'*',grade,mix,cem,from:S.filt?.from||'',to:S.filt?.to||''};S.set.fcuOv='';save();render();const r=$('#report');if(r)r.scrollIntoView({behavior:'smooth'})};
   document.querySelectorAll('tr.pick').forEach(tr=>{tr.onclick=()=>openMix(tr);tr.onkeydown=e=>{if(e.key==='Enter')openMix(tr)}});
-  const va=$('#vAll');if(va)va.onclick=()=>{S.view='all';save();render()};const vo=$('#vOne');if(vo)vo.onclick=()=>{S.view='one';save();render()};
-  FK.forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;S.view='one';if(k==='grade')S.set.fcuOv='';save();render()}});
+  ['sup','grade','mix'].forEach((k,i)=>{const e=$('#p-'+k);if(e)e.onchange=()=>{S.pick[k]=e.value;if(i<1)S.pick.grade='*';if(i<2)S.pick.mix='*';save();render()}});
+  const pa=$('#pAll');if(pa)pa.onclick=()=>{S.pick={sup:'*',grade:'*',mix:'*'};save();render()};const po=$('#pOv');if(po)po.onclick=()=>{S.hideOv=!S.hideOv;render()};
+  FK.forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;if(k==='grade')S.set.fcuOv='';save();render()}});
   ['from','to'].forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;save();render()}});
   ['fcuOv','lslOv','usl','binW','title','minDesc','minECP','finalECP','minSPC','minCap','minTrend','minSup','spreadPct'].forEach(k=>{const e=$('#s-'+k);if(e)e.onchange=()=>{const v=e.value.trim();S.set[k]=['fcuOv','lslOv','usl','binW','title'].includes(k)?v:Math.max(2,+v||DEF[k]);save();render();reopen()}});
   [0,1,2,3].forEach(i=>{const e=$('#s-ecp'+i);if(e)e.onchange=()=>{S.set.ecp[i]=+e.value||DEF.ecp[i];save();render();reopen()}});
@@ -791,7 +808,7 @@ function bind(){
 function reopenAdj(){const d=document.querySelector('#app details');if(d)d.open=true}
 function reopen(){const d=document.querySelector('details');if(d)d.open=true}
 function savePdf(){
-  const f=curFilt();const name=`Concrete SPC - ${S.view==='all'?'All mixes':[f.sup,f.grade,f.mix].filter(v=>v&&v!=='*').join(' ')} - ${new Date().toISOString().slice(0,10)}`.replace(/[\\/:*?"<>|]/g,'_');
+  const f=curFilt();const name=`Concrete SPC - ${[S.pick.sup,S.pick.grade,S.pick.mix].filter(v=>v&&v!=='*').join(' ')||'All mixes'} - ${new Date().toISOString().slice(0,10)}`.replace(/[\\/:*?"<>|]/g,'_');
   document.title=name;
   if(window.AndroidBridge&&window.AndroidBridge.printPdf){window.AndroidBridge.printPdf(name);setTimeout(()=>document.title='Concrete SPC',3000);return}
   window.print();setTimeout(()=>document.title='Concrete SPC',3000)}
