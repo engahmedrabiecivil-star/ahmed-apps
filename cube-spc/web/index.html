@@ -577,7 +577,7 @@ function trendChart(x,ids,A,w=640,h=240){
   return svg.replace('</svg>',extra+'</svg>')}
 
 /* ================= report ================= */
-const insuf=(N,need,what)=>`<div class="insuf"><b>Insufficient Data</b> — ${what} needs at least <b>${need}</b> samples (subgroups); this selection has <b>${N}</b>. No result is shown so the report doesn't give a misleading figure.</div>`;
+const insuf=(N,need,what)=>`<div class="insuf"><b>Insufficient Data</b> — ${what} needs at least <b>${need}</b> groups (samples); this selection has <b>${N}</b>. No result is shown so the report doesn't give a misleading figure.</div>`;
 const chip=(t,c)=>`<span class="chip ${c}">${t}</span>`;
 function capChip(v){if(v==null||!isFinite(v))return chip('–','na');return v>=1.33?chip('Capable (≥ 1.33)','ok'):v>=1.0?chip('Marginal (1.00–1.33)','warn'):chip('Not capable (< 1.00)','bad')}
 function report(f=curFilt(),k=0){
@@ -585,13 +585,13 @@ function report(f=curFilt(),k=0){
   const mixed=FK.filter(k=>['grade','mix','sup'].includes(k)&&f[k]==='*');
   const title=T.title||S.reg.title||'Project';
   const lab=[f.item&&f.item!=='*'?f.item:'',f.grade&&f.grade!=='*'?`${f.grade} (fcu = ${f1(D.fcu).replace('.0','')} ${U()})`:'',f.mix&&f.mix!=='*'?f.mix:'',f.cem&&f.cem!=='*'?f.cem:''].filter(Boolean).join(' · ');
-  const nlab=S.reg.mode==='cubes'?`(n = ${S.reg.n} cubes)`:'(individual results)';
+  const nlab=S.reg.mode==='cubes'?`· Subgroup size n = ${S.reg.n} cubes`:'· individual results (n = 1)';
   const supT=f.sup&&f.sup!=='*'?`Concrete Plant ${f.sup}`:'All Plants';
-  let h=`<div class="rep ${k?'pb':''}" ${k?'':'id="report"'}><div class="rhead"><p class="proj">${esc(title)}</p><div class="b1">${esc(supT)} — Statistical Analysis of 28-Day Cube Strength</div><div class="b2">${esc(lab)} — Subgroups N = ${N} ${nlab}${f.from||f.to?` · ${f.from||'start'} to ${f.to||'latest'}`:''}</div></div>`;
+  let h=`<div class="rep ${k?'pb':''}" ${k?'':'id="report"'}><div class="rhead"><p class="proj">${esc(title)}</p><div class="b1">${esc(supT)} — Statistical Analysis of 28-Day Cube Strength</div><div class="b2">${esc(lab)} — Groups N = ${N} ${nlab}${f.from||f.to?` · ${f.from||'start'} to ${f.to||'latest'}`:''}</div></div>`;
   if(mixed.length)h+=`<div class="insuf"><b>Mixed population:</b> this selection combines more than one ${mixed.map(k=>FL[k].toLowerCase()).join(' / ')}. ECP and SPC results are only meaningful for one plant, one grade and one mix. Pick a single group above.</div>`;
   // 1 data
   h+=`<section class="sec"><h2>1. Data Basis</h2><div class="kpis">
-    <div class="kpi"><div class="l">Samples analysed (N)</div><div class="v">${N}</div><div class="s">each = average of ${S.reg.mode==='cubes'?S.reg.n+' cubes':'1 result'}</div></div>
+    <div class="kpi"><div class="l">Groups analysed (N)</div><div class="v">${N}</div><div class="s">${S.reg.mode==='cubes'?'subgroup size n = '+S.reg.n+' cubes, result = their average':'1 result per group (n = 1)'}</div></div>
     <div class="kpi"><div class="l">Excluded</div><div class="v">${D.excl.length}</div><div class="s">${D.excl.length?'see list below':'none'}</div></div>
     <div class="kpi"><div class="l">Awaiting 28-day</div><div class="v">${D.pendingN}</div><div class="s">not yet crushed</div></div>
     <div class="kpi"><div class="l">Period</div><div class="v" style="font-size:14px">${u.length?u[0].pour+'<br>'+u[u.length-1].pour:'–'}</div></div></div>
