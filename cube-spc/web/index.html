@@ -629,9 +629,9 @@ function report(f=curFilt(),k=0){
   // 7 six sigma
   h+=`<section class="sec"><h2>7. Six Sigma Analysis</h2>`;
   if(N<T.minCap)h+=insuf(N,T.minCap,'The sigma level');
-  else h+=`<div class="row" style="align-items:center"><div><div class="muted small">Final Sigma Performance</div><div class="big">${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ</div></div>
-    <div style="flex:1;min-width:220px">${A.stab==='unstable'?chip('Not valid – process unstable','bad'):A.sigma>=6?chip('World class (≥ 6σ)','ok'):A.sigma>=4?chip('Good (4–6σ)','ok'):A.sigma>=3?chip('Average (3–4σ)','warn'):chip('Low (< 3σ)','bad')}${A.stab==='unstable'?`<p class="note" style="color:var(--fg)"><b>${verdictTxt(A)}</b></p>`:''}
-    <p class="note">Sigma level = 3 × Cpk = (X̿ − LSL) / σ̂, with σ̂ = R̄/d2 = ${f2(A.sigW)} from the X̄-R chart. This is the short-term basis of the Six Sigma table (6σ ↔ Cpk 2.0). Long-term Z with the overall σ = ${f2(A.zLT)}. DPMO ≈ ${A.dpmo<0.5?'0':A.dpmo.toFixed(1)}.${A.stab==='unstable'?' The value is shown for reference only: a sigma level is valid only for a stable process.':''}</p></div></div>`;
+  else h+=`<div class="row" style="align-items:center"><div><div class="muted small">Final Sigma Performance</div><div class="big">${A.stab==='unstable'?'Not assessed':(A.sigma>9?'> 9':A.sigma.toFixed(1))+' σ'}</div></div>
+    <div style="flex:1;min-width:220px">${A.stab==='unstable'?chip('Process unstable','bad'):A.sigma>=6?chip('World class (≥ 6σ)','ok'):A.sigma>=4?chip('Good (4–6σ)','ok'):A.sigma>=3?chip('Average (3–4σ)','warn'):chip('Low (< 3σ)','bad')}${A.stab==='unstable'?`<p class="note" style="color:var(--fg)"><b>${verdictTxt(A)}</b></p>`:''}
+    <p class="note">${A.stab==='unstable'?'A sigma level is calculated only for a stable process. It will appear here once the out-of-control points are resolved and the process is stable.':`Sigma level = 3 × Cpk = (X̿ − LSL) / σ̂, with σ̂ = R̄/d2 = ${f2(A.sigW)} from the X̄-R chart. This is the short-term basis of the Six Sigma table (6σ ↔ Cpk 2.0). DPMO ≈ ${A.dpmo<0.5?'0':A.dpmo.toFixed(1)}.`}</p></div></div>`;
   h+=`</section>`;
   // 8 concrete & supplier performance
   h+=`<section class="sec pb"><h2>8. Concrete Performance</h2>`;
@@ -647,14 +647,13 @@ function report(f=curFilt(),k=0){
   if(pairs.length>1){h+=`<h3>Plant Performance — all ${esc(f.grade&&f.grade!=='*'?f.grade:'')} mixes, one row per plant per mix</h3><div class="tw"><table><thead><tr><th>Plant</th><th>Mix</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP</th><th class="n">&lt; fcu</th><th>Stability</th><th class="n">Ppk</th><th class="n">σ level</th></tr></thead><tbody>`;
     const rowsS=pairs.map(([s,mx])=>{const AA=analyze(dataset({...f,sup:s,mix:mx}));return{s,mx,AA}}).sort((a,b)=>(b.AA.N>=T.minSup)-(a.AA.N>=T.minSup)||(a.AA.cv||99)-(b.AA.cv||99)||b.AA.N-a.AA.N);
     for(const{s,mx,AA}of rowsS){const ok=AA.N>=T.minSup;const l=ok?ecpLevel(AA.cv):null;
-      h+=`<tr class="${s===f.sup&&mx===f.mix?'flag':''}"><td><b>${esc(s||'(blank)')}</b></td><td>${esc(mx||'–')}</td><td class="n">${AA.N}</td>${ok?`<td class="n">${f1(AA.mean)}</td><td class="n">${f2(AA.sd)}</td><td class="n">${f2(AA.cv)}</td><td>${chip(ECPN[l],ECPC[l])}</td><td class="n">${AA.below.length}</td><td>${AA.stab==='insufficient'?chip('Insufficient','na'):chip(AA.stab==='stable'?'Stable':'Unstable',AA.stab==='stable'?'ok':'bad')}</td><td class="n">${AA.N>=T.minCap?f2(AA.Ppk):'–'}</td><td class="n">${AA.N>=T.minCap?(AA.sigma>9?'> 9':AA.sigma.toFixed(1)):'–'}</td>`:`<td colspan="8" class="muted">Insufficient Data (needs ≥ ${T.minSup} samples)</td>`}</tr>`}
+      h+=`<tr class="${s===f.sup&&mx===f.mix?'flag':''}"><td><b>${esc(s||'(blank)')}</b></td><td>${esc(mx||'–')}</td><td class="n">${AA.N}</td>${ok?`<td class="n">${f1(AA.mean)}</td><td class="n">${f2(AA.sd)}</td><td class="n">${f2(AA.cv)}</td><td>${chip(ECPN[l],ECPC[l])}</td><td class="n">${AA.below.length}</td><td>${AA.stab==='insufficient'?chip('Insufficient','na'):chip(AA.stab==='stable'?'Stable':'Unstable',AA.stab==='stable'?'ok':'bad')}</td><td class="n">${AA.N>=T.minCap?f2(AA.Ppk):'–'}</td><td class="n">${AA.N<T.minCap?'–':AA.stab==='unstable'?'<span class="muted">not assessed</span>':(AA.sigma>9?'> 9':AA.sigma.toFixed(1))}</td>`:`<td colspan="8" class="muted">Insufficient Data (needs ≥ ${T.minSup} samples)</td>`}</tr>`}
     h+=`</tbody></table></div><p class="note">Ranked by CV (lowest variability first). The highlighted row is this report's mix. Mixes are not pooled.</p>`}
   h+=`</section>`;
   // 9 dashboard
   const dRow=(k,v,c)=>`<tr><td>${k}</td><td class="n"><b>${v}</b></td><td>${c||''}</td></tr>`;
   const ecpTxt=N<T.minECP?'Insufficient Data':ECPN[lv]+(N<T.finalECP?' (provisional)':'');
-  const adv=S.set.adv!==false?advancedHtml(f):'';h+=adv;
-  h+=`<section class="sec"><h2>${adv?12:9}. Final Assessment Dashboard</h2><div class="tw"><table class="dash"><thead><tr><th>Indicator</th><th class="n">Final Result</th><th>Status</th></tr></thead><tbody>
+  h+=`<section class="sec"><h2>9. Final Assessment Dashboard</h2><div class="tw"><table class="dash"><thead><tr><th>Indicator</th><th class="n">Final Result</th><th>Status</th></tr></thead><tbody>
    ${dRow('Mean Strength',f1(A.mean)+' '+U(),A.margin>=0?chip(`${f1(A.margin)} above fcu`,'ok'):chip('below fcu','bad'))}
    ${dRow('Standard Deviation',f2(A.sd)+' '+U())}
    ${dRow('CV%',f2(A.cv)+'%')}
@@ -662,7 +661,7 @@ function report(f=curFilt(),k=0){
    ${dRow('Process Stability',A.stab==='insufficient'?'Insufficient Data':A.stab==='stable'?'Stable':'Unstable',chip(A.stab==='insufficient'?'Insufficient':A.stab==='stable'?'Stable':'Unstable',A.stab==='stable'?'ok':A.stab==='unstable'?'bad':'na'))}
    ${dRow('Process Capability (Cp / Cpk)',A.capState==='insufficient'?'Insufficient Data':A.capState==='unstable'?'Not valid (unstable)':`${A.usl==null?'n/a':f2(A.Cp)} / ${f2(A.Cpk)}`,A.capState==='ok'?capChip(A.Cpk):chip(A.capState==='unstable'?'Withheld':'Insufficient','na'))}
    ${dRow('Process Performance (Pp / Ppk)',A.capState==='insufficient'?'Insufficient Data':`${A.usl==null?'n/a':f2(A.Pp)} / ${f2(A.Ppk)}`,A.capState==='insufficient'?chip('Insufficient','na'):capChip(A.Ppk))}
-   ${dRow('Sigma Level',N<T.minCap?'Insufficient Data':(A.sigma>9?'> 9':A.sigma.toFixed(1))+' σ',N<T.minCap?'':A.stab==='unstable'?chip('Not valid – unstable','bad'):'')}
+   ${dRow('Sigma Level',N<T.minCap?'Insufficient Data':A.stab==='unstable'?'Not assessed':(A.sigma>9?'> 9':A.sigma.toFixed(1))+' σ',N<T.minCap?'':A.stab==='unstable'?chip('Process unstable','bad'):'')}
    ${dRow('Performance Trend',N<T.minTrend?'Insufficient Data':A.trend[0].toUpperCase()+A.trend.slice(1))}
    </tbody></table></div>`;
   const ans=[
@@ -670,7 +669,7 @@ function report(f=curFilt(),k=0){
    ['Is production stable?',A.stab==='insufficient'?`Not enough data yet (${N} of ${T.minSPC}).`:A.stab==='stable'?'Yes, no special-cause signals.':`No, ${A.viol.length} type(s) of out-of-control signal. See section 5.`,A.stab==='stable'?'ok':A.stab==='unstable'?'bad':'na'],
    ['Can the plant reliably produce the required strength?',A.capState==='insufficient'?'Not enough data yet.':A.capState==='unstable'?`Not confirmed. ${verdictTxt(A)} Past performance Ppk = ${f2(A.Ppk)}.`:A.Cpk>=1.33?`Yes, Cpk = ${f2(A.Cpk)} (≥ 1.33).`:`Marginal, Cpk = ${f2(A.Cpk)}.`,A.capState==='ok'&&A.Cpk>=1.33?'ok':A.capState==='insufficient'?'na':'warn'],
    ['How much variation is there?',N<T.minECP?`CV = ${f2(A.cv)}% (too few results for an ECP grade).`:`CV = ${f2(A.cv)}%, ECP level ${ECPN[lv]}.`,N<T.minECP?'na':ECPC[lv]],
-   ['What is the sigma level?',N<T.minCap?'Not enough data yet.':A.stab==='unstable'?`Not valid yet: the process is unstable. For reference ${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ.`:`${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ.`,N<T.minCap?'na':A.stab==='unstable'?'bad':A.sigma>=4?'ok':'warn'],
+   ['What is the sigma level?',N<T.minCap?'Not enough data yet.':A.stab==='unstable'?'Not assessed: the process is unstable. Resolve the out-of-control points first.':`${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ.`,N<T.minCap?'na':A.stab==='unstable'?'bad':A.sigma>=4?'ok':'warn'],
    ['Is plant performance improving or getting worse?',N<T.minTrend?'Not enough data yet.':`${A.trend[0].toUpperCase()+A.trend.slice(1)}: strength ${A.meanDir}, variability ${A.varDir==='same'?'unchanged':A.varDir}.`,{improving:'ok',steady:'na',deteriorating:'bad'}[A.trend]||'na']];
   h+=`<div class="qa">${ans.map(([q,a,c])=>`<div><span class="chip ${c}" style="min-width:12px">&nbsp;</span><b>${q}</b><span style="flex:2">${a}</span></div>`).join('')}</div>
    <p class="foot">Order of assessment: ECP 203-2020 (code assessment) → Process Stability → Process Capability → Six Sigma. Capability is relied on only after stability is confirmed. Generated by Concrete SPC on ${new Date().toISOString().slice(0,10)}.</p></section></div>`;
@@ -1018,7 +1017,7 @@ function vDash(){
          <div class="row" style="gap:4px;margin-top:6px">${g.ok&&a.N>=T.minCap&&has(a.Cpk)?chip('Cpk '+f2(a.Cpk),light('cpk',a.Cpk)):''}${rules.length?chip('Rule '+rules.join(','),'warn'):''}${g.ok&&a.N<T.minCap?chip(`n<${T.minCap}`,'na'):''}</div></button>`}).join('')}</div>`;
     if(sel.ok){const specs=[{v:A.lsl,t:'LSL',c:'#c77700'},{v:A.usl,t:'USL',c:'#c77700'},{v:A.tgt,t:'Target',c:'#1f6b4a'}];const spc=A.N>=T.minSPC;
       h+=`<div class="sel"><div class="row" style="justify-content:space-between"><b>${esc(mixLabel(sel.f))} · 28-day strength (${U()})</b><span class="muted small">UCL/CL/LCL · LSL/USL/Target · ±1σ ±2σ ±3σ zones</span></div>
-       <div class="kpis" style="margin:8px 0">${[['Stability',chip(STABN[A.stab].replace(' Process',''),STABC[A.stab])],['Cpk',A.N>=T.minCap?f2(A.Cpk)+' '+lchip('cpk',A.Cpk):'–'],['Ppk',A.N>=T.minCap?f2(A.Ppk)+' '+lchip('ppk',A.Ppk):'–'],['Cpm',A.N>=T.minCap&&has(A.Cpm)?f2(A.Cpm):'needs Target'],['Sigma',A.N>=T.minCap?sig1(A.sigma)+' σ'+(A.stab==='unstable'?' '+chip('not valid','bad'):''):'–'],['ECP',A.N>=T.minECP?chip(ECPN[ecpLevel(A.cv)],ECPC[ecpLevel(A.cv)]):'–']].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:16px">${v}</div></div>`).join('')}</div>
+       <div class="kpis" style="margin:8px 0">${[['Stability',chip(STABN[A.stab].replace(' Process',''),STABC[A.stab])],['Cpk',A.N>=T.minCap?f2(A.Cpk)+' '+lchip('cpk',A.Cpk):'–'],['Ppk',A.N>=T.minCap?f2(A.Ppk)+' '+lchip('ppk',A.Ppk):'–'],['Cpm',A.N>=T.minCap&&has(A.Cpm)?f2(A.Cpm):'needs Target'],['Sigma',A.N<T.minCap?'–':A.stab==='unstable'?'Not assessed':sig1(A.sigma)+' σ'],['ECP',A.N>=T.minECP?chip(ECPN[ecpLevel(A.cv)],ECPC[ecpLevel(A.cv)]):'–']].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:16px">${v}</div></div>`).join('')}</div>
        <div class="chart">${lineChartX({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,marks:spc?A.marks:null,zones:A.s1,specs,yl:A.ct==='imr'?'Individual result':'Sample Mean',label:'Xbar',w:860,h:280,clName:A.ct==='imr'?'X̄':'X̿'})}
        ${lineChartX({ys:A.disp,ids,cl:A.dbar,ucl:A.uclD,lcl:A.lclD,marks:spc?A.marksD:null,yl:A.dName,label:'Range',w:860,h:170,clName:A.dSym})}</div>
        ${spc?'':`<p class="note">Trial limits: fewer than ${T.minSPC} subgroups, so tests are not applied yet.</p>`}
@@ -1097,7 +1096,7 @@ function dashSheet(list){const T=S.set,sh=new XSheet('Dashboard');const ok=list.
   for(const g of list){const a=g.A;if(!g.ok){sh.add([g.f.sup,g.f.grade,g.f.mix,a.N,{v:`Insufficient Data (needs ${T.minDesc})`,s:'na'}]);continue}
     const lv=ecpLevel(a.cv),cap=a.N>=T.minCap;
     sh.add([g.f.sup,g.f.grade,g.f.mix,a.N,{v:xnum(a.mean,1),s:'n1'},xnum(a.sd),xnum(a.cv),{v:a.N>=T.minECP?ECPN[lv]:'Insufficient',s:a.N>=T.minECP?ECPC[lv]:'na'},{v:STABN[a.stab],s:STABC[a.stab]},a.stab==='insufficient'?'–':Object.keys(a.hits).join(', ')||'none',
-      cap?xnum(a.Cp):'–',cap?{v:xnum(a.Cpk),s:light('cpk',a.Cpk)||'na'}:'–',cap?xnum(a.Pp):'–',cap?{v:xnum(a.Ppk),s:light('ppk',a.Ppk)||'na'}:'–',cap?xnum(a.Cpm):'–',cap?{v:xnum(a.SI),s:light('si',a.SI)||'na'}:'–',cap?xnum(a.ss.Zbench):'–',cap?{v:xnum(a.sigma),s:a.sigma>=4?'ok':a.sigma>=3?'warn':'bad'}:'–',cap?xnum(a.ss.DPMOexp,2):'–',a.trend||'–'])}
+      cap?xnum(a.Cp):'–',cap?{v:xnum(a.Cpk),s:light('cpk',a.Cpk)||'na'}:'–',cap?xnum(a.Pp):'–',cap?{v:xnum(a.Ppk),s:light('ppk',a.Ppk)||'na'}:'–',cap?xnum(a.Cpm):'–',cap?{v:xnum(a.SI),s:light('si',a.SI)||'na'}:'–',!cap?'–':a.stab==='unstable'?'not assessed':xnum(a.ss.Zbench),!cap?'–':a.stab==='unstable'?{v:'Not assessed',s:'na'}:{v:xnum(a.sigma),s:a.sigma>=4?'ok':a.sigma>=3?'warn':'bad'},!cap?'–':a.stab==='unstable'?'not assessed':xnum(a.ss.DPMOexp,2),a.trend||'–'])}
   sh.gap();sh.note('Cp/Cpk use σST (within); Pp/Ppk use σLT (overall). Sigma level basis: '+({st:'short-term, 3 × Cpk with σ̂ = R̄/d2',lt15:'long-term Z + 1.5σ shift',lt:'long-term Z, no shift'})[T.sigb||'st']+'. Capability is reliable only for stable, normal data.');
   return sh}
 function mixSheet(g,name){const T=S.set,sh=new XSheet(name),A=g.A,D=g.D,u=D.used,sp=A.sp;sh.cols=[30,14,14,14,40,12,12,12,12,12];
@@ -1129,7 +1128,7 @@ function mixSheet(g,name){const T=S.set,sh=new XSheet(name),A=g.A,D=g.D,u=D.used
   if(A.N>=T.minCap&&A.ss){const s=A.ss;sh.head(['Parameter','Value','','','Description']);
     [['Defect Rate',+(s.rate*100).toFixed(3),'% non-conforming samples'],['DPU',+s.DPU.toFixed(5),'Defects per unit'],['DPMO (observed)',+s.DPMOobs.toFixed(1),`${s.D} defects, ${s.opp} opportunit${s.opp>1?'ies':'y'} per unit`],['DPMO (expected)',+s.DPMOexp.toFixed(3),'normal model, σLT'],
      ['Yield %',+(s.yield*100).toFixed(3),'conforming samples'],['FPY %',+(s.FPY*100).toFixed(3),'first pass yield'],['Z LSL',xnum(s.ZL),'(μ − LSL)/σ'],['Z USL',has(s.ZU)?xnum(s.ZU):'–','(USL − μ)/σ'],['Z min',xnum(s.Zmin),'min(Z LSL, Z USL)'],['Z bench',xnum(s.Zbench),'Φ⁻¹(1 − P total), long-term'],['Z ST',xnum(s.ZbST),'short-term (= 3·Cpk)'],
-     ['Sigma Level',{v:xnum(A.sigma),s:A.sigma>=4?'ok':A.sigma>=3?'warn':'bad'},({st:'Z ST = 3·Cpk (σ̂ = R̄/d2)',lt15:'Z bench + 1.5σ shift',lt:'Z bench, no shift'})[T.sigb||'st']],['Process Z-Value',xnum(s.Zbench),'long-term, no shift']].forEach(([a,b,c])=>sh.add([a,b,'','',c]))}
+     ['Sigma Level',{v:xnum(A.sigma),s:A.sigma>=4?'ok':A.sigma>=3?'warn':'bad'},({st:'Z ST = 3·Cpk (σ̂ = R̄/d2)',lt15:'Z bench + 1.5σ shift',lt:'Z bench, no shift'})[T.sigb||'st']],['Process Z-Value',xnum(s.Zbench),'long-term, no shift']].forEach(([a,b,c])=>{const model=['DPMO (expected)','Z LSL','Z USL','Z min','Z bench','Z ST','Sigma Level','Process Z-Value'].includes(a);sh.add(A.stab==='unstable'&&model?[a,{v:'Not assessed',s:'na'},'','','process unstable']:[a,b,'','',c])})}
   else sh.add([{v:`Insufficient Data (needs ${T.minCap} samples)`,s:'na'}]);
   sh.gap();sh.sec('Sample data (28-day)',10);
   const nc=S.reg.mode==='cubes'?S.reg.n:0;sh.head(['Sample','Pour date',...Array.from({length:nc},(_,i)=>'Cube '+(i+1)),'Result',A.ct==='xs'?'StDev':'Range','Status','Tests','Note']);
@@ -1185,11 +1184,11 @@ function advancedHtml(f){const D=dataset(f),A=analyzeX(D),T=S.set,u=D.used,x=u.m
    <section class="sec pb"><h2>10. Process Capability (advanced)</h2>${capabilityHtml(A,T,x)}</section>
    <section class="sec"><h2>11. Six Sigma Calculations</h2>${sixSigmaHtml(A,T)}</section>`;
   return h}
-function advSettings(){const T=S.set;return`<h3 style="margin-top:4px">Advanced analysis settings</h3><p class="note">These settings apply to the Dashboard, report sections 9–11 and the Excel export. The earlier report sections keep their own settings.</p>
+function advSettings(){const T=S.set;return`<h3 style="margin-top:4px">Advanced analysis settings</h3><p class="note">These settings apply to the Dashboard and the Excel export. The report keeps its own settings.</p>
   <div class="grid" style="margin-top:8px">
    <label class="f"><span>Control chart</span><select id="s-chart">${[['auto','Auto (n = 2–9 X̄-R, n ≥ 10 X̄-S)'],['xr','X̄-R'],['xs','X̄-S'],['imr','I-MR (sample results)']].map(([k,l])=>`<option value="${k}" ${(T.chart||'auto')===k?'selected':''}>${l}</option>`).join('')}</select></label>
    <label class="f"><span>Special-cause tests</span><select id="s-rules2">${Object.entries(TSETS).map(([k,v])=>`<option value="${k}" ${T.rules2===k?'selected':''}>${v.name}</option>`).join('')}</select></label>
-   <label class="f"><span>Advanced sections in the report</span><select id="s-adv"><option value="1" ${T.adv!==false?'selected':''}>Show (sections 9–11)</option><option value="0" ${T.adv===false?'selected':''}>Hide</option></select></label></div>
+</div>
   <h3>Six Sigma definitions</h3><div class="grid">
    <label class="f"><span>Defect</span><select id="s-defect"><option value="result" ${T.defect!=='cube'?'selected':''}>Sample result outside spec (1 opportunity per sample)</option><option value="cube" ${T.defect==='cube'?'selected':''}>Cube below the cube limit (n opportunities per sample)</option></select></label>
    <label class="f"><span>Cube limit (${U()})</span><input type="number" id="s-cubeLim" placeholder="= LSL" value="${esc(T.cubeLim)}"></label>
@@ -1333,7 +1332,7 @@ function overview(list,sel=[]){
      <td>${A.stab==='insufficient'?chip(`N < ${T.minSPC}`,'na'):chip(A.stab==='stable'?'Stable':'Unstable',A.stab==='stable'?'ok':'bad')}</td>
      <td class="n">${A.capState==='ok'?f2(A.Cpk):A.capState==='unstable'?'<span class="muted">withheld</span>':'<span class="muted">–</span>'}</td>
      <td class="n">${A.N>=T.minCap?f2(A.Ppk):'<span class="muted">–</span>'}</td>
-     <td class="n">${A.N>=T.minCap?(A.sigma>9?'> 9':A.sigma.toFixed(1)):'<span class="muted">–</span>'}</td>
+     <td class="n">${A.N<T.minCap?'<span class="muted">–</span>':A.stab==='unstable'?'<span class="muted">not assessed</span>':(A.sigma>9?'> 9':A.sigma.toFixed(1))}</td>
      <td>${A.trend?chip(A.trend[0].toUpperCase()+A.trend.slice(1),{improving:'ok',steady:'na',deteriorating:'bad'}[A.trend]):'<span class="muted">–</span>'}</td></tr>`}
   h+=`</tbody></table></div>
    <p class="note">* ECP level provisional (fewer than ${T.finalECP} samples). A mix needs ${T.minDesc} samples to be analysed, ${T.minSPC} for stability, ${T.minCap} for capability (Cpk, Ppk) and sigma level, ${T.minTrend} for the trend. Cpk is withheld when the mix is not stable. Each plant's mix is analysed on its own; mixes are never pooled.</p>`;
