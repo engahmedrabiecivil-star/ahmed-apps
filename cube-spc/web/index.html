@@ -1238,7 +1238,7 @@ function bindAdv(){
   const drp=$('#d-rep');if(drp)drp.onclick=goRep;const dop=$('#d-open');if(dop)dop.onclick=goRep;
   const runXl=async(list,label,btn)=>{if(btn)btn.disabled=true;try{await exportExcel(list,label)}catch(e){console.error(e);toast('Could not create the Excel file.')}if(btn)btn.disabled=false};
   const dx=$('#d-xl');if(dx)dx.onclick=()=>runXl(mixListX(),'Dashboard',dx);
-  const rx=$('#xl');if(rx)rx.onclick=()=>{const keys=new Set((S.lastSel||[]).map(g=>mkey(g.f)));const l=mixListX().filter(g=>keys.has(mkey(g.f)));runXl(l,l.length===1?mixLabel(l[0].f):'Report',rx)}}
+  const rx=$('#xl');if(rx)rx.onclick=()=>{if(!(S.lastSel||[]).length){toast('Choose a plant, a grade or a mix first.');return}const keys=new Set((S.lastSel||[]).map(g=>mkey(g.f)));const l=mixListX().filter(g=>keys.has(mkey(g.f)));runXl(l,l.length===1?mixLabel(l[0].f):'Report',rx)}}
 function verdictTxt(A){const lsl=A.lsl;const far=has(A.Ppk)&&A.Ppk>=1.33;
   return far?`The process is unstable (variation between pours), but the results stay far above ${has(lsl)?'LSL = '+f1(lsl):'the specification'}. Remove the causes of the variation first, then assess capability and the sigma level.`
     :`The process is unstable and the margin to ${has(lsl)?'LSL = '+f1(lsl):'the specification'} is not large. Remove the causes of the variation before relying on the results.`}
@@ -1466,7 +1466,8 @@ function vRep(){
   const list=mixList();const okN=list.filter(g=>g.ok).length;
   const P=S.pick,inP=(g,ks)=>ks.every(k=>P[k]==='*'||g.f[k]===P[k]);
   if(!list.some(g=>inP(g,['sup','grade','mix'])))S.pick=Object.assign(P,{sup:'*',grade:'*',mix:'*'});
-  const sel=list.filter(g=>inP(g,['sup','grade','mix']));const selOk=sel.filter(g=>g.ok);
+  const chosen=P.sup!=='*'||P.grade!=='*'||P.mix!=='*';
+  const sel=chosen?list.filter(g=>inP(g,['sup','grade','mix'])):[];const selOk=sel.filter(g=>g.ok);
   const cnt=(arr)=>arr.reduce((s,g)=>s+g.A.N,0);
   const optsP=[...new Set(list.map(g=>g.f.sup))].map(v=>{const a=list.filter(g=>g.f.sup===v);return`<option value="${esc(v)}" ${P.sup===v?'selected':''}>${esc(v||'(blank)')} · ${a.length} mix${a.length>1?'es':''}, ${cnt(a)} samples</option>`}).join('');
   const lg=list.filter(g=>inP(g,['sup']));const optsG=[...new Set(lg.map(g=>g.f.grade))].map(v=>{const a=lg.filter(g=>g.f.grade===v);return`<option value="${esc(v)}" ${P.grade===v?'selected':''}>${esc(v||'(blank)')} · ${cnt(a)} samples</option>`}).join('');
@@ -1476,10 +1477,10 @@ function vRep(){
     <label class="f"><span>Plant</span><select id="p-sup"><option value="*">All plants</option>${optsP}</select></label>
     <label class="f"><span>Grade</span><select id="p-grade"><option value="*">All grades</option>${optsG}</select></label>
     <label class="f"><span>Mix</span><select id="p-mix"><option value="*">All mixes</option>${optsM}</select></label></div>
-   <p class="note">${sel.length===1?`Showing the full report for <b>${esc([sel[0].f.sup,sel[0].f.grade,sel[0].f.mix].filter(Boolean).join(' · '))}</b> (${sel[0].A.N} samples).`
+   <p class="note">${!chosen?'<b>Choose a plant, a grade or a mix above to see the analysis.</b>':sel.length===1?`Showing the full report for <b>${esc([sel[0].f.sup,sel[0].f.grade,sel[0].f.mix].filter(Boolean).join(' · '))}</b> (${sel[0].A.N} samples).`
      :`Showing ${selOk.length} full report${selOk.length===1?'':'s'}: ${selOk.map(g=>`<b>${esc([g.f.sup,g.f.grade,g.f.mix].filter(Boolean).join(' · '))}</b>`).join(', ')||'none'}.${skipped.length?` Not analysed (fewer than ${T.minDesc} samples): ${skipped.map(g=>esc([g.f.sup,g.f.grade,g.f.mix].filter(Boolean).join(' · '))+' ('+g.A.N+')').join(', ')}.`:''}`}
      You can also tap any row in the overview.</p>
-   <div class="row"><button class="btn" id="pAll" ${P.sup==='*'&&P.grade==='*'&&P.mix==='*'?'disabled':''}>Show all mixes</button><button class="btn" id="pOv">${S.hideOv?'Show':'Hide'} the overview</button></div>
+   <div class="row"><button class="btn" id="pAll" ${P.sup==='*'&&P.grade==='*'&&P.mix==='*'?'disabled':''}>Clear selection</button><button class="btn" id="pOv">${S.hideOv?'Show':'Hide'} the overview</button></div>
    <details style="margin-top:10px"><summary>Filters, limits and settings</summary>
    <div class="grid" style="margin-top:8px">
     <label class="f"><span>Poured from</span><input type="date" id="f-from" value="${f.from||''}"></label><label class="f"><span>Poured to</span><input type="date" id="f-to" value="${f.to||''}"></label></div>
@@ -1501,7 +1502,8 @@ function vRep(){
   S.lastSel=sel;
   if(sel.length===1&&sel[0].f.mix!==(S.filt||{}).mix||sel.length===1&&sel[0].f.sup!==(S.filt||{}).sup){S.filt={...sel[0].f,from:S.filt?.from||'',to:S.filt?.to||''};S.set.fcuOv=''}
   if(!S.hideOv)h+=overview(list,sel);
-  if(sel.length===1)h+=report(sel[0].f,1);
+  if(!chosen){}
+  else if(sel.length===1)h+=report(sel[0].f,1);
   else{if(!selOk.length)h+=`<div class="insuf"><b>Insufficient Data</b> — none of the chosen mixes has ${T.minDesc} samples yet.</div>`;selOk.forEach((g,i)=>h+=report(g.f,i+1))}
   return h}
 function mixList(){const T=S.set,fr=S.filt||{};
