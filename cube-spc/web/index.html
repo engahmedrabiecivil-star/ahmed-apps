@@ -585,7 +585,7 @@ function report(f=curFilt(),k=0){
   const spcOk=N>=T.minSPC;
   h+=`<section class="sec pb"><h2>3. Statistical Charts</h2>${spcOk?'':`<div class="insuf"><b>Trial limits only</b> — control limits need at least <b>${T.minSPC}</b> subgroups to be reliable; this selection has <b>${N}</b>. Charts are shown for viewing; stability is not judged.</div>`}
    <div class="charts"><div class="chart"><div class="t">${S.reg.mode==='cubes'?'X̄-R':'I-MR'} Chart of 28-Day Strength${f.sup&&f.sup!=='*'?' — '+esc(f.sup):''}</div>
-   ${lineChart({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,flags:spcOk?A.flagX:null,lab1:A.out1,yl:S.reg.mode==='cubes'?'Sample Mean':'Result',label:'Xbar'})}
+   ${lineChart({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,flags:spcOk?A.out1:null,lab1:A.out1,yl:S.reg.mode==='cubes'?'Sample Mean':'Result',label:'Xbar'})}
    ${lineChart({ys:A.rSeries,ids,cl:A.Rbar,ucl:A.uclR,lcl:A.lclR,flags:spcOk?A.flagR:null,lab1:A.flagR,yl:S.reg.mode==='cubes'?'Sample Range':'Moving Range',label:'Range',h:200})}</div>
    <div class="chart"><div class="t">Histogram &amp; Normal Distribution Curve</div>${histChart(x,A)}</div></div>
    <p class="foot">${S.reg.mode==='cubes'?`X̄-R constants n = ${S.reg.n}: A2 = ${A.K.A2}, D3 = ${A.K.D3}, D4 = ${A.K.D4}, d2 = ${A.K.d2}`:'I-MR constants: E2 = 2.66, D4 = 3.267, d2 = 1.128'} · ${D.excl.length?'Excluded: '+esc(D.excl.map(o=>o.id).join(', '))+' · ':''}Source: ${esc(S.reg.file)}</p></section>`;
@@ -831,7 +831,7 @@ function lineChartX({ys,ids,cl,ucl,lcl,marks,yl,specs=[],zones=0,w=640,h=250,lab
   offS.forEach((s,k)=>{const below=s.v<lo;g+=`<text x="${ml+6}" y="${below?mt+H-6-k*12:mt+12+k*12}" fill="${s.c||'#c77700'}" font-weight="600">${below?'↓':'↑'} ${s.t} ${f1(s.v)} (off scale)</text>`});
   let d='',pv=false;ys.forEach((v,i)=>{if(v==null||!isFinite(v)){pv=false;return}d+=(pv?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);pv=true});g+=`<path d="${d}" fill="none" stroke="#222" stroke-width="1.2"/>`;
   ys.forEach((v,i)=>{if(v==null||!isFinite(v))return;const m=marks&&marks.get(i);const tip=`${esc(ids[i])}: ${f2(v)}${m?' · test '+m.join(', '):''}`;
-    g+=m?`<circle cx="${X(i)}" cy="${Y(v)}" r="4.2" fill="#d32f2f"><title>${tip}</title></circle><text x="${X(i)}" y="${Y(v)-7}" text-anchor="middle" fill="#d32f2f" font-size="10" font-weight="700">${m.join(',')}</text>`
+    const out=m&&m.includes(1);g+=out?`<rect x="${X(i)-4}" y="${Y(v)-4}" width="8" height="8" fill="#d32f2f"><title>${tip}</title></rect><text x="${X(i)}" y="${Y(v)-7}" text-anchor="middle" fill="#d32f2f" font-size="10" font-weight="700">${m.join(',')}</text>`:m?`<circle cx="${X(i)}" cy="${Y(v)}" r="2.8" fill="#222"><title>${tip}</title></circle><text x="${X(i)}" y="${Y(v)-6}" text-anchor="middle" fill="#6b7774" font-size="9">${m.join(',')}</text>`
       :`<circle cx="${X(i)}" cy="${Y(v)}" r="2.8" fill="#222"><title>${tip}</title></circle>`});
   return g+'</svg>'}
 function histChartX(x,A,w=520,h=300,cap=false){
@@ -1175,7 +1175,7 @@ function advancedHtml(f){const D=dataset(f),A=analyzeX(D),T=S.set,u=D.used,x=u.m
   if(A.N<T.minDesc)return'';const spc=A.N>=T.minSPC;
   let h=`<section class="sec pb"><h2>10. Process Stability Analysis (advanced)</h2><p class="muted" style="margin:0">Is the concrete production process statistically stable? Full analysis per TQM L5 and SPC Formulas and Tables, ${CTN[A.ct]} chart, ${esc(A.tset.name)}.</p>
    <div class="chart adv-ch">${lineChartX({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,marks:spc?A.marks:null,zones:A.s1,specs:[{v:A.lsl,t:'LSL',c:'#c77700'},{v:A.usl,t:'USL',c:'#c77700'},{v:A.tgt,t:'Target',c:'#1f6b4a'}],yl:A.ct==='imr'?'Individual result':'Sample Mean',label:'Xbar',w:760,h:270,clName:A.ct==='imr'?'X̄':'X̿'})}</div>
-   <p class="foot">Red points carry the number of the failed test. Shaded bands: ±1σ, ±2σ, ±3σ zones.</p>
+   <p class="foot">Red squares are points outside the control limits; grey numbers mark pattern tests on black points. Shaded bands: ±1σ, ±2σ, ±3σ zones.</p>
    ${A.stab==='insufficient'?insuf(A.N,T.minSPC,'Process stability'):stabilityHtml(A,ids,T)}</section>
    <section class="sec pb"><h2>11. Process Capability (advanced)</h2>${capabilityHtml(A,T,x)}</section>
    <section class="sec"><h2>12. Six Sigma Calculations</h2>${sixSigmaHtml(A,T)}</section>`;
