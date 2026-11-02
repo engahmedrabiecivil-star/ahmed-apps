@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Edge neural voices (Egyptian), with retries
+      - name: Edge neural voices (MSA), with retries
         continue-on-error: true
         run: |
           pip install --quiet --upgrade edge-tts
@@ -27,40 +27,15 @@ jobs:
           async def one(text, voice, path):
               for attempt in range(4):
                   try:
-                      c = edge_tts.Communicate(text, voice, rate="+4%")
+                      c = edge_tts.Communicate(text, voice, rate="+2%")
                       await c.save(path); print("ok", path); return
                   except Exception as e:
                       print("retry", path, type(e).__name__, e); await asyncio.sleep(3 + attempt * 3)
           async def go():
               for s in sc:
-                  for voice in ["ar-EG-ShakirNeural", "ar-EG-SalmaNeural"]:
+                  for voice in ["ar-SA-HamedNeural", "ar-EG-ShakirNeural"]:
                       await one(s["say"], voice, f"tts/audio/{voice.split('-')[2]}_{s['id']}.mp3")
           asyncio.run(go())
-          PY
-      - name: Google voice
-        continue-on-error: true
-        run: |
-          pip install --quiet gTTS
-          python - <<'PY'
-          import json
-          from gtts import gTTS
-          sc = json.load(open("tts/script.json", encoding="utf-8"))
-          for s in sc:
-              try: gTTS(s["say"], lang="ar").save(f"tts/audio/Google_{s['id']}.mp3"); print("ok", s["id"])
-              except Exception as e: print("fail", s["id"], e)
-          PY
-      - name: Piper voice
-        continue-on-error: true
-        run: |
-          pip install --quiet piper-tts
-          mkdir -p voices
-          curl -sSL -o voices/ar.onnx "https://huggingface.co/rhasspy/piper-voices/resolve/main/ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx"
-          curl -sSL -o voices/ar.onnx.json "https://huggingface.co/rhasspy/piper-voices/resolve/main/ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx.json"
-          python - <<'PY'
-          import json, subprocess
-          sc = json.load(open("tts/script.json", encoding="utf-8"))
-          for s in sc:
-              subprocess.run(["piper","-m","voices/ar.onnx","-f",f"tts/audio/Piper_{s['id']}.wav"],input=s["say"].encode())
           PY
       - name: Save the audio on this branch
         run: |
