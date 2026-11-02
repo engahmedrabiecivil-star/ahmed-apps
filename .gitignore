@@ -14,3 +14,8 @@ cube-spc/android/app/src/main/assets/
 cube-spc/desktop/node_modules/
 cube-spc/desktop/dist/
 cube-spc/desktop/app/
+lessons-library/android/.gradle/
+lessons-library/android/build/
+lessons-library/android/app/build/
+lessons-library/desktop/node_modules/
+lessons-library/desktop/dist/

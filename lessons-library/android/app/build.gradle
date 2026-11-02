@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.ahmedrabie.lessons'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.ahmedrabie.lessons"
+        minSdk 29
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    // fixed key so every new build installs as an update 
+    signingConfigs {
+        fixed {
+            storeFile file('lessons.keystore')
+            storePassword 'lessons123'
+            keyAlias 'lessons'
+            keyPassword 'lessons123'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.fixed
+        }
+        debug {
+            signingConfig signingConfigs.fixed
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

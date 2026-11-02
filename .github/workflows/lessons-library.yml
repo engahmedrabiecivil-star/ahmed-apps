@@ -1,0 +1,42 @@
+name: Build Quality Lessons APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lessons-library/android/**"
+      - ".github/workflows/lessons-library.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build APK
+        working-directory: lessons-library/android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Publish the APK as a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp lessons-library/android/app/build/outputs/apk/release/app-release.apk Quality-Lessons.apk
+          gh release delete lessons-library-latest --yes --cleanup-tag || true
+          gh release create lessons-library-latest Quality-Lessons.apk \
+            --title "Quality Lessons for Android (build ${{ github.run_number }})" \
+            --notes "Download Quality-Lessons.apk on your Android phone and open it to install. Allow 'Install unknown apps' when asked. Needs internet. Developed by Eng. Ahmed Rabie" \
+            --latest=false

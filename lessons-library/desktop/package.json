@@ -1,0 +1,29 @@
+{
+  "name": "quality-lessons",
+  "productName": "Quality Lessons",
+  "version": "1.0.0",
+  "description": "HAC Quality Lesson Library",
+  "author": "Eng. Ahmed Rabie",
+  "main": "main.js",
+  "build": {
+    "appId": "com.ahmedrabie.lessons",
+    "productName": "Quality Lessons",
+    "files": ["main.js", "icon.png"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quality Lessons",
+      "artifactName": "Quality-Lessons-Setup.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  }
+}

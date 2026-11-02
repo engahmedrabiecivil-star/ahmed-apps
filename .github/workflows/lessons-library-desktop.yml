@@ -1,0 +1,45 @@
+name: Build Quality Lessons for Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lessons-library/desktop/**"
+      - ".github/workflows/lessons-library-desktop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install
+        working-directory: lessons-library/desktop
+        run: npm install --no-audit --no-fund
+
+      - name: Build Windows installer
+        working-directory: lessons-library/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Publish the installer as a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete lessons-library-desktop-latest --yes --cleanup-tag || true
+          gh release create lessons-library-desktop-latest "lessons-library/desktop/dist/Quality-Lessons-Setup.exe" \
+            --title "Quality Lessons for Windows (build ${{ github.run_number }})" \
+            --notes "Download Quality-Lessons-Setup.exe and open it. If Windows shows 'Windows protected your PC', click More info, then Run anyway. Needs internet. Developed by Eng. Ahmed Rabie" \
+            --latest=false
