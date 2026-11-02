@@ -13,21 +13,36 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Voice each scene
+      - name: Edge neural voices (Egyptian)
+        continue-on-error: true
         run: |
-          pip install --quiet edge-tts==7.0.2
+          pip install --quiet --upgrade edge-tts
+          pip show edge-tts | head -2
           python - <<'PY'
-          import json, asyncio, edge_tts
+          import json, asyncio, os, edge_tts
           sc = json.load(open("tts/script.json", encoding="utf-8"))
+          os.makedirs("out", exist_ok=True)
           async def go():
               for s in sc:
                   for voice in ["ar-EG-ShakirNeural", "ar-EG-SalmaNeural"]:
                       c = edge_tts.Communicate(s["say"], voice, rate="+4%")
-                      await c.save(f"out/{voice[:5]}_{voice[6:11]}_{s['id']}.mp3")
-          import os; os.makedirs("out", exist_ok=True)
+                      await c.save(f"out/{voice.split('-')[2]}_{s['id']}.mp3")
           asyncio.run(go())
           PY
-          ls -la out | head
+      - name: Piper voice (fallback)
+        continue-on-error: true
+        run: |
+          pip install --quiet piper-tts
+          mkdir -p out voices
+          curl -sSL -o voices/ar.onnx "https://huggingface.co/rhasspy/piper-voices/resolve/main/ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx"
+          curl -sSL -o voices/ar.onnx.json "https://huggingface.co/rhasspy/piper-voices/resolve/main/ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx.json"
+          python - <<'PY'
+          import json, subprocess
+          sc = json.load(open("tts/script.json", encoding="utf-8"))
+          for s in sc:
+              subprocess.run(["piper","-m","voices/ar.onnx","-f",f"out/Piper_{s['id']}.wav"],input=s["say"].encode(),check=True)
+          PY
+      - run: ls -la out
       - uses: actions/upload-artifact@v4
         with:
           name: narration
