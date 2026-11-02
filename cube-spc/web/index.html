@@ -114,6 +114,7 @@ tr.pick{cursor:pointer}tr.pick:hover td,tr.pick:focus-visible td{background:var(
 .ovt td,.ovt th{padding:5px 7px}
 
 /* ---------- dashboard ---------- */
+.dnav{position:sticky;top:var(--hh,60px);z-index:4;padding:6px 16px 0;box-shadow:0 2px 6px rgba(0,0,0,.06)}.dnav nav.stabs{margin:0}
 .dhead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .crumb{font-size:12px;color:var(--muted)}
 .dt{font-size:24px;margin:2px 0;letter-spacing:-.2px}
@@ -1008,14 +1009,15 @@ function saveSpec(f,scope){S.specs=S.specs||{};const v=id=>{const e=$('#sp-'+id)
   if(rec.usl&&rec.lsl&&+rec.usl<=+rec.lsl){toast('USL must be higher than LSL.');return false}
   if(scope==='grade'){for(const k of Object.keys(S.specs))if(k.split('|')[1]===f.grade)delete S.specs[k];S.specs['grade:'+f.grade]=rec}else S.specs[mkey(f)]=rec;save();return true}
 function dashSel(list){const ok=list.filter(g=>g.ok);let g=list.find(g=>mkey(g.f)===S.dsel);if(!g)g=[...ok].sort((a,b)=>b.A.N-a.A.N)[0]||list[0];if(g)S.dsel=mkey(g.f);return g}
+function dashNav(){return`<div class="card dnav"><nav class="stabs">${[['ov','Overview'],['mon','Chart Monitor'],['const','Control constants'],['trend','Cp/Cpk Trend'],['ocap','OCAP'],['sup','Supplier Evaluation'],['set','Settings']].map(([k,l])=>`<button data-d="${k}" class="${S.dtab===k?'on':''}">${l}</button>`).join('')}</nav></div>`}
 function vDash(){
   if(!S.reg)return`<div class="card"><h2>No register loaded</h2><p>Load the concrete pouring register from the Register tab.</p><button class="btn primary" id="pick">Choose register file</button></div>`;
-  if(S.dtab==='ov')return`<div class="card" style="padding:6px 16px 0"><nav class="stabs" style="margin:0">${[['ov','Overview'],['mon','Chart Monitor'],['const','Control constants'],['trend','Cp/Cpk Trend'],['ocap','OCAP'],['sup','Supplier Evaluation'],['set','Settings']].map(([k,l])=>`<button data-d="${k}" class="${S.dtab===k?'on':''}">${l}</button>`).join('')}</nav></div>`+vOverview();
+  if(S.dtab==='ov')return dashNav()+vOverview();
   const T=S.set,list=mixListX(),ok=list.filter(g=>g.ok),sel=dashSel(list);if(!sel)return'';
   const ooc=ok.filter(g=>g.A.stab==='unstable'),pot=ok.filter(g=>g.A.stab==='potential');
   const capL=ok.filter(g=>g.A.N>=T.minCap&&g.A.stab!=='unstable'&&has(g.A.Cpk)),avg=capL.length?ST.mean(capL.map(g=>g.A.Cpk)):NaN,okCpk=capL.filter(g=>light('cpk',g.A.Cpk)==='ok').length;
   const grey=list.filter(g=>g.A.N<T.minCap);const ct=chartType(S.reg.mode==='cubes'?S.reg.n:1);
-  let h=`<div class="dhead"><div style="min-width:0"><div class="crumb">${esc(T.title||S.reg.title)} / Inspection / SPC Control Chart</div><h2 class="dt">SPC Control Chart</h2>
+  let h=dashNav()+`<div class="dhead"><div style="min-width:0"><div class="crumb">${esc(T.title||S.reg.title)} / Inspection / SPC Control Chart</div><h2 class="dt">SPC Control Chart</h2>
    <div class="muted small">Statistical Process Control · Monitor ${ok.length} mixes · OOC ${ooc.length} items · Avg Cpk ${f2(avg)} · ISO 7870-2 + ${esc(TSETS[T.rules2].name)}</div></div>
    <div class="row"><button class="btn" id="d-rep">Capability report</button><button class="btn primary" id="d-xl">Export Excel</button></div></div>
   <div class="tiles">
@@ -1023,7 +1025,7 @@ function vDash(){
    <div class="tile"><div class="l">OOC Active</div><div class="v" style="color:var(--bad)">${ooc.length}<small> items</small></div><div class="s" style="color:var(--bad)">${ooc.length?'Out-of-control chart':'none'}${pot.length?` · ${pot.length} with pattern signals`:''}</div></div>
    <div class="tile"><div class="l">Avg Cpk</div><div class="v" style="color:var(--${has(avg)?light('cpk',avg):'na'})">${f2(avg)}</div><div class="s">Target ≥ ${T.g.cpk[1]} · OK ${okCpk} item${okCpk===1?'':'s'}${capL.filter(g=>g.A.capState!=='reliable').length?` · ${capL.filter(g=>g.A.capState!=='reliable').length} not reliable`:''}</div></div>
    <div class="tile"><div class="l">n &lt; ${T.minCap} (grey)</div><div class="v">${grey.length}<small> items</small></div><div class="s">before capability lock</div></div></div>
-  <div class="card"><nav class="stabs">${[['ov','Overview'],['mon','Chart Monitor'],['const','Control constants'],['trend','Cp/Cpk Trend'],['ocap','OCAP'],['sup','Supplier Evaluation'],['set','Settings']].map(([k,l])=>`<button data-d="${k}" class="${S.dtab===k?'on':''}">${l}</button>`).join('')}</nav>`;
+  <div class="card">`;
   const D=sel.D,A=sel.A,u=D.used,x=u.map(o=>o.x),ids=u.map(o=>o.id);
   if(S.dtab==='mon'){
     h+=`<div class="ctsel"><div class="row" style="justify-content:space-between"><b>Chart type selection (ISO 7870-2)</b><span class="muted small mono">Active: ${CTN[ct]}</span></div>
@@ -1227,7 +1229,8 @@ function bindAdv(){
   const sps=$('#sp-save');if(sps)sps.onclick=()=>{const f=curMix();if(f&&saveSpec(f,'mix')){render();toast('Limits confirmed for '+mixLabel(f))}};
   const spg=$('#sp-grade');if(spg)spg.onclick=()=>{const f=curMix();if(f&&saveSpec(f,'grade')){render();toast('Limits confirmed for all '+f.grade+' mixes')}};
   const spc=$('#sp-clear');if(spc)spc.onclick=()=>{const f=curMix();if(!f)return;delete S.specs[mkey(f)];delete S.specs['grade:'+f.grade];save();render();toast('Back to default limits')};
-  document.querySelectorAll('.stabs button').forEach(b=>b.onclick=()=>{S.dtab=b.dataset.d;save();render()});
+  document.querySelectorAll('.stabs button').forEach(b=>b.onclick=()=>{S.dtab=b.dataset.d;save();render();scrollTo(0,0)});
+  {const on=document.querySelector('.dnav button.on');if(on){const nv=on.parentElement;nv.scrollLeft=on.offsetLeft-nv.clientWidth/2+on.offsetWidth/2}}
   document.querySelectorAll('.cbtn').forEach(b=>b.onclick=()=>{S.set.chart=b.dataset.ct;save();render()});
   document.querySelectorAll('.mcard').forEach(b=>b.onclick=()=>{S.dsel=b.dataset.k;save();render()});
   const opl=$('#ov-plant');if(opl)opl.onchange=()=>{S.dplant=opl.value;save();render()};
@@ -1540,7 +1543,7 @@ function overview(list,sel=[]){
   return h+`</section></div>`}
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tab));
-  $('#app').innerHTML=S.tab==='reg'?vReg():S.tab==='dash'?vDash():vRep();$('#app').style.maxWidth=S.tab==='dash'&&S.dtab==='ov'?'1440px':'';
+  $('#app').innerHTML=S.tab==='reg'?vReg():S.tab==='dash'?vDash():vRep();{const hd=document.querySelector('header.top');if(hd)document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px')}$('#app').style.maxWidth=S.tab==='dash'&&S.dtab==='ov'?'1440px':'';
   $('#hdrSub').textContent=S.reg?(S.set.title||S.reg.title||S.reg.file):'28-day cube strength analysis · ECP 203-2020';
   bind()}
 function bind(){
