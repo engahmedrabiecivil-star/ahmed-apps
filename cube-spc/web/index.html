@@ -1017,9 +1017,8 @@ function vDash(){
   const ooc=ok.filter(g=>g.A.stab==='unstable'),pot=ok.filter(g=>g.A.stab==='potential');
   const capL=ok.filter(g=>g.A.N>=T.minCap&&g.A.stab!=='unstable'&&has(g.A.Cpk)),avg=capL.length?ST.mean(capL.map(g=>g.A.Cpk)):NaN,okCpk=capL.filter(g=>light('cpk',g.A.Cpk)==='ok').length;
   const grey=list.filter(g=>g.A.N<T.minCap);const ct=chartType(S.reg.mode==='cubes'?S.reg.n:1);
-  let h=dashNav()+`<div class="dhead"><div style="min-width:0"><div class="crumb">${esc(T.title||S.reg.title)} / Inspection / SPC Control Chart</div><h2 class="dt">SPC Control Chart</h2>
-   <div class="muted small">Statistical Process Control · Monitor ${ok.length} mixes · OOC ${ooc.length} items · Avg Cpk ${f2(avg)} · ISO 7870-2 + ${esc(TSETS[T.rules2].name)}</div></div>
-   <div class="row"><button class="btn" id="d-rep">Capability report</button><button class="btn primary" id="d-xl">Export Excel</button></div></div>
+  let h=dashNav()+`<div class="dhead"><div style="min-width:0"><div class="crumb">${esc(T.title||S.reg.title)} / Inspection / SPC Control Chart</div><h2 class="dt">SPC Control Chart</h2></div>
+   <div class="row"><button class="btn primary" id="d-xl">Export Excel</button></div></div>
   <div class="tiles">
    <div class="tile"><div class="l">Monitor Chart</div><div class="v">${ok.length}<small> / ${list.length}</small></div><div class="s">mixes with ≥ ${T.minDesc} samples</div></div>
    <div class="tile"><div class="l">OOC Active</div><div class="v" style="color:var(--bad)">${ooc.length}<small> items</small></div><div class="s" style="color:var(--bad)">${ooc.length?'Out-of-control chart':'none'}${pot.length?` · ${pot.length} with pattern signals`:''}</div></div>
