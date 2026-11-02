@@ -1,7 +1,7 @@
 {
   "name": "concrete-spc",
   "productName": "Concrete SPC",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Concrete SPC - 28-day cube strength statistical analysis (ECP 203-2020)",
   "author": "Eng. Ahmed Rabie",
   "main": "main.js",
