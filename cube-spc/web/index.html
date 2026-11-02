@@ -480,7 +480,8 @@ function analyze(D){
   // normality
   A.ad=N>=8?andersonDarling(x):null;
   // capability
-  if(N>=2&&A.sd>0){const so=A.sd,sw=A.sigW,L=A.lsl,U=A.usl;
+  A.sdO=N>=2?(S.reg.mode==='cubes'?ST.sd(u.flatMap(o=>o.c.filter(v=>v!=null))):A.sd):NaN;A.nO=S.reg.mode==='cubes'?u.reduce((s,o)=>s+o.c.filter(v=>v!=null).length,0):N;
+  if(N>=2&&A.sd>0){const so=A.sdO,sw=A.sigW,L=A.lsl,U=A.usl;
     A.Cpl=(A.mean-L)/(3*sw);A.Ppl=(A.mean-L)/(3*so);
     if(U!=null){A.Cpu=(U-A.mean)/(3*sw);A.Cp=(U-L)/(6*sw);A.Ppu=(U-A.mean)/(3*so);A.Pp=(U-L)/(6*so)}
     A.Cpk=U!=null?Math.min(A.Cpl,A.Cpu):A.Cpl;A.Ppk=U!=null?Math.min(A.Ppl,A.Ppu):A.Ppl;
@@ -623,14 +624,14 @@ function report(f=curFilt(),k=0){
     <tr><td>% below LSL (expected)</td><td class="n">${A.pBelow*100<0.0001?'< 0.0001':(A.pBelow*100).toFixed(4)}%</td><td>Observed: ${A.obsBelow} of ${N}</td></tr>
     <tr><td>% above USL (expected)</td><td class="n">${one?na1:(A.pAbove*100).toFixed(4)+'%'}</td><td>${one?'One-sided specification':`Observed: ${A.obsAbove} of ${N}`}</td></tr>
     <tr><td>Estimated nonconforming</td><td class="n">${A.pNC*100<0.0001?'< 0.0001':(A.pNC*100).toFixed(4)}%</td><td>${A.dpmo<0.5?'≈ 0':A.dpmo.toFixed(1)} PPM (normal model, overall σ)</td></tr></tbody></table></div>
-    <p class="note">LSL = ${f1(A.lsl)} ${U()}${T.lslOv===''?' (= fcu)':''}${one?'; no upper limit (USL) set, so Cp, Cpu, Pp and % above USL do not apply':`; USL = ${f1(A.usl)} ${U()}`}. σ̂ = R̄/d2 = ${f2(A.sigW)} (from the X̄-R chart, SPC Formulas and Tables); σ<sub>overall</sub> = ${f2(A.sd)}. ${A.capState!=='ok'?'<b>Cp/Cpk are withheld</b> because the process is not stable; Pp/Ppk describe past performance only.':''} ${A.ad&&A.ad.p<0.05?'<b>Data not normal</b>: indices are approximate.':''}</p>`}
+    <p class="note">LSL = ${f1(A.lsl)} ${U()}${T.lslOv===''?' (= fcu)':''}${one?'; no upper limit (USL) set, so Cp, Cpu, Pp and % above USL do not apply':`; USL = ${f1(A.usl)} ${U()}`}. σ̂ = R̄/d2 = ${f2(A.sigW)} (from the X̄-R chart); σ<sub>overall</sub> = ${f2(A.sdO)} (all ${A.nO} ${S.reg.mode==='cubes'?'cubes':'results'}). ${A.capState!=='ok'?'<b>Cp/Cpk are withheld</b> because the process is not stable; Pp/Ppk describe past performance only.':''} ${A.ad&&A.ad.p<0.05?'<b>Data not normal</b>: indices are approximate.':''}</p>`}
   h+=`</section>`;
   // 7 six sigma
   h+=`<section class="sec"><h2>7. Six Sigma Analysis</h2>`;
   if(N<T.minCap)h+=insuf(N,T.minCap,'The sigma level');
   else h+=`<div class="row" style="align-items:center"><div><div class="muted small">Final Sigma Performance</div><div class="big">${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ</div></div>
-    <div style="flex:1;min-width:220px">${A.sigma>=6?chip('World class (≥ 6σ)','ok'):A.sigma>=4?chip('Good (4–6σ)','ok'):A.sigma>=3?chip('Average (3–4σ)','warn'):chip('Low (< 3σ)','bad')}
-    <p class="note">Sigma level = 3 × Cpk = (X̿ − LSL) / σ̂, with σ̂ = R̄/d2 = ${f2(A.sigW)} from the X̄-R chart. This is the short-term basis of the Six Sigma table (6σ ↔ Cpk 2.0). Long-term Z with the overall σ = ${f2(A.zLT)}. DPMO ≈ ${A.dpmo<0.5?'0':A.dpmo.toFixed(1)}.${A.stab==='unstable'?' The process is unstable, so this describes past results, not future output.':''}</p></div></div>`;
+    <div style="flex:1;min-width:220px">${A.stab==='unstable'?chip('Not valid – process unstable','bad'):A.sigma>=6?chip('World class (≥ 6σ)','ok'):A.sigma>=4?chip('Good (4–6σ)','ok'):A.sigma>=3?chip('Average (3–4σ)','warn'):chip('Low (< 3σ)','bad')}${A.stab==='unstable'?`<p class="note" style="color:var(--fg)"><b>${verdictTxt(A)}</b></p>`:''}
+    <p class="note">Sigma level = 3 × Cpk = (X̿ − LSL) / σ̂, with σ̂ = R̄/d2 = ${f2(A.sigW)} from the X̄-R chart. This is the short-term basis of the Six Sigma table (6σ ↔ Cpk 2.0). Long-term Z with the overall σ = ${f2(A.zLT)}. DPMO ≈ ${A.dpmo<0.5?'0':A.dpmo.toFixed(1)}.${A.stab==='unstable'?' The value is shown for reference only: a sigma level is valid only for a stable process.':''}</p></div></div>`;
   h+=`</section>`;
   // 8 concrete & supplier performance
   h+=`<section class="sec pb"><h2>8. Concrete Performance</h2>`;
@@ -660,21 +661,21 @@ function report(f=curFilt(),k=0){
    ${dRow('Process Stability',A.stab==='insufficient'?'Insufficient Data':A.stab==='stable'?'Stable':'Unstable',chip(A.stab==='insufficient'?'Insufficient':A.stab==='stable'?'Stable':'Unstable',A.stab==='stable'?'ok':A.stab==='unstable'?'bad':'na'))}
    ${dRow('Process Capability (Cp / Cpk)',A.capState==='insufficient'?'Insufficient Data':A.capState==='unstable'?'Not valid (unstable)':`${A.usl==null?'n/a':f2(A.Cp)} / ${f2(A.Cpk)}`,A.capState==='ok'?capChip(A.Cpk):chip(A.capState==='unstable'?'Withheld':'Insufficient','na'))}
    ${dRow('Process Performance (Pp / Ppk)',A.capState==='insufficient'?'Insufficient Data':`${A.usl==null?'n/a':f2(A.Pp)} / ${f2(A.Ppk)}`,A.capState==='insufficient'?chip('Insufficient','na'):capChip(A.Ppk))}
-   ${dRow('Sigma Level',N<T.minCap?'Insufficient Data':(A.sigma>9?'> 9':A.sigma.toFixed(1))+' σ')}
+   ${dRow('Sigma Level',N<T.minCap?'Insufficient Data':(A.sigma>9?'> 9':A.sigma.toFixed(1))+' σ',N<T.minCap?'':A.stab==='unstable'?chip('Not valid – unstable','bad'):'')}
    ${dRow('Performance Trend',N<T.minTrend?'Insufficient Data':A.trend[0].toUpperCase()+A.trend.slice(1))}
    </tbody></table></div>`;
   const ans=[
    ['Does the concrete meet the specified strength?',A.below.length?`${A.below.length} of ${N} results are below fcu (${esc(A.below.map(o=>o.id).join(', '))}). Review against the ECP acceptance criteria.`:`Yes. All ${N} results are at or above fcu = ${f1(D.fcu)}; mean is ${f1(A.margin)} ${U()} above it.`,A.below.length?'warn':'ok'],
    ['Is production stable?',A.stab==='insufficient'?`Not enough data yet (${N} of ${T.minSPC}).`:A.stab==='stable'?'Yes, no special-cause signals.':`No, ${A.viol.length} type(s) of out-of-control signal. See section 5.`,A.stab==='stable'?'ok':A.stab==='unstable'?'bad':'na'],
-   ['Can the plant reliably produce the required strength?',A.capState==='insufficient'?'Not enough data yet.':A.capState==='unstable'?`Not confirmed: the process is unstable. Past performance Ppk = ${f2(A.Ppk)}.`:A.Cpk>=1.33?`Yes, Cpk = ${f2(A.Cpk)} (≥ 1.33).`:`Marginal, Cpk = ${f2(A.Cpk)}.`,A.capState==='ok'&&A.Cpk>=1.33?'ok':A.capState==='insufficient'?'na':'warn'],
+   ['Can the plant reliably produce the required strength?',A.capState==='insufficient'?'Not enough data yet.':A.capState==='unstable'?`Not confirmed. ${verdictTxt(A)} Past performance Ppk = ${f2(A.Ppk)}.`:A.Cpk>=1.33?`Yes, Cpk = ${f2(A.Cpk)} (≥ 1.33).`:`Marginal, Cpk = ${f2(A.Cpk)}.`,A.capState==='ok'&&A.Cpk>=1.33?'ok':A.capState==='insufficient'?'na':'warn'],
    ['How much variation is there?',N<T.minECP?`CV = ${f2(A.cv)}% (too few results for an ECP grade).`:`CV = ${f2(A.cv)}%, ECP level ${ECPN[lv]}.`,N<T.minECP?'na':ECPC[lv]],
-   ['What is the sigma level?',N<T.minCap?'Not enough data yet.':`${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ.`,N<T.minCap?'na':A.sigma>=4?'ok':'warn'],
+   ['What is the sigma level?',N<T.minCap?'Not enough data yet.':A.stab==='unstable'?`Not valid yet: the process is unstable. For reference ${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ.`:`${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ.`,N<T.minCap?'na':A.stab==='unstable'?'bad':A.sigma>=4?'ok':'warn'],
    ['Is plant performance improving or getting worse?',N<T.minTrend?'Not enough data yet.':`${A.trend[0].toUpperCase()+A.trend.slice(1)}: strength ${A.meanDir}, variability ${A.varDir==='same'?'unchanged':A.varDir}.`,{improving:'ok',steady:'na',deteriorating:'bad'}[A.trend]||'na']];
   h+=`<div class="qa">${ans.map(([q,a,c])=>`<div><span class="chip ${c}" style="min-width:12px">&nbsp;</span><b>${q}</b><span style="flex:2">${a}</span></div>`).join('')}</div>
    <p class="foot">Order of assessment: ECP 203-2020 (code assessment) → Process Stability → Process Capability → Six Sigma. Capability is relied on only after stability is confirmed. Generated by Concrete SPC on ${new Date().toISOString().slice(0,10)}.</p></section>`+(S.set.adv!==false?advancedHtml(f):'')+`</div>`;
   return h}
 
-/* ================= control chart constants (SPC Formulas and Tables, H. B. Rowe) ================= */
+/* ================= control chart constants ================= */
 // X̄-R: [A2, D3, D4, d2] for n = 2..10
 const XR={2:[1.880,0,3.267,1.128],3:[1.023,0,2.574,1.693],4:[0.729,0,2.282,2.059],5:[0.577,0,2.115,2.326],6:[0.483,0,2.004,2.534],7:[0.419,0.076,1.924,2.704],8:[0.373,0.136,1.864,2.847],9:[0.337,0.184,1.816,2.970],10:[0.308,0.223,1.777,3.078]};
 // X̄-S: [c4, A3, B3, B4]; n = 8..25 from the table, n < 8 standard values, n > 25 from the approximation formulas
@@ -685,7 +686,7 @@ function xsConst(n){if(XS[n])return XS[n];const c4=4*(n-1)/(4*n-3),q=c4*Math.sqr
 const CTN={xr:'X̄-R',xs:'X̄-S',imr:'I-MR'};
 function chartType(n){let c=S.set.chart||'auto';if(n<2)return'imr';if(c==='auto')c=n<10?'xr':'xs';if(c==='xr'&&!XR[n])c='xs';return c}
 
-/* ================= special-cause tests (Minitab tests 1-8, TQM L5; WECO rules, SPC Formulas p.6) ================= */
+/* ================= special-cause tests (Nelson / Minitab tests 1-8, WECO rules) ================= */
 const TESTS={1:'1 point more than 3σ from the centre line',2:'K points in a row on the same side of the centre line',3:'K points in a row, all increasing or all decreasing',4:'K points in a row, alternating up and down',
   5:'K out of K+1 points more than 2σ from the centre line (same side)',6:'K out of K+1 points more than 1σ from the centre line (same side)',7:'K points in a row within 1σ of the centre line (either side)',8:'K points in a row more than 1σ from the centre line (either side)'};
 const TEST_K={1:3,2:9,3:6,4:14,5:2,6:4,7:15,8:8};
@@ -741,11 +742,12 @@ function analyzeX(D){
   A.stab=N<T.minSPC?'insufficient':A.ooc.length?'unstable':other.length?'potential':'stable';
   // runs on one side, variation components
   if(N>=2){let best={len:0},run=0,prev=0,st=0;x.forEach((v,i)=>{const sd=v>A.cl?1:v<A.cl?-1:0;if(sd&&sd===prev)run++;else{run=sd?1:0;st=i}prev=sd;if(run>best.len)best={len:run,side:sd,from:st,to:i}});A.longRun=best;
-    A.sigB=Math.sqrt(Math.max(0,A.sd**2-A.sigST**2));A.pctW=Math.min(100,A.sigST**2/A.sd**2*100)}
-  // ---- normality (TQM L7: p must be > 0.05 before capability)
+    const nn=A.ct==='imr'?1:n;A.sdO=A.ct==='imr'?A.sd:ST.sd(u.flatMap(o=>o.c.filter(v=>v!=null)));A.nO=A.ct==='imr'?N:u.reduce((s,o)=>s+o.c.filter(v=>v!=null).length,0);
+    A.sdMeanExp=A.sigST/Math.sqrt(nn);A.sigB=Math.sqrt(Math.max(0,A.sd**2-A.sdMeanExp**2));A.pctW=Math.min(100,A.sigST**2/A.sdO**2*100)}
+  // ---- normality (p must be > 0.05 before capability)
   A.ad=N>=8?andersonDarling(x):null;A.normal=A.ad?A.ad.p>=0.05:null;
   // ---- capability (σST for Cp family, σLT = sample SD for Pp family)
-  if(N>=2&&A.sd>0&&A.sigST>0){const L=A.lsl,Uu=A.usl,Tg=A.tgt,m=A.mean,ss=A.sigST,so=A.sd;
+  if(N>=2&&A.sd>0&&A.sigST>0){const L=A.lsl,Uu=A.usl,Tg=A.tgt,m=A.mean,ss=A.sigST,so=A.sdO;
     if(has(L)){A.Cpl=(m-L)/(3*ss);A.Ppl=(m-L)/(3*so)}
     if(has(Uu)){A.Cpu=(Uu-m)/(3*ss);A.Ppu=(Uu-m)/(3*so)}
     if(has(L)&&has(Uu)){A.Cp=(Uu-L)/(6*ss);A.Pp=(Uu-L)/(6*so);A.Cr=1/A.Cp;if(has(Tg))A.Kidx=(m-Tg)/(0.5*(Uu-L))}
@@ -756,7 +758,7 @@ function analyzeX(D){
     A.obsLo=has(L)?u.filter(o=>o.x<L).length:0;A.obsHi=has(Uu)?u.filter(o=>o.x>Uu).length:0}
   A.capState=N<T.minCap||A.stab==='insufficient'?'insufficient':A.stab==='unstable'?'unstable':A.normal===false?'nonnormal':A.stab==='potential'?'caution':'reliable';
   // ---- Six Sigma
-  if(N>=2&&A.sd>0){const L=A.lsl,Uu=A.usl,m=A.mean,so=A.sd;const cube=T.defect==='cube'&&S.reg.mode==='cubes';
+  if(N>=2&&A.sd>0){const L=A.lsl,Uu=A.usl,m=A.mean,so=A.sdO;const cube=T.defect==='cube'&&S.reg.mode==='cubes';
     const cl=T.cubeLim!==''&&T.cubeLim!=null&&isFinite(+T.cubeLim)?+T.cubeLim:L;
     let D=0,Dd=0,fp=0;for(const o of u){const rDef=(has(L)&&o.x<L)||(has(Uu)&&o.x>Uu);const cDef=S.reg.mode==='cubes'&&has(cl)?o.c.filter(v=>v!=null&&v<cl).length:0;
       if(cube){D+=cDef;if(cDef)Dd++}else if(rDef){D++;Dd++}if(!rDef&&!cDef)fp++}
@@ -778,19 +780,19 @@ function analyzeX(D){
   return A}
 // cumulative indices after each sample (Cp/Cpk trend)
 function capPath(D){const T=S.set,u=D.used,sp=specOf(D.f),n=S.reg.mode==='cubes'?S.reg.n:1,ct=chartType(n);const out=[];
-  for(let k=Math.max(T.minCap,5);k<=u.length;k++){const w=u.slice(0,k),x=w.map(o=>o.x),m=ST.mean(x),so=ST.sd(x);let ss;
+  for(let k=Math.max(T.minCap,5);k<=u.length;k++){const w=u.slice(0,k),x=w.map(o=>o.x),m=ST.mean(x),so=ct==='imr'?ST.sd(x):ST.sd(w.flatMap(o=>o.c.filter(v=>v!=null)));let ss;
     if(ct==='xr')ss=ST.mean(w.map(o=>o.R))/XR[n][3];else if(ct==='xs')ss=ST.mean(w.map(o=>o.S))/xsConst(n)[0];else ss=ST.mean(x.slice(1).map((v,i)=>Math.abs(v-x[i])))/1.128;
     const c=(s)=>{const a=has(sp.lsl)?(m-sp.lsl)/(3*s):null,b=has(sp.usl)?(sp.usl-m)/(3*s):null;return has(a)&&has(b)?Math.min(a,b):has(a)?a:b};
     out.push({k,id:w[k-1].id,date:w[k-1].pour,cpk:c(ss),ppk:c(so)})}return out}
-// guideline traffic lights (TQM L7 slides 59, 73, 76-79)
-const GUIDE={cp:{n:'Cp',src:'L7 Cp guidelines'},cpk:{n:'Cpk',src:'L7 capability study, min 1.33'},pp:{n:'Pp',src:'L7 Cp/Pp guidelines'},ppk:{n:'Ppk',src:'L7 Ppk guidelines'},cpm:{n:'Cpm',src:'same as Cpk'},si:{n:'Stability index',src:'L7 stability index guidelines',low:true},ti:{n:'Target index',src:'L7 target index guidelines',low:true}};
+// guideline traffic lights 
+const GUIDE={cp:{n:'Cp',src:''},cpk:{n:'Cpk',src:''},pp:{n:'Pp',src:''},ppk:{n:'Ppk',src:''},cpm:{n:'Cpm',src:'same as Cpk'},si:{n:'Stability index',src:'',low:true},ti:{n:'Target index',src:'',low:true}};
 function light(k,v){if(!has(v))return null;const g=S.set.g[k==='cpm'?'cpk':k];if(GUIDE[k].low)return v<=g[0]?'ok':v<=g[1]?'warn':'bad';return v<g[0]?'bad':v<g[1]?'warn':'ok'}
 const LN={ok:'Adequate',warn:'Marginal',bad:'Poor'};
 const STABN={stable:'Stable Process',unstable:'Unstable Process',potential:'Potential Special Causes Detected',insufficient:'Insufficient Data'};
 const STABC={stable:'ok',unstable:'bad',potential:'warn',insufficient:'na'};
 const CAPN={reliable:'Reliable',caution:'Use with caution',unstable:'Not reliable – process unstable',nonnormal:'Not reliable – data not normal',insufficient:'Insufficient Data'};
 const CAPC={reliable:'ok',caution:'warn',unstable:'bad',nonnormal:'bad',insufficient:'na'};
-// action from the L7 "Using the indices" flowchart
+// action from the "Using the indices" flowchart
 function flowAction(A){if(A.capState==='insufficient')return null;const lp=light('ppk',A.Ppk);if(lp==='ok')return A.stab==='stable'?{c:'ok',t:'Ppk is adequate and the process is stable: likely do nothing, keep monitoring.'}:{c:'warn',t:`Ppk is adequate, but the process is ${A.stab==='unstable'?'unstable':'showing pattern signals'}: remove the special causes (see OCAP) so that future performance can be predicted.`};
   const acts=[];if(A.stab==='unstable'||light('si',A.SI)!=='ok')acts.push('Improve stability (remove special causes)');if(has(A.TI)&&light('ti',A.TI)!=='ok')acts.push('Work on the level (move the average to the target)');
   if(has(A.Cp)?light('cp',A.Cp)!=='ok':light('cpk',A.Cpk)!=='ok')acts.push('Improve capability (reduce common-cause variation)');
@@ -869,7 +871,7 @@ function multiChart(series,refs,{w=640,h=230,yl='Index',xs}){const ml=46,mr=70,m
   return g+'</svg>'}
 
 
-/* ================= advanced analysis (TQM L5 / L7, SPC formulas) ================= */
+/* ================= advanced analysis ================= */
 const lchip=(k,v)=>{const l=light(k,v);return l?chip(LN[l],l):chip('–','na')};
 const sig1=v=>!has(v)?'–':v>9?'> 9':v.toFixed(2);
 const ppm=p=>!has(p)?'–':p*1e6<0.005?'0.00':(p*1e6).toFixed(2);
@@ -882,7 +884,7 @@ function limitsHtml(A){
   return`<h3>Control limits (${CTN[A.ct]}, n = ${A.n})</h3><div class="tw"><table><thead><tr><th>Chart</th><th class="n">Centre line</th><th class="n">UCL</th><th class="n">LCL</th><th>Formula</th></tr></thead><tbody>
    <tr><td>${A.ct==='imr'?'Individuals (sample results)':'X̄ (sample means)'}</td><td class="n">${f2(A.cl)}</td><td class="n">${f2(A.ucl)}</td><td class="n">${f2(A.lcl)}</td><td>${fx[0]}</td></tr>
    <tr><td>${A.dName}</td><td class="n">${f2(A.dbar)}</td><td class="n">${f2(A.uclD)}</td><td class="n">${f2(A.lclD)}</td><td>${fx[1]}</td></tr></tbody></table></div>
-   <p class="note">Constants (SPC Formulas and Tables): ${kTxt}. ${A.sigTxt} = ${f2(A.sigHat)}; this σ̂ is used for Cp, Cpk and the sigma level.</p>`;
+   <p class="note">Constants: ${kTxt}. ${A.sigTxt} = ${f2(A.sigHat)}; this σ̂ is used for Cp, Cpk and the sigma level.</p>`;
 }
 function stabilityHtml(A,ids,T){
   let h=`<div class="row" style="align-items:center"><span class="big" style="color:var(--${STABC[A.stab]==='na'?'na':STABC[A.stab]})">${STABN[A.stab]}</span>
@@ -901,9 +903,11 @@ function stabilityHtml(A,ids,T){
   // variation components
   h+=`<h3>Common-cause and special-cause variation</h3><div class="tw"><table><thead><tr><th>Component</th><th class="n">σ (${U()})</th><th>What it represents</th></tr></thead><tbody>
    <tr><td>Short-term σ<sub>ST</sub> (within)</td><td class="n">${f2(A.sigST)}</td><td style="white-space:normal">Common-cause variation: ${A.ct==='imr'?'between successive results':'between cubes of the same set (sampling and testing)'}. Used for control limits and Cp/Cpk.</td></tr>
-   <tr><td>Long-term σ<sub>LT</sub> (overall)</td><td class="n">${f2(A.sd)}</td><td style="white-space:normal">All variation in the results, common + special causes. Used for Pp/Ppk.</td></tr>
-   <tr><td>Between / over-time σ</td><td class="n">${f2(A.sigB)}</td><td style="white-space:normal">√(σ<sub>LT</sub>² − σ<sub>ST</sub>²): variation from pour to pour and over time. Within part = ${f1(A.pctW)}% of total variance.</td></tr>
-   <tr><td>Stability index σ<sub>LT</sub>/σ<sub>ST</sub></td><td class="n">${f2(A.SI)}</td><td>${lchip('si',A.SI)} <span class="muted">adequate ≤ ${S.set.g.si[0]}, poor &gt; ${S.set.g.si[1]} (TQM L7)</span></td></tr></tbody></table></div>`;
+   ${A.ct!=='imr'?`<tr><td>σ of sample means expected</td><td class="n">${f2(A.sdMeanExp)}</td><td style="white-space:normal">σ<sub>ST</sub>/√${A.n}: how much the sample means would vary if only common causes acted</td></tr>
+   <tr><td>σ of sample means actual</td><td class="n">${f2(A.sd)}</td><td style="white-space:normal">Measured spread of the ${A.N} sample results${A.sd>1.3*A.sdMeanExp?' — clearly larger than expected, so there is extra variation between pours':''}</td></tr>`:''}
+   <tr><td>Between pours / over time σ</td><td class="n">${f2(A.sigB)}</td><td style="white-space:normal">Special-cause part: variation from pour to pour and over time${A.ct!=='imr'?' = √(actual² − expected²)':' = √(σ<sub>LT</sub>² − σ<sub>ST</sub>²)'}</td></tr>
+   <tr><td>Long-term σ<sub>LT</sub> (overall)</td><td class="n">${f2(A.sdO)}</td><td style="white-space:normal">All ${A.nO} ${A.ct==='imr'?'results':'cubes'}: common + special causes. Used for Pp/Ppk. Within part = ${f1(A.pctW)}% of total variance.</td></tr>
+   <tr><td>Stability index σ<sub>LT</sub>/σ<sub>ST</sub></td><td class="n">${f2(A.SI)}</td><td>${lchip('si',A.SI)} <span class="muted">(guide: ≤ ${S.set.g.si[0]} adequate, &gt; ${S.set.g.si[1]} poor)</span></td></tr></tbody></table></div>`;
   if(A.months.length>1)h+=`<h3>Process variation over time</h3><div class="tw"><table><thead><tr><th>Month</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th class="n">${A.dSym}</th><th class="n">Pours beyond limits</th></tr></thead><tbody>
    ${A.months.map(m=>`<tr><td>${m.k}</td><td class="n">${m.n}</td><td class="n">${f1(m.m)}</td><td class="n">${m.n>1?f2(m.s):'–'}</td><td class="n">${m.n>1?f2(m.s/m.m*100):'–'}</td><td class="n">${f2(m.d)}</td><td class="n">${A.ooc.filter(i=>ids.__pour&&ids.__pour[i].slice(0,7)===m.k).length}</td></tr>`).join('')}</tbody></table></div>`;
   if(A.ct!=='imr')h+=`<p class="note"><b>Concrete note:</b> ${CTN[A.ct]} limits come from the spread inside each set of ${A.n} cubes, which is mainly sampling and testing variation. Pour-to-pour variation therefore often shows as points outside these limits. To judge pour-to-pour stability, switch the chart type to I-MR (sample results) in the settings.</p>`;
@@ -912,7 +916,7 @@ function capabilityHtml(A,T,x){
   let h=`<div class="note" style="font-size:13px"><b>Specification limits:</b> ${specLine(A)}</div>`;
   if(A.capState==='insufficient')return h+insuf(A.N,T.minCap,'Process capability');
   const ok=v=>v?chip('✓','ok'):chip('✗','bad');
-  h+=`<div class="tw"><table><thead><tr><th>Before capability (TQM L7)</th><th>Check</th><th>Result</th></tr></thead><tbody>
+  h+=`<div class="tw"><table><thead><tr><th>Before capability</th><th>Check</th><th>Result</th></tr></thead><tbody>
    <tr><td>1. Data come from a stable process</td><td>${ok(A.stab==='stable')}${A.stab==='potential'?' '+chip('pattern signals','warn'):''}</td><td>${STABN[A.stab]}</td></tr>
    <tr><td>2. Data are normally distributed</td><td>${A.ad?ok(A.normal):chip('–','na')}</td><td>${A.ad?`Anderson-Darling A² = ${f2(A.ad.A2)}, p = ${A.ad.p<0.001?'< 0.001':A.ad.p.toFixed(3)} (needs p > 0.05)`:'not enough data'}</td></tr>
    <tr><td>3. Enough samples</td><td>${ok(A.N>=T.minCap)}</td><td>N = ${A.N} (minimum ${T.minCap}; short-term studies 30–50, long-term 100–200)</td></tr></tbody></table></div>
@@ -931,7 +935,7 @@ function capabilityHtml(A,T,x){
    ${row('Stability index',A.SI,'si','σ<sub>LT</sub> / σ<sub>ST</sub>','Long-term vs short-term variation')}
    ${two?row('K (centring)',A.Kidx,'','(X̄ − T) / ½(USL − LSL)','Off-centre ratio',noT)+row('Cr',A.Cr,'','6σ<sub>ST</sub> / (USL − LSL) = 1/Cp','Capability ratio'):''}
    </tbody></table></div>
-   <p class="note">σ<sub>ST</sub> = ${f2(A.sigST)} (${A.sigTxt}); σ<sub>LT</sub> = ${f2(A.sd)} (sample standard deviation, n − 1). Guidelines: Cp, Pp, Ppk poor &lt; ${T.g.cp[0]}, adequate ≥ ${T.g.cp[1]}; Cpk adequate ≥ ${T.g.cpk[1]}; target index adequate ≤ ${T.g.ti[0]}. ${A.capState!=='reliable'?`<b>${CAPN[A.capState]}:</b> Cp/Cpk are shown for information only. Pp/Ppk describe how the process ran in the past.`:''}</p>`;
+   <p class="note">σ<sub>ST</sub> = ${f2(A.sigST)} (${A.sigTxt}); σ<sub>LT</sub> = ${f2(A.sdO)} (standard deviation of all ${A.nO} ${A.ct==='imr'?'results':'cubes'}, n − 1). Guidelines: Cp, Pp, Ppk poor &lt; ${T.g.cp[0]}, adequate ≥ ${T.g.cp[1]}; Cpk adequate ≥ ${T.g.cpk[1]}; target index adequate ≤ ${T.g.ti[0]}. ${A.capState!=='reliable'?`<b>${CAPN[A.capState]}:</b> Cp/Cpk are shown for information only. Pp/Ppk describe how the process ran in the past.`:''}</p>`;
   h+=`<div class="charts"><div class="chart"><div class="t">Capability histogram against LSL / USL / Target</div>${histChartX(x,A,560,320,true)}</div>
    <div><h3 style="margin-top:0">Expected performance</h3><div class="tw"><table><thead><tr><th>PPM</th><th class="n">Observed</th><th class="n">Expected within</th><th class="n">Expected overall</th></tr></thead><tbody>
    <tr><td>&lt; LSL</td><td class="n">${has(A.lsl)?(A.obsLo/A.N*1e6).toFixed(0):'–'}</td><td class="n">${has(A.lsl)?ppm(A.expW.lo):'–'}</td><td class="n">${has(A.lsl)?ppm(A.expO.lo):'–'}</td></tr>
@@ -939,7 +943,7 @@ function capabilityHtml(A,T,x){
    <tr><td><b>Total</b></td><td class="n">${((A.obsLo+A.obsHi)/A.N*1e6).toFixed(0)}</td><td class="n">${ppm(A.expW.lo+A.expW.hi)}</td><td class="n">${ppm(A.expO.lo+A.expO.hi)}</td></tr>
    <tr><td>% below LSL</td><td class="n">${pct(A.obsLo/A.N)}</td><td class="n">${pct(A.expW.lo,4)}</td><td class="n">${pct(A.expO.lo,4)}</td></tr>
    <tr><td>% above USL</td><td class="n">${has(A.usl)?pct(A.obsHi/A.N):'–'}</td><td class="n">${has(A.usl)?pct(A.expW.hi,4):'–'}</td><td class="n">${has(A.usl)?pct(A.expO.hi,4):'–'}</td></tr></tbody></table></div>
-   ${(()=>{const fa=flowAction(A);return fa?`<h3>Recommended action (TQM L7 flowchart)</h3><div class="qa"><div><span class="chip ${fa.c}">&nbsp;</span><span>${fa.t}</span></div></div>`:''})()}</div></div>`;
+   ${(()=>{const fa=flowAction(A);return fa?`<h3>Recommended action</h3><div class="qa"><div><span class="chip ${fa.c}">&nbsp;</span><span>${fa.t}</span></div></div>`:''})()}</div></div>`;
   return h}
 const SIGTAB=[[1,691462,'Non-competitive','> 40%'],[2,308538,'Non-competitive','30–40%'],[3,66807,'Industry average','20–30%'],[4,6210,'Industry average','15–20%'],[5,233,'World class','10–15%'],[6,3.4,'World class','< 10%'],[7,0.019,'World class','–']];
 function sixSigmaHtml(A,T){
@@ -948,13 +952,13 @@ function sixSigmaHtml(A,T){
   const lvl=Math.min(7,Math.max(1,Math.floor(A.sigma+1e-9)));
   let h=`<h3 style="margin-top:0">What sigma level is our concrete production process operating at?</h3>
    <div class="row" style="align-items:center"><div><div class="muted small">Sigma Level (${SBN[sb]})</div><div class="big">${A.sigma>9?'> 9':A.sigma.toFixed(2)} σ</div></div>
-   <div style="flex:1;min-width:240px">${A.sigma>=6?chip('World class','ok'):A.sigma>=4?chip('Industry average or better','ok'):A.sigma>=3?chip('Industry average','warn'):chip('Non-competitive','bad')}
+   <div style="flex:1;min-width:240px">${A.stab==='unstable'?chip('Not valid – process unstable','bad')+`<p class="note" style="color:var(--fg)"><b>${verdictTxt(A)}</b></p>`:A.sigma>=6?chip('World class','ok'):A.sigma>=4?chip('Industry average or better','ok'):A.sigma>=3?chip('Industry average','warn'):chip('Non-competitive','bad')}
    <p class="note">Process Z-value (no shift) Z<sub>bench</sub> = <b>${sig1(s.Zbench)}</b>. ${sb==='lt15'?'The 1.5σ shift is a Six Sigma convention for long-term drift, shown as a separate term, not a statistical result.':sb==='st'?'Sigma level = Z<sub>ST</sub> = 3·Cpk, with σ̂ = R̄/d2 from the control chart: the same basis as the short-term Cpk column of the table below.':''} ${A.capState!=='reliable'?'The process is not confirmed stable, so this describes past results.':''}</p></div></div>
    <div class="tw"><table><thead><tr><th>Parameter</th><th class="n">Value</th><th>Description</th><th>Basis</th></tr></thead><tbody>
    <tr><td>Defect Rate</td><td class="n">${pct(s.rate)}</td><td>نسبة النتائج غير المطابقة</td><td>${s.Dd} defective of ${s.units} samples</td></tr>
    <tr><td>DPU</td><td class="n">${s.DPU.toFixed(4)}</td><td>Defects Per Unit</td><td>${s.D} defects ÷ ${s.units} units</td></tr>
    <tr><td>DPMO (observed)</td><td class="n">${s.DPMOobs.toFixed(1)}</td><td>Defects Per Million Opportunities</td><td>DPU × 10⁶ ÷ ${s.opp} opportunit${s.opp>1?'ies':'y'} per unit</td></tr>
-   <tr><td>DPMO (expected)</td><td class="n">${s.DPMOexp<0.01?'< 0.01':s.DPMOexp.toFixed(2)}</td><td>From the normal model and the spec limits</td><td>σ<sub>LT</sub> = ${f2(A.sd)}</td></tr>
+   <tr><td>DPMO (expected)</td><td class="n">${s.DPMOexp<0.01?'< 0.01':s.DPMOexp.toFixed(2)}</td><td>From the normal model and the spec limits</td><td>σ<sub>LT</sub> = ${f2(A.sdO)}</td></tr>
    <tr><td>Yield</td><td class="n">${pct(s.yield)}</td><td>نسبة النتائج المطابقة</td><td>conforming samples ÷ samples</td></tr>
    <tr><td>FPY</td><td class="n">${pct(s.FPY)}</td><td>First Pass Yield</td><td>samples passing every check first time${S.reg.mode==='cubes'?` (result within spec and each cube ≥ ${f1(s.cubeLim)})`:''}</td></tr>
    <tr><td>Z-Score (Z<sub>LSL</sub>)</td><td class="n">${sig1(s.ZL)}</td><td>Standardized distance</td><td>(μ − LSL) / σ</td></tr>
@@ -964,12 +968,12 @@ function sixSigmaHtml(A,T){
    <tr><td>Z<sub>ST</sub></td><td class="n">${sig1(s.ZbST)}</td><td>Short-term Z (= 3·Cpk)</td><td>σ<sub>ST</sub> = ${f2(A.sigST)}</td></tr>
    <tr><td><b>Sigma Level</b></td><td class="n"><b>${sig1(A.sigma)}</b></td><td>مستوى السيجما</td><td>${sb==='st'?'Z<sub>ST</sub> = 3·Cpk':sb==='lt15'?'Z<sub>bench</sub> + 1.5 (shift convention)':'Z<sub>bench</sub>'}</td></tr>
    <tr><td>Process Z-Value</td><td class="n">${sig1(s.Zbench)}</td><td>مستوى الأداء بالنسبة للمواصفات</td><td>long-term, no shift</td></tr>
-   ${has(s.obsSigma)?`<tr><td>Sigma from observed DPMO</td><td class="n">${sig1(s.obsSigma)}</td><td>Attribute method (TQM L7)</td><td>Φ⁻¹(1 − DPMO/10⁶) + 1.5</td></tr>`:''}
+   ${has(s.obsSigma)?`<tr><td>Sigma from observed DPMO</td><td class="n">${sig1(s.obsSigma)}</td><td>Attribute method</td><td>Φ⁻¹(1 − DPMO/10⁶) + 1.5</td></tr>`:''}
    </tbody></table></div>
    <p class="note"><b>Definitions.</b> Unit = one 28-day sample (${S.reg.mode==='cubes'?'average of '+A.n+' cubes':'one result'}). ${s.cube?`Defect = one cube below ${f1(s.cubeLim)} ${U()}; ${s.opp} opportunities per unit (one per cube).`:`Defect = a sample result outside the specification (below LSL${has(A.usl)?' or above USL':''}); 1 opportunity per unit.`} ${s.D===0?`No defects were observed in ${s.units} samples, so the observed DPMO cannot resolve below about ${(1e6/(s.units*s.opp)).toFixed(0)}; the sigma level is taken from the distance between the mean and the spec limits in units of σ.`:''}</p>
    <div class="tw"><table class="sig"><thead><tr><th class="n">Sigma level</th><th class="n">DPMO</th><th class="n">Defective %</th><th class="n">Yield %</th><th class="n">Short-term Cpk</th><th class="n">Long-term Cpk</th><th>Competitive level</th><th>Cost of quality</th></tr></thead><tbody>
    ${SIGTAB.map(([l,d,c,q])=>`<tr class="${l===lvl?'hit':''}"><td class="n"><b>${l}</b></td><td class="n">${d.toLocaleString('en-US')}</td><td class="n">${(d/1e4).toPrecision(3)}%</td><td class="n">${(100-d/1e4).toFixed(l>=7?7:l>=6?5:l>=4?3:1)}%</td><td class="n">${(l/3).toFixed(2)}</td><td class="n">${((l-1.5)/3).toFixed(2)}</td><td>${c}</td><td>${q}</td></tr>`).join('')}</tbody></table></div>
-   <p class="foot">Highlighted: this process (${sig1(A.sigma)} σ). Table DPMO values include the 1.5σ shift; cost of quality from TQM L7.</p>`;
+   <p class="foot">Highlighted: this process (${sig1(A.sigma)} σ). Table DPMO values include the 1.5σ shift.</p>`;
   return h}
 /* ================= dashboard ================= */
 function specEditor(f){const sp=specOf(f),raw=(S.specs||{})[mkey(f)]||(S.specs||{})['grade:'+f.grade]||{};const gf=gradeFcu(f.grade);
@@ -1013,7 +1017,7 @@ function vDash(){
          <div class="row" style="gap:4px;margin-top:6px">${g.ok&&a.N>=T.minCap&&has(a.Cpk)?chip('Cpk '+f2(a.Cpk),light('cpk',a.Cpk)):''}${rules.length?chip('Rule '+rules.join(','),'warn'):''}${g.ok&&a.N<T.minCap?chip(`n<${T.minCap}`,'na'):''}</div></button>`}).join('')}</div>`;
     if(sel.ok){const specs=[{v:A.lsl,t:'LSL',c:'#c77700'},{v:A.usl,t:'USL',c:'#c77700'},{v:A.tgt,t:'Target',c:'#1f6b4a'}];const spc=A.N>=T.minSPC;
       h+=`<div class="sel"><div class="row" style="justify-content:space-between"><b>${esc(mixLabel(sel.f))} · 28-day strength (${U()})</b><span class="muted small">UCL/CL/LCL · LSL/USL/Target · ±1σ ±2σ ±3σ zones</span></div>
-       <div class="kpis" style="margin:8px 0">${[['Stability',chip(STABN[A.stab].replace(' Process',''),STABC[A.stab])],['Cpk',A.N>=T.minCap?f2(A.Cpk)+' '+lchip('cpk',A.Cpk):'–'],['Ppk',A.N>=T.minCap?f2(A.Ppk)+' '+lchip('ppk',A.Ppk):'–'],['Cpm',A.N>=T.minCap&&has(A.Cpm)?f2(A.Cpm):'needs Target'],['Sigma',A.N>=T.minCap?sig1(A.sigma)+' σ':'–'],['ECP',A.N>=T.minECP?chip(ECPN[ecpLevel(A.cv)],ECPC[ecpLevel(A.cv)]):'–']].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:16px">${v}</div></div>`).join('')}</div>
+       <div class="kpis" style="margin:8px 0">${[['Stability',chip(STABN[A.stab].replace(' Process',''),STABC[A.stab])],['Cpk',A.N>=T.minCap?f2(A.Cpk)+' '+lchip('cpk',A.Cpk):'–'],['Ppk',A.N>=T.minCap?f2(A.Ppk)+' '+lchip('ppk',A.Ppk):'–'],['Cpm',A.N>=T.minCap&&has(A.Cpm)?f2(A.Cpm):'needs Target'],['Sigma',A.N>=T.minCap?sig1(A.sigma)+' σ'+(A.stab==='unstable'?' '+chip('not valid','bad'):''):'–'],['ECP',A.N>=T.minECP?chip(ECPN[ecpLevel(A.cv)],ECPC[ecpLevel(A.cv)]):'–']].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:16px">${v}</div></div>`).join('')}</div>
        <div class="chart">${lineChartX({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,marks:spc?A.marks:null,zones:A.s1,specs,yl:A.ct==='imr'?'Individual result':'Sample Mean',label:'Xbar',w:860,h:280,clName:A.ct==='imr'?'X̄':'X̿'})}
        ${lineChartX({ys:A.disp,ids,cl:A.dbar,ucl:A.uclD,lcl:A.lclD,marks:spc?A.marksD:null,yl:A.dName,label:'Range',w:860,h:170,clName:A.dSym})}</div>
        ${spc?'':`<p class="note">Trial limits: fewer than ${T.minSPC} subgroups, so tests are not applied yet.</p>`}
@@ -1024,7 +1028,7 @@ function vDash(){
     h+=`<div class="charts"><div><h3 style="margin-top:4px">X̄ and R charts</h3><div class="tw"><table><thead><tr><th class="n">n</th><th class="n">A2</th><th class="n">D3</th><th class="n">D4</th><th class="n">d2</th></tr></thead><tbody>${Object.entries(XR).map(([k,v])=>`<tr class="${+k===n&&ct==='xr'?'hit':''}"><td class="n">${k}</td>${v.map(z=>`<td class="n">${z.toFixed(3)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
       <h3>Individuals and moving range (n = 2 for MR)</h3><div class="tw"><table><tbody><tr class="${ct==='imr'?'hit':''}"><td>E2 = 3/d2</td><td class="n">2.660</td><td>D4</td><td class="n">3.267</td><td>d2</td><td class="n">1.128</td></tr></tbody></table></div></div>
      <div><h3 style="margin-top:4px">X̄ and S charts</h3><div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th class="n">n</th><th class="n">c4</th><th class="n">A3</th><th class="n">B3</th><th class="n">B4</th></tr></thead><tbody>${Object.entries(XS).map(([k,v])=>`<tr class="${+k===n&&ct==='xs'?'hit':''}"><td class="n">${k}</td><td class="n">${v[0].toFixed(4)}</td>${v.slice(1).map(z=>`<td class="n">${z.toFixed(3)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="note">n &gt; 25: c4 = 4(n−1)/(4n−3), A3 = 3/(c4√n), B3 = 1 − 3/(c4√(2(n−1))), B4 = 1 + 3/(c4√(2(n−1))).</p></div></div>
-     <p class="note">Source: SPC Formulas and Tables (H. B. Rowe). Highlighted: constants used now (${CTN[ct]}, n = ${ct==='imr'?1:n}).</p>`;
+     <p class="note">Highlighted: constants used now (${CTN[ct]}, n = ${ct==='imr'?1:n}).</p>`;
     if(sel.ok)h+=`<h3>Applied to ${esc(mixLabel(sel.f))}</h3>`+limitsHtml(A)}
   else if(S.dtab==='trend'){
     if(sel.ok&&sel.A.N>=T.minCap){const p=capPath(D);h+=`<h3 style="margin-top:4px">${esc(mixLabel(sel.f))}: Cpk and Ppk as results come in</h3><div class="chart">${multiChart([{n:'Cpk',c:'#1f6b4a',v:p.map(z=>z.cpk)},{n:'Ppk',c:'#b3261e',v:p.map(z=>z.ppk),dash:true}],[{v:T.g.cpk[1],c:'#2e8b3e',t:'≥ '+T.g.cpk[1]},{v:T.g.cpk[0],c:'#d32f2f',t:T.g.cpk[0]+''}],{w:860,h:260,xs:p.map(z=>z.k)})}</div>
@@ -1040,7 +1044,7 @@ function vDash(){
       if(!sigs.length)h+=`<div class="qa"><div><span class="chip ok">&nbsp;</span><b>No active signals.</b><span style="flex:2">The process shows only common-cause variation. Keep charting each new result.</span></div></div>`;
       else h+=`<div class="tw"><table><thead><tr><th>Signal</th><th style="white-space:normal">Samples</th><th style="white-space:normal">Possible causes</th><th style="white-space:normal">Action</th><th>Owner / date</th></tr></thead><tbody>
        ${sigs.map(s=>`<tr><td><b>${s.t==='R'?'Test 1 · '+A.dName:'Test '+s.t}</b><div class="muted small">${s.t==='R'?'beyond the UCL':TSHORT[s.t]}</div></td><td style="white-space:normal">${s.is.map(i=>`${esc(ids[i])} <span class="muted">(${u[i].pour})</span>`).join(', ')}</td><td style="white-space:normal;min-width:220px">${OCAP[s.t].c}</td><td style="white-space:normal;min-width:220px">${OCAP[s.t].a}</td><td class="muted">QC / plant</td></tr>`).join('')}</tbody></table></div>`;
-      const fa=flowAction(A);if(fa)h+=`<h3>Using the indices (TQM L7 flowchart)</h3><div class="qa"><div><span class="chip ${fa.c}">&nbsp;</span><span>${fa.t}</span></div></div>`}}
+      const fa=flowAction(A);if(fa)h+=`<h3>Recommended action</h3><div class="qa"><div><span class="chip ${fa.c}">&nbsp;</span><span>${fa.t}</span></div></div>`}}
   return h+`</div>`}
 
 /* ================= Excel export (.xlsx written directly) ================= */
@@ -1093,7 +1097,7 @@ function dashSheet(list){const T=S.set,sh=new XSheet('Dashboard');const ok=list.
     const lv=ecpLevel(a.cv),cap=a.N>=T.minCap;
     sh.add([g.f.sup,g.f.grade,g.f.mix,a.N,{v:xnum(a.mean,1),s:'n1'},xnum(a.sd),xnum(a.cv),{v:a.N>=T.minECP?ECPN[lv]:'Insufficient',s:a.N>=T.minECP?ECPC[lv]:'na'},{v:STABN[a.stab],s:STABC[a.stab]},a.stab==='insufficient'?'–':Object.keys(a.hits).join(', ')||'none',
       cap?xnum(a.Cp):'–',cap?{v:xnum(a.Cpk),s:light('cpk',a.Cpk)||'na'}:'–',cap?xnum(a.Pp):'–',cap?{v:xnum(a.Ppk),s:light('ppk',a.Ppk)||'na'}:'–',cap?xnum(a.Cpm):'–',cap?{v:xnum(a.SI),s:light('si',a.SI)||'na'}:'–',cap?xnum(a.ss.Zbench):'–',cap?{v:xnum(a.sigma),s:a.sigma>=4?'ok':a.sigma>=3?'warn':'bad'}:'–',cap?xnum(a.ss.DPMOexp,2):'–',a.trend||'–'])}
-  sh.gap();sh.note('Cp/Cpk use σST (within); Pp/Ppk use σLT (overall). Sigma level basis: '+({st:'short-term, 3 × Cpk with σ̂ = R̄/d2',lt15:'long-term Z + 1.5σ shift',lt:'long-term Z, no shift'})[T.sigb||'st']+'. Capability is reliable only for stable, normal data (TQM L7).');
+  sh.gap();sh.note('Cp/Cpk use σST (within); Pp/Ppk use σLT (overall). Sigma level basis: '+({st:'short-term, 3 × Cpk with σ̂ = R̄/d2',lt15:'long-term Z + 1.5σ shift',lt:'long-term Z, no shift'})[T.sigb||'st']+'. Capability is reliable only for stable, normal data.');
   return sh}
 function mixSheet(g,name){const T=S.set,sh=new XSheet(name),A=g.A,D=g.D,u=D.used,sp=A.sp;sh.cols=[30,14,14,14,40,12,12,12,12,12];
   sh.title(`${mixLabel(g.f)} — statistical analysis of 28-day strength`,9);
@@ -1109,7 +1113,7 @@ function mixSheet(g,name){const T=S.set,sh=new XSheet(name),A=g.A,D=g.D,u=D.used
   if(A.ad)sh.add(['Normality (Anderson-Darling)',`A² ${f2(A.ad.A2)}, p ${A.ad.p.toFixed(3)}`,{v:A.normal?'Normal':'Not normal',s:A.normal?'ok':'bad'}]);sh.gap();
   sh.sec(`Process stability — ${CTN[A.ct]}`,5);sh.add(['Verdict',{v:STABN[A.stab],s:STABC[A.stab]}]);
   if(A.stab!=='insufficient'){sh.head(['Chart','Centre line','UCL','LCL','Formula']);sh.add([A.ct==='imr'?'Individuals':'X̄',xnum(A.cl),xnum(A.ucl),xnum(A.lcl),A.ct==='xr'?'X̿ ± A2·R̄':A.ct==='xs'?'X̿ ± A3·S̄':'X̄ ± 2.660·MR̄']);sh.add([A.dName,xnum(A.dbar),xnum(A.uclD),xnum(A.lclD),A.ct==='xr'?'D4·R̄ / D3·R̄':A.ct==='xs'?'B4·S̄ / B3·S̄':'3.267·MR̄']);
-    sh.add(['σ short-term (σST)',xnum(A.sigST,3),'','',plain(A.sigTxt)]);sh.add(['σ long-term (σLT)',xnum(A.sd,3)]);sh.add(['σ between / over time',xnum(A.sigB,3)]);sh.add(['Stability index σLT/σST',{v:xnum(A.SI),s:light('si',A.SI)||'na'}]);
+    sh.add(['σ short-term (σST)',xnum(A.sigST,3),'','',plain(A.sigTxt)]);sh.add(['σ long-term (σLT, all cubes)',xnum(A.sdO,3)]);sh.add(['σ of sample means',xnum(A.sd,3)]);sh.add(['σ between / over time',xnum(A.sigB,3)]);sh.add(['Stability index σLT/σST',{v:xnum(A.SI),s:light('si',A.SI)||'na'}]);
     sh.gap();sh.head(['Test','Result','','','Description / samples']);
     for(const t of A.tset.tests){const hs=A.hits[t]||[];sh.add(['Test '+t,{v:hs.length?(t===1?'Out of control':'Signal'):'Pass',s:hs.length?'bad':'ok'},'','',tdesc(t)+(hs.length?' — '+hs.map(i=>u[i].id).join(', '):'')])}
     const hd=A.hitsD[1]||[];sh.add(['Test 1 ('+A.dName+')',{v:hd.length?'Out of control':'Pass',s:hd.length?'bad':'ok'},'','',hd.map(i=>u[i].id).join(', ')])}
@@ -1119,7 +1123,7 @@ function mixSheet(g,name){const T=S.set,sh=new XSheet(name),A=g.A,D=g.D,u=D.used
     r('Cp',A.Cp,'cp','(USL − LSL) / 6σST');r('Cpk',A.Cpk,'cpk','min(Cpu, Cpl)');r('Cpu',A.Cpu,'','(USL − X̄) / 3σST');r('Cpl',A.Cpl,'','(X̄ − LSL) / 3σST');r('Pp',A.Pp,'pp','(USL − LSL) / 6σLT');r('Ppk',A.Ppk,'ppk','min(Ppu, Ppl)');
     r('Cpm (Taguchi)',A.Cpm,'cpm','needs Target');r('Target index',A.TI,'ti','|X̄ − T| / σST');r('Stability index',A.SI,'si','σLT / σST');if(has(A.Kidx))r('K',A.Kidx,'','(X̄ − T) / ½(USL − LSL)');if(has(A.Cr))r('Cr',A.Cr,'','1 / Cp');
     sh.add(['Expected PPM < LSL (overall)',has(A.lsl)?+(A.expO.lo*1e6).toFixed(3):'–']);sh.add(['Expected PPM > USL (overall)',has(A.usl)?+(A.expO.hi*1e6).toFixed(3):'–']);sh.add(['Observed PPM total',+((A.obsLo+A.obsHi)/A.N*1e6).toFixed(0)]);
-    const fa=flowAction(A);if(fa)sh.add(['Recommended action (L7 flowchart)',{v:fa.t,s:fa.c}])}
+    const fa=flowAction(A);if(fa)sh.add(['Recommended action',{v:fa.t,s:fa.c}])}
   sh.gap();sh.sec('Six Sigma',5);
   if(A.N>=T.minCap&&A.ss){const s=A.ss;sh.head(['Parameter','Value','','','Description']);
     [['Defect Rate',+(s.rate*100).toFixed(3),'% non-conforming samples'],['DPU',+s.DPU.toFixed(5),'Defects per unit'],['DPMO (observed)',+s.DPMOobs.toFixed(1),`${s.D} defects, ${s.opp} opportunit${s.opp>1?'ies':'y'} per unit`],['DPMO (expected)',+s.DPMOexp.toFixed(3),'normal model, σLT'],
@@ -1139,7 +1143,7 @@ async function exportExcel(list,label){
       lineChartX({ys:A.disp,ids,cl:A.dbar,ucl:A.uclD,lcl:A.lclD,marks:spc?A.marksD:null,yl:A.dName,label:'Range',w:640,h:180,clName:A.dSym}),histChartX(x,A,560,300,A.N>=S.set.minCap)];
     let row=2;for(const s of svgs){const p=await svgPng(s);if(p){sh.img(p.b64,6,row,p.w,p.h);row+=Math.ceil(p.h/19)+1}}
     sheets.push(sh)}
-  const cs=new XSheet(sheetName('Control constants',used));cs.cols=[8,10,10,10,10,4,8,10,10,10,10];cs.title('Control chart constants — SPC Formulas and Tables',11);cs.gap();
+  const cs=new XSheet(sheetName('Control constants',used));cs.cols=[8,10,10,10,10,4,8,10,10,10,10];cs.title('Control chart constants',11);cs.gap();
   cs.head(['n','A2','D3','D4','d2','','n','c4','A3','B3','B4']);const ks=Object.keys(XS);for(let i=0;i<ks.length;i++){const a=XR[ks[i]],b=XS[ks[i]];cs.add([...(a?[+ks[i],...a]:['','','','','']),'',+ks[i],...b])}sheets.push(cs);
   const zip=new JSZip();const ct=[`<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>`,`<Default Extension="xml" ContentType="application/xml"/>`,`<Default Extension="png" ContentType="image/png"/>`,
     `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>`,`<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`];
@@ -1173,7 +1177,7 @@ function mixListX(){const T=S.set,fr=S.filt||{};
 /* ================= advanced sections appended to the report ================= */
 function advancedHtml(f){const D=dataset(f),A=analyzeX(D),T=S.set,u=D.used,x=u.map(o=>o.x),ids=u.map(o=>o.id);ids.__pour=u.map(o=>o.pour);
   if(A.N<T.minDesc)return'';const spc=A.N>=T.minSPC;
-  let h=`<section class="sec pb"><h2>10. Process Stability Analysis (advanced)</h2><p class="muted" style="margin:0">Is the concrete production process statistically stable? Full analysis per TQM L5 and SPC Formulas and Tables, ${CTN[A.ct]} chart, ${esc(A.tset.name)}.</p>
+  let h=`<section class="sec pb"><h2>10. Process Stability Analysis (advanced)</h2><p class="muted" style="margin:0">Is the concrete production process statistically stable? Full analysis, ${CTN[A.ct]} chart, ${esc(A.tset.name)}.</p>
    <div class="chart adv-ch">${lineChartX({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,marks:spc?A.marks:null,zones:A.s1,specs:[{v:A.lsl,t:'LSL',c:'#c77700'},{v:A.usl,t:'USL',c:'#c77700'},{v:A.tgt,t:'Target',c:'#1f6b4a'}],yl:A.ct==='imr'?'Individual result':'Sample Mean',label:'Xbar',w:760,h:270,clName:A.ct==='imr'?'X̄':'X̿'})}</div>
    <p class="foot">Red squares are points outside the control limits; grey numbers mark pattern tests on black points. Shaded bands: ±1σ, ±2σ, ±3σ zones.</p>
    ${A.stab==='insufficient'?insuf(A.N,T.minSPC,'Process stability'):stabilityHtml(A,ids,T)}</section>
@@ -1189,7 +1193,7 @@ function advSettings(){const T=S.set;return`<h3 style="margin-top:4px">Advanced 
    <label class="f"><span>Defect</span><select id="s-defect"><option value="result" ${T.defect!=='cube'?'selected':''}>Sample result outside spec (1 opportunity per sample)</option><option value="cube" ${T.defect==='cube'?'selected':''}>Cube below the cube limit (n opportunities per sample)</option></select></label>
    <label class="f"><span>Cube limit (${U()})</span><input type="number" id="s-cubeLim" placeholder="= LSL" value="${esc(T.cubeLim)}"></label>
    <label class="f"><span>Sigma level</span><select id="s-sigb">${[['st','Short-term: 3 × Cpk (σ̂ = R̄/d2, X̄-R)'],['lt15','Long-term Z + 1.5σ shift'],['lt','Long-term Z, no shift']].map(([k,l])=>`<option value="${k}" ${(T.sigb||'st')===k?'selected':''}>${l}</option>`).join('')}</select></label></div>
-  <h3>Guidelines (TQM L7 traffic lights)</h3><div class="grid">${Object.entries({cp:'Cp',cpk:'Cpk / Cpm',pp:'Pp',ppk:'Ppk',si:'Stability index',ti:'Target index'}).map(([k,l])=>`<label class="f"><span>${l}: ${GUIDE[k].low?'adequate ≤ / poor >':'poor < / adequate ≥'}</span><span class="row" style="gap:4px;flex-wrap:nowrap"><input type="number" step="0.01" id="g-${k}-0" value="${T.g[k][0]}"><input type="number" step="0.01" id="g-${k}-1" value="${T.g[k][1]}"></span></label>`).join('')}</div>
+  <h3>Guidelines (traffic lights)</h3><div class="grid">${Object.entries({cp:'Cp',cpk:'Cpk / Cpm',pp:'Pp',ppk:'Ppk',si:'Stability index',ti:'Target index'}).map(([k,l])=>`<label class="f"><span>${l}: ${GUIDE[k].low?'adequate ≤ / poor >':'poor < / adequate ≥'}</span><span class="row" style="gap:4px;flex-wrap:nowrap"><input type="number" step="0.01" id="g-${k}-0" value="${T.g[k][0]}"><input type="number" step="0.01" id="g-${k}-1" value="${T.g[k][1]}"></span></label>`).join('')}</div>
   <div class="row" style="margin-top:10px"><button class="btn" id="advReset">Reset these settings</button></div>`}
 function bindAdv(){
   for(const[k,fn]of[['chart',v=>v],['rules2',v=>v],['defect',v=>v],['sigb',v=>v],['adv',v=>v==='1'],['cubeLim',v=>v.trim()]]){const e=$('#s-'+k);if(e)e.onchange=()=>{S.set[k]=fn(e.value);save();render()}}
@@ -1207,6 +1211,9 @@ function bindAdv(){
   const runXl=async(list,label,btn)=>{if(btn)btn.disabled=true;try{await exportExcel(list,label)}catch(e){console.error(e);toast('Could not create the Excel file.')}if(btn)btn.disabled=false};
   const dx=$('#d-xl');if(dx)dx.onclick=()=>runXl(mixListX(),'Dashboard',dx);
   const rx=$('#xl');if(rx)rx.onclick=()=>{const keys=new Set((S.lastSel||[]).map(g=>mkey(g.f)));const l=mixListX().filter(g=>keys.has(mkey(g.f)));runXl(l,l.length===1?mixLabel(l[0].f):'Report',rx)}}
+function verdictTxt(A){const lsl=A.lsl;const far=has(A.Ppk)&&A.Ppk>=1.33;
+  return far?`The process is unstable (variation between pours), but the results stay far above ${has(lsl)?'LSL = '+f1(lsl):'the specification'}. Remove the causes of the variation first, then assess capability and the sigma level.`
+    :`The process is unstable and the margin to ${has(lsl)?'LSL = '+f1(lsl):'the specification'} is not large. Remove the causes of the variation before relying on the results.`}
 /* ================= views ================= */
 function vReg(){
   let h=`<div class="card"><h2>Load the concrete pouring register</h2><div class="drop" id="drop"><p style="margin:0 0 10px">Excel (.xlsx) or CSV, from any project. The app finds the 28-day cube strengths itself; you check what it found before the analysis.</p>
