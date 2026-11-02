@@ -66,6 +66,19 @@ details summary{cursor:pointer;font-weight:600;padding:4px 0}
 .rep{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:18px;min-width:0}
 .rhead{text-align:center;display:flex;flex-direction:column;gap:4px}
 .rhead .proj{font-size:22px;font-weight:800;color:#1f4d3a;margin:0}
+.ovd .band{background:#1f4d3a;color:#fff;font-weight:800;font-size:20px;padding:14px 16px;border-radius:4px;margin-top:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline}.ovd .band span{font-size:12px;font-weight:400;opacity:.85}
+.ovd .band.b2{font-size:17px;padding:10px 16px;margin-top:22px;background:#2b5f48}
+.otiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.otile{background:#f1f7ee;border-left:4px solid #a9d18e;padding:10px 14px;min-width:0}.otile.q{background:#eef3f8;border-left-color:#8fb1d3}
+.otile .l{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#4c5a55}.otile .v{font-size:28px;font-weight:800;color:#1f4d3a;font-variant-numeric:tabular-nums}.otile .s{font-size:11px;color:#5b6865}
+.ogrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;margin-top:14px}
+.opanel,.ochart{background:var(--surface);border:1px solid var(--line);padding:10px;min-width:0}.ochart svg{width:100%;height:auto;display:block}
+.ot{font-weight:800;color:#1f4d3a;margin-bottom:6px}.ct{font-weight:700;text-align:center;font-size:15px;margin-bottom:4px}
+table.xt th{background:#a9d18e;color:#111;border:1px solid #fff;font-size:12px;padding:5px 7px}table.xt td{padding:5px 7px;font-size:13px}table.xt td{border-bottom:1px solid #e3e8e6}table.xt tr.tot td{background:#e2efda;font-weight:800}
+.pbar{position:relative;height:16px;background:#eef1f0}.pbar div{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#3d8b4f,#cfe6c7)}.pbar span{position:absolute;right:4px;top:0;font-size:11px;font-weight:700}
+.st{display:inline-block;color:#fff;font-weight:700;padding:1px 10px;border-radius:2px;min-width:56px;text-align:center}
+.boqed{margin-top:8px}.boqed input{min-height:32px;padding:4px 6px}
+@media (max-width:560px){.ogrid{grid-template-columns:1fr}.ochart{overflow-x:auto}.ochart>svg{min-width:520px}}
 .parthead{background:#1f6b4a;color:#fff;font-weight:800;font-size:18px;letter-spacing:.3px;text-align:center;padding:8px 12px;border-radius:4px;margin-top:6px;break-after:avoid;page-break-after:avoid}
 .supd{border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:6px 0}.supd .tw{margin-top:6px}
 .rhead .b1{background:#a9d18e;border:1.5px solid #222;font-weight:800;padding:4px 8px;color:#111}
@@ -196,9 +209,9 @@ const CONST={2:{A2:1.880,D3:0,D4:3.267,d2:1.128},3:{A2:1.023,D3:0,D4:2.574,d2:1.
 /* ================= storage ================= */
 const DEF={v:2,minDesc:10,minECP:10,finalECP:30,minSPC:20,minCap:25,minSup:10,minTrend:20,
   ecp:[8,11,14,17],rules:'all',rules2:'minitab8',sigb:'st',chart:'auto',defect:'result',cubeLim:'',shift:true,adv:true,g:{cp:[1,1.5],cpk:[1,1.33],pp:[1,1.5],ppk:[1,1.5],si:[1.33,1.67],ti:[0.5,1.0]},usl:'',fcuOv:'',lslOv:'',title:'',autoTypo:true,spreadPct:20,binW:''};
-let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{},pick:{sup:'*',grade:'*',mix:'*'},specs:{},dtab:'mon',dsel:''};
-function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.pick=r.pick||{sup:'*',grade:'*',mix:'*'};S.set={...DEF,...r.set};S.set.g={...DEF.g,...(r.set&&r.set.g||{})};if(!TSETS[S.set.rules2])S.set.rules2='minitab8';S.specs=r.specs||{};S.dtab=r.dtab||'mon';S.dsel=r.dsel||'';if(!r.set||r.set.v!==2){S.set.v=2;S.set.minDesc=Math.max(10,S.set.minDesc);S.set.minECP=Math.max(10,Math.min(S.set.minECP,10))}S.ov=r.ov||{}}}catch(e){}}
-function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,pick:S.pick,specs:S.specs,dtab:S.dtab,dsel:S.dsel,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
+let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{},pick:{sup:'*',grade:'*',mix:'*'},specs:{},dtab:'ov',dsel:'',boq:{},dplant:'All'};
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.pick=r.pick||{sup:'*',grade:'*',mix:'*'};S.set={...DEF,...r.set};S.set.g={...DEF.g,...(r.set&&r.set.g||{})};if(!TSETS[S.set.rules2])S.set.rules2='minitab8';S.specs=r.specs||{};S.dtab=r.dtab||'ov';S.boq=r.boq||{};S.dplant=r.dplant||'All';if(!r.ovSeen){S.dtab='ov'}S.ovSeen=1;S.dsel=r.dsel||'';if(!r.set||r.set.v!==2){S.set.v=2;S.set.minDesc=Math.max(10,S.set.minDesc);S.set.minECP=Math.max(10,Math.min(S.set.minECP,10))}S.ov=r.ov||{}}}catch(e){}}
+function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,pick:S.pick,specs:S.specs,dtab:S.dtab,dsel:S.dsel,boq:S.boq,dplant:S.dplant,ovSeen:1,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
 
 /* ================= reading files ================= */
 async function readXlsx(buf){
@@ -261,6 +274,8 @@ const RX={
   item:/^items?$|concrete type|type of concrete|نوع الخرسانة|^البند$|^النوع$/,
   el:/exact item|element|description|structural|العنصر|الوصف|الجزء/,
   age:/^age|age ?\(|عمر|^days?$|^يوم$|test age/,
+  qty:/^qty|quantity|volume|^vol\b|كمية|الكمية|^m3$|^m³$|م3/,
+  card:/pour ?card|card ?no|كارت|بطاقة الصب/,
 };
 const STRL=/strength|result|cube|crush|comp|kg|mpa|n\/mm|مقاوم|اجهاد|إجهاد|مكعب|كسر|نتيجة|^#?\d$|^c\d$|^s\d$|^no\.? ?\d$/;
 const AVGL=/ave|avg|average|mean|متوسط/;
@@ -300,7 +315,7 @@ function colStats(rows,j){let ne=0,nums=[],dates=0,texts=[];for(const r of rows)
 function detectMap(P){
   const{aoa,start,par,chi,w}=P;const rows=aoa.slice(start,start+500).filter(r=>r&&r.some(v=>!empty(v)));
   const L=j=>lc(chi[j]),F=j=>lc(par[j]+' '+chi[j]);const st=[];for(let j=0;j<w;j++)st[j]=colStats(rows,j);
-  const notes=[],m={layout:'wide',id:-1,pour:-1,sup:-1,item:-1,grade:-1,mix:-1,cem:-1,el:-1,c1:-1,n:0,avg:-1,age:-1,ageVal:28,unit:'kg'};
+  const notes=[],m={layout:'wide',id:-1,pour:-1,sup:-1,item:-1,grade:-1,mix:-1,cem:-1,el:-1,qty:-1,card:-1,c1:-1,n:0,avg:-1,age:-1,ageVal:28,unit:'kg'};
   const used=new Set();
   const byLabel=(k,ok=()=>true)=>{for(const pass of[L,F])for(let j=0;j<w;j++)if(!used.has(j)&&RX[k].test(pass(j))&&ok(j)){used.add(j);return j}return -1};
   // 1. strength candidates by content
@@ -352,16 +367,17 @@ r.age=AGE_OF(par[r.s])??(/day|يوم|age|عمر|d$/.test(lc(chi[r.s]))?AGE_OF(ch
   m.sup=byLabel('sup',j=>st[j].texts.length>=st[j].ne*0.6);
   m.grade=byLabel('grade');
   if(m.grade<0)for(let j=0;j<w;j++)if(!used.has(j)&&st[j].ne>=3){const g=st[j].texts.filter(t=>/^\s*(c|b|k|f|fcu)?\s*-?\s*\d{2,3}\b/i.test(t)).length;if(g/st[j].ne>0.7&&new Set(st[j].texts).size<=12){m.grade=j;used.add(j);break}}
-  m.mix=byLabel('mix');m.cem=byLabel('cem');m.item=byLabel('item');m.el=byLabel('el');
+  m.mix=byLabel('mix');m.cem=byLabel('cem');m.item=byLabel('item');m.el=byLabel('el');m.qty=byLabel('qty',j=>st[j].numF>=0.6);m.card=byLabel('card');
   if(m.id<0){for(let j=0;j<w;j++)if(!used.has(j)&&st[j].texts.length>=st[j].ne*0.8&&st[j].ne>=3&&new Set(st[j].texts).size>=st[j].ne*0.9&&st[j].texts.some(t=>/\d/.test(t))){m.id=j;used.add(j);notes.push(`Sample ID taken from column ${colName(j)} (unique codes).`);break}}
   return{m,notes,runs}}
 
 function buildRecs(P,m){
   const rows=P.aoa.slice(P.start);const recs=[];const skip={noDate:0,noId:0};const s=(row,k)=>m[k]>=0?String(row[m[k]]??'').trim():'';
-  const keep={};const ff=['id','pour','sup','item','grade','mix','cem','el'];
+  const keep={};const ff=['id','pour','sup','item','grade','mix','cem','el','card'];const pours=[],seenP=new Set();
   const long=m.layout==='long';
   rows.forEach((row,i)=>{if(!row||!row.some(v=>!empty(v)))return;
     if(long||m.age>=0)for(const k of ff)if(m[k]>=0){if(empty(row[m[k]])&&keep[k]!=null)row=Object.assign([],row,{[m[k]]:keep[k]});else keep[k]=row[m[k]]}
+    if(m.qty>=0){const pd=parseDate(m.pour>=0?row[m.pour]:''),q=toNum(row[m.qty]);if(pd&&q>0){const k=[s(row,'card')||s(row,'id')||i,pd,q,s(row,'el')].join('|');if(!seenP.has(k)){seenP.add(k);pours.push({pour:pd,qty:q,card:s(row,'card'),sup:s(row,'sup'),item:s(row,'item'),grade:s(row,'grade'),mix:s(row,'mix'),el:s(row,'el')})}}}
     if(m.age>=0){const a=toNum(row[m.age]);if(a!==m.ageVal)return}
     let id=s(row,'id');if(m.id<0)id='Row '+(P.start+i+1);
     if(!id||/^(total|sum|avg|average|mean|الاجمالي|الإجمالي|المتوسط)/i.test(id)){skip.noId++;return}
@@ -373,7 +389,7 @@ function buildRecs(P,m){
   let n=m.n||0;if(long){const cnt={};recs.forEach(r=>{const k=r.c.filter(v=>v!=null).length;cnt[k]=(cnt[k]||0)+1});n=+Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||1;recs.forEach(r=>{if(r.c.length>n)r.c=r.c.slice(0,n)})}
   const mode=m.c1>=0&&n>=2?'cubes':'avg';
   if(mode==='avg')recs.forEach(r=>{if(r.avg==null&&r.c.length)r.avg=r.c[0]});
-  return{recs,skip,n:mode==='cubes'?n:1,mode}}
+  return{recs,pours,skip,n:mode==='cubes'?n:1,mode}}
 
 const sig=(sheet,P)=>{let h=7;for(const ch of sheet+'|'+P.chi.join('|'))h=(h*31+ch.charCodeAt(0))|0;return 'p'+(h>>>0).toString(36)};
 function prep(sheet,hr){
@@ -398,7 +414,7 @@ async function onFile(f){
     pending={book,file:f.name};prep(best);S.tab='reg';render();scrollTo(0,0);
   }catch(e){console.error(e);toast('Could not read that file. Save it as .xlsx or .csv and try again.')}}
 function readMapForm(){const m={...pending.map};
-  for(const k of['id','pour','sup','item','grade','mix','cem','el','c1','avg','age']){const e=$('#m-'+k);if(e)m[k]=+e.value}
+  for(const k of['id','pour','sup','item','grade','mix','cem','el','qty','card','c1','avg','age']){const e=$('#m-'+k);if(e)m[k]=+e.value}
   const n=$('#m-n');if(n)m.n=Math.max(1,Math.min(6,+n.value||1));const ly=$('#m-layout');if(ly)m.layout=ly.value;const u=$('#m-unit');if(u)m.unit=u.value;
   return m}
 function doImport(){
@@ -409,7 +425,7 @@ function doImport(){
   const title=($('#ptitle')?.value||'').trim()||pending.title||pending.file.replace(/\.[^.]+$/,'');
   S.profiles=S.profiles||{};S.profiles[pending.sig]={...m};
   stash();
-  S.reg={file:pending.file,sheet:pending.sheet,title,mode:B.mode,n:B.n,unit:m.unit,recs:B.recs,loaded:new Date().toISOString().slice(0,10)};
+  S.reg={file:pending.file,sheet:pending.sheet,title,mode:B.mode,n:B.n,unit:m.unit,recs:B.recs,pours:B.pours||[],loaded:new Date().toISOString().slice(0,10)};
   const old=S.projs&&S.projs[title];S.filt=old?old.filt:null;S.ov=old?old.ov||{}:{};S.set.title=title;
   pending=null;stash();save();
   const withRes=B.recs.filter(hasResult).length;
@@ -994,6 +1010,7 @@ function saveSpec(f,scope){S.specs=S.specs||{};const v=id=>{const e=$('#sp-'+id)
 function dashSel(list){const ok=list.filter(g=>g.ok);let g=list.find(g=>mkey(g.f)===S.dsel);if(!g)g=[...ok].sort((a,b)=>b.A.N-a.A.N)[0]||list[0];if(g)S.dsel=mkey(g.f);return g}
 function vDash(){
   if(!S.reg)return`<div class="card"><h2>No register loaded</h2><p>Load the concrete pouring register from the Register tab.</p><button class="btn primary" id="pick">Choose register file</button></div>`;
+  if(S.dtab==='ov')return`<div class="card" style="padding:6px 16px 0"><nav class="stabs" style="margin:0">${[['ov','Overview'],['mon','Chart Monitor'],['const','Control constants'],['trend','Cp/Cpk Trend'],['ocap','OCAP'],['sup','Supplier Evaluation'],['set','Settings']].map(([k,l])=>`<button data-d="${k}" class="${S.dtab===k?'on':''}">${l}</button>`).join('')}</nav></div>`+vOverview();
   const T=S.set,list=mixListX(),ok=list.filter(g=>g.ok),sel=dashSel(list);if(!sel)return'';
   const ooc=ok.filter(g=>g.A.stab==='unstable'),pot=ok.filter(g=>g.A.stab==='potential');
   const capL=ok.filter(g=>g.A.N>=T.minCap&&g.A.stab!=='unstable'&&has(g.A.Cpk)),avg=capL.length?ST.mean(capL.map(g=>g.A.Cpk)):NaN,okCpk=capL.filter(g=>light('cpk',g.A.Cpk)==='ok').length;
@@ -1006,7 +1023,7 @@ function vDash(){
    <div class="tile"><div class="l">OOC Active</div><div class="v" style="color:var(--bad)">${ooc.length}<small> items</small></div><div class="s" style="color:var(--bad)">${ooc.length?'Out-of-control chart':'none'}${pot.length?` · ${pot.length} with pattern signals`:''}</div></div>
    <div class="tile"><div class="l">Avg Cpk</div><div class="v" style="color:var(--${has(avg)?light('cpk',avg):'na'})">${f2(avg)}</div><div class="s">Target ≥ ${T.g.cpk[1]} · OK ${okCpk} item${okCpk===1?'':'s'}${capL.filter(g=>g.A.capState!=='reliable').length?` · ${capL.filter(g=>g.A.capState!=='reliable').length} not reliable`:''}</div></div>
    <div class="tile"><div class="l">n &lt; ${T.minCap} (grey)</div><div class="v">${grey.length}<small> items</small></div><div class="s">before capability lock</div></div></div>
-  <div class="card"><nav class="stabs">${[['mon','Chart Monitor'],['const','Control constants'],['trend','Cp/Cpk Trend'],['ocap','OCAP'],['sup','Supplier Evaluation'],['set','Settings']].map(([k,l])=>`<button data-d="${k}" class="${S.dtab===k?'on':''}">${l}</button>`).join('')}</nav>`;
+  <div class="card"><nav class="stabs">${[['ov','Overview'],['mon','Chart Monitor'],['const','Control constants'],['trend','Cp/Cpk Trend'],['ocap','OCAP'],['sup','Supplier Evaluation'],['set','Settings']].map(([k,l])=>`<button data-d="${k}" class="${S.dtab===k?'on':''}">${l}</button>`).join('')}</nav>`;
   const D=sel.D,A=sel.A,u=D.used,x=u.map(o=>o.x),ids=u.map(o=>o.id);
   if(S.dtab==='mon'){
     h+=`<div class="ctsel"><div class="row" style="justify-content:space-between"><b>Chart type selection (ISO 7870-2)</b><span class="muted small mono">Active: ${CTN[ct]}</span></div>
@@ -1140,7 +1157,8 @@ function mixSheet(g,name){const T=S.set,sh=new XSheet(name),A=g.A,D=g.D,u=D.used
     sh.add([o.id,o.pour,...(nc?o.c.map(v=>has(v)?v:'–'):[]),{v:xnum(o.x,2),s:o.use?'n2':'na'},xnum(A.ct==='xs'?o.S:o.R),{v:o.use?(m||md?'Signal':'OK'):'Excluded',s:o.use?(m||md?'bad':'ok'):'na'},[...(m||[]),...(md?['R']:[])].join(', '),o.use?o.flags.join('; '):o.why])}
   return sh}
 async function exportExcel(list,label){
-  toast('Preparing the Excel file…');const used=new Set();const sheets=[dashSheet(list)];sheets[0].name=sheetName('Dashboard',used);sheets.push(supplierSheet(mixListX(),sheetName('Supplier Evaluation',used)));
+  toast('Preparing the Excel file…');const used=new Set();const sheets=[dashSheet(list)];sheets[0].name=sheetName('Dashboard',used);if((S.reg.pours||[]).length){const ps=pourSheet(sheetName('Pouring vs BOQ',used));let row=1;for(const s of ps.charts){const im=await svgPng(s);if(im){ps.img(im.b64,ps.imgCol,row,im.w,im.h);row+=Math.ceil(im.h/19)+1}}sheets.splice(1,0,ps)}
+  sheets.push(supplierSheet(mixListX(),sheetName('Supplier Evaluation',used)));
   for(const g of list.filter(g=>g.ok)){const sh=mixSheet(g,sheetName(`${g.f.sup} ${g.f.grade} ${g.f.mix||''}`,used));
     const A=g.A,u=g.D.used,x=u.map(o=>o.x),ids=u.map(o=>o.id);const spc=A.N>=S.set.minSPC;
     const svgs=[lineChartX({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,marks:spc?A.marks:null,zones:A.s1,specs:[{v:A.lsl,t:'LSL',c:'#c77700'},{v:A.usl,t:'USL',c:'#c77700'},{v:A.tgt,t:'Target',c:'#1f6b4a'}],yl:A.ct==='imr'?'Result':'Sample Mean',label:'Xbar',w:640,h:260,clName:A.ct==='imr'?'X̄':'X̿'}),
@@ -1212,6 +1230,8 @@ function bindAdv(){
   document.querySelectorAll('.stabs button').forEach(b=>b.onclick=()=>{S.dtab=b.dataset.d;save();render()});
   document.querySelectorAll('.cbtn').forEach(b=>b.onclick=()=>{S.set.chart=b.dataset.ct;save();render()});
   document.querySelectorAll('.mcard').forEach(b=>b.onclick=()=>{S.dsel=b.dataset.k;save();render()});
+  const opl=$('#ov-plant');if(opl)opl.onchange=()=>{S.dplant=opl.value;save();render()};
+  const bqs=$('#bq-save');if(bqs)bqs.onclick=()=>{const B=boqOf();pourData('All').items.forEach((it,i)=>{const v=id=>{const e=$(id+i);return e?e.value.trim():''};B[it]={name:v('#bq-n-'),ar:v('#bq-a-'),no:v('#bq-no-'),qty:v('#bq-q-')}});save();render();toast('BOQ saved')};
   const goRep=()=>{const g=mixListX().find(g=>mkey(g.f)===S.dsel);if(g){S.pick={sup:g.f.sup,grade:g.f.grade,mix:g.f.mix};S.filt={...g.f}}S.tab='rep';save();render();scrollTo(0,0)};
   const drp=$('#d-rep');if(drp)drp.onclick=goRep;const dop=$('#d-open');if(dop)dop.onclick=goRep;
   const runXl=async(list,label,btn)=>{if(btn)btn.disabled=true;try{await exportExcel(list,label)}catch(e){console.error(e);toast('Could not create the Excel file.')}if(btn)btn.disabled=false};
@@ -1263,6 +1283,17 @@ function supplierHtml(list){const T=S.set,W={...SW_DEF,...(T.sw||{})},ev=supplie
         return`<tr><td>${esc(g.f.grade)}</td><td>${esc(g.f.mix||'–')}</td><td class="n">${a.N}</td><td class="n">${f1(a.mean)}</td><td class="n">${f2(a.cv)}</td><td>${a.N>=T.minECP?chip(ECPN[l],ECPC[l]):chip('–','na')}</td><td class="n">${a.below.length}</td><td>${chip(STABN[a.stab].replace(' Process','').replace('Potential Special Causes Detected','Signals'),STABC[a.stab])}</td><td class="n">${a.N<T.minCap?'–':a.stab==='unstable'?'<span class="muted">not assessed</span>':f2(a.Ppk)}</td><td>${a.trend||'–'}</td></tr>`}).join('')}</tbody></table></div></details>`).join('')}`;
     h+=`<p class="note"><b>How the score is built</b> (weights can be changed in Settings): ${Object.keys(SW_DEF).map(k=>`${SWN[k]} ${W[k]}%`).join(' · ')}. Conformity loses 10 points for each 1% of results below fcu. Consistency: Excellent 100, Very Good 85, Good 70, Acceptable 55, Poor 30. Stability: stable 100, pattern signals 70, unstable 40. Capability (worst Ppk of the stable mixes): adequate 100, marginal 70, poor 30. Trend: improving 100, steady 80, deteriorating 40. Criteria without enough data are left out and the weights re-scaled. Rating: A ≥ 85 Excellent · B ≥ 70 Good · C ≥ 55 Conditional · D &lt; 55 Not acceptable. <b>Provisional</b>: stability or capability not yet assessable (fewer than ${T.minSPC} / ${T.minCap} samples in every mix), so the rating rests on conformity and consistency only and is ranked after fully assessed plants. A plant with an unstable mix is rated B at most.</p>`}
   return h}
+function pourSheet(name){const P=pourData('All'),sh=new XSheet(name);const cols=P.rows.length;sh.cols=[16,18,10,12,12,14,11,4,12,...P.rows.map(()=>12),12,9];
+  sh.title(`${S.set.title||S.reg.title} — Concrete Pouring Dashboard`,9+cols);sh.note(`${S.reg.file} · ${S.reg.loaded} · ${nf(P.tot.poured)} m³ poured · ${P.cards} pour cards over ${P.pdays} pouring days`+(P.tot.boq>0?` · progress ${(P.tot.poured/P.tot.boq*100).toFixed(1)}% of ${nf(P.tot.boq)} m³`:''));sh.gap();
+  sh.sec('BOQ tracking — مقارنة المصبوب مع المقايسة',7);sh.head(['Element','العنصر','BOQ item','BOQ m³','Poured m³','Remaining m³','Progress %']);
+  P.rows.forEach(r=>sh.add([r.name,r.ar,r.no,r.boq>0?Math.round(r.boq):'–',Math.round(r.poured),r.boq>0?Math.round(r.boq-r.poured):'–',r.boq>0?{v:+(r.poured/r.boq*100).toFixed(1),s:'n1'}:'–']));
+  sh.add([{v:'Total',s:'b'},{v:'الإجمالي',s:'b'},'',P.tot.boq>0?Math.round(P.tot.boq):'–',Math.round(P.tot.poured),P.tot.boq>0?Math.round(P.tot.boq-P.tot.poured):'–',P.tot.boq>0?{v:+(P.tot.poured/P.tot.boq*100).toFixed(1),s:'n1'}:'–']);sh.gap();
+  sh.sec('كميات الخرسانة من كل محطة — volume by batch plant (m³)',3+cols);sh.head(['Station',...P.rows.map(r=>r.name),'Total','Share %']);
+  P.plants.forEach(s=>{const t=P.rows.reduce((a,r)=>a+(r.by[s]||0),0);sh.add([{v:s,s:'b'},...P.rows.map(r=>r.by[s]?Math.round(r.by[s]):'–'),Math.round(t),{v:+(t/P.tot.poured*100).toFixed(1),s:'n1'}])});
+  sh.add([{v:'Total',s:'b'},...P.rows.map(r=>Math.round(r.poured)),Math.round(P.tot.poured),100]);sh.gap();
+  sh.sec('Poured per week (m³)',2+P.plants.length);sh.head(['Week from',...P.plants,'Total']);P.weeks.forEach(k=>sh.add([k.d,...P.plants.map(p=>k.by[p]?Math.round(k.by[p]):0),Math.round(k.t)]));
+  sh.imgCol=Math.max(8,3+cols)+1;sh.charts=[hStack(P.rows,P.plants,P.col),donut(P.plants.map(s=>({n:s,c:P.col[s],v:P.rows.reduce((a,r)=>a+(r.by[s]||0),0)}))),cumLine(P.days,P.tot.boq),weekBars(P.weeks,P.plants,P.col)];
+  return sh}
 function supplierSheet(list,name){const T=S.set,sh=new XSheet(name),ev=supplierEval(list);sh.cols=[6,16,10,10,12,12,14,22,12,18,12,10,20];
   sh.title('Supplier Evaluation — 28-day cube strength by concrete plant',12);sh.note(`${S.reg.title} · ${S.reg.file} · minimum ${T.minSup} analysed samples per plant`);sh.gap();
   sh.head(['#','Plant','Mixes','Samples','≥ fcu %','CV %','ECP level','Stability','Worst Ppk','Trend','Mean above fcu %','Score','Rating']);
@@ -1271,6 +1302,113 @@ function supplierSheet(list,name){const T=S.set,sh=new XSheet(name),ev=supplierE
       has(e.ppkMin)?{v:xnum(e.ppkMin),s:light('ppk',e.ppkMin)}:e.nUnst?'not assessed':'–',[...new Set(e.trends)].join(', ')||'–',xnum(e.margin,1),{v:xnum(e.score,1),s:e.rate[3]},{v:e.rate[1]+' · '+e.rate[2],s:e.rate[3]}])});
   sh.gap();const W={...SW_DEF,...(T.sw||{})};sh.note('Weights: '+Object.keys(SW_DEF).map(k=>`${SWN[k]} ${W[k]}%`).join(' · ')+'. Rating: A ≥ 85 · B ≥ 70 · C ≥ 55 · D < 55.');
   return sh}
+/* ================= one-page dashboard: pouring vs BOQ + quality ================= */
+const PCOL=['#2E6A8E','#C46A3A','#6A9A4A','#8E6BB8','#D4A82A','#4A9AA8','#B85A7A','#7A7A7A'];
+const nf=v=>has(v)?Math.round(v).toLocaleString('en-US'):'–';
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dlab=y=>y.slice(8,10)+'-'+MON[+y.slice(5,7)-1];
+const addDays=(y,n)=>{const d=new Date(Date.UTC(+y.slice(0,4),+y.slice(5,7)-1,+y.slice(8,10))+n*864e5);return d.toISOString().slice(0,10)};
+const weekStart=y=>{const d=new Date(Date.UTC(+y.slice(0,4),+y.slice(5,7)-1,+y.slice(8,10)));return addDays(y,-((d.getUTCDay()+1)%7))}; // weeks start on Saturday
+function boqOf(){S.boq=S.boq||{};const k=S.reg.title||S.reg.file;return S.boq[k]=S.boq[k]||{}}
+function plantColors(){const all=S.reg.pours||[];const v=new Map();all.forEach(p=>v.set(p.sup,(v.get(p.sup)||0)+p.qty));
+  S.reg.recs.forEach(r=>{if(!v.has(r.sup))v.set(r.sup,0)});const order=[...v.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);const m={};order.forEach((s,i)=>m[s]=PCOL[i%PCOL.length]);return{order,col:m}}
+// ---- charts
+function hStack(rows,plants,col,w=560,h0=0){const lab=110,mr=16,top=34,bh=26,gap=16,H=top+rows.length*(bh+gap)+40,W=w-lab-mr;
+  let g=SVGH(w,H,'Poured vs BOQ');
+  for(let i=0;i<=10;i++){const x=lab+W*i/10;g+=`<line x1="${x}" x2="${x}" y1="${top-6}" y2="${top+rows.length*(bh+gap)-gap+6}" stroke="#000" stroke-opacity=".07"/><text x="${x}" y="${top-12}" text-anchor="middle" fill="#333">${i*10}%</text>`}
+  rows.forEach((r,i)=>{const y=top+i*(bh+gap);const den=r.boq>0?Math.max(r.boq,r.poured):r.poured||1;let x=lab;
+    g+=`<text x="${lab-8}" y="${y+bh/2+4}" text-anchor="end" fill="#222">${esc(r.name)}</text>`;
+    plants.forEach(p=>{const v=r.by[p]||0;if(!v)return;const ww=W*v/den;g+=`<rect x="${x}" y="${y}" width="${ww}" height="${bh}" fill="${col[p]}"><title>${esc(p)}: ${nf(v)} m³</title></rect>`;x+=ww});
+    if(r.boq>0&&r.boq>r.poured){const ww=W*(r.boq-r.poured)/den;g+=`<rect x="${x}" y="${y}" width="${ww}" height="${bh}" fill="#d9d9d9"><title>Remaining: ${nf(r.boq-r.poured)} m³</title></rect>`}
+    if(!(r.boq>0))g+=`<text x="${lab+W-4}" y="${y+bh/2+4}" text-anchor="end" fill="#fff" font-weight="700">no BOQ set</text>`});
+  const ly=top+rows.length*(bh+gap)+8;let lx=lab;[...plants,'Remaining'].forEach(p=>{g+=`<rect x="${lx}" y="${ly}" width="10" height="10" fill="${p==='Remaining'?'#d9d9d9':col[p]}"/><text x="${lx+14}" y="${ly+9}" fill="#333">${esc(p)}</text>`;lx+=24+p.length*6.5});
+  return g+'</svg>'}
+function donut(parts,w=380,h=260){const cx=130,cy=h/2,R=95,r=55;const tot=parts.reduce((s,p)=>s+p.v,0)||1;let a=-Math.PI/2;let g=SVGH(w,h,'Volume by batch plant');
+  parts.forEach(p=>{if(!p.v)return;const a2=a+2*Math.PI*p.v/tot;const big=a2-a>Math.PI?1:0;const P=(ang,rr)=>[cx+rr*Math.cos(ang),cy+rr*Math.sin(ang)];
+    const[x1,y1]=P(a,R),[x2,y2]=P(a2,R),[x3,y3]=P(a2,r),[x4,y4]=P(a,r);
+    g+=p.v>=tot-1e-9?`<circle cx="${cx}" cy="${cy}" r="${(R+r)/2}" fill="none" stroke="${p.c}" stroke-width="${R-r}"/>`:`<path d="M${x1} ${y1}A${R} ${R} 0 ${big} 1 ${x2} ${y2}L${x3} ${y3}A${r} ${r} 0 ${big} 0 ${x4} ${y4}Z" fill="${p.c}" stroke="#fff" stroke-width="1.5"><title>${esc(p.n)}: ${nf(p.v)} m³</title></path>`;
+    const pc=p.v/tot*100;if(pc>=4){const[tx,ty]=P((a+a2)/2,(R+r)/2);g+=`<text x="${tx}" y="${ty+4}" text-anchor="middle" fill="#fff" font-weight="700">${pc.toFixed(0)}%</text>`}a=a2});
+  parts.forEach((p,i)=>{g+=`<rect x="${255}" y="${40+i*22}" width="12" height="12" fill="${p.c}"/><text x="${273}" y="${50+i*22}" fill="#222">${esc(p.n)} · ${(p.v/tot*100).toFixed(1)}%</text>`});
+  return g+'</svg>'}
+function cumLine(days,boq,w=560,h=260){const ml=60,mr=16,mt=16,mb=56,W=w-ml-mr,H=h-mt-mb;const n=days.length;if(!n)return'';const ymax=Math.max(days[n-1].c,boq||0)*1.08;
+  const X=i=>ml+(n<2?W/2:i*W/(n-1)),Y=v=>mt+H-v/ymax*H;let g=SVGH(w,h,'Cumulative poured');
+  for(const t of niceTicks(0,ymax,6))g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(t)}" y2="${Y(t)}" stroke="#000" stroke-opacity=".07"/><text x="${ml-6}" y="${Y(t)+4}" text-anchor="end" fill="#333">${nf(t)}</text>`;
+  const step=Math.max(1,Math.ceil(n/16));for(let i=0;i<n;i+=step)g+=`<text transform="translate(${X(i)+4} ${mt+H+8}) rotate(-90)" text-anchor="end" fill="#333" font-size="10">${dlab(days[i].d)}</text>`;
+  if(boq>0)g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(boq)}" y2="${Y(boq)}" stroke="#8a8a8a" stroke-width="2" stroke-dasharray="8 6"/><text x="${ml+W}" y="${Y(boq)-6}" text-anchor="end" fill="#555">BOQ ${nf(boq)} m³</text>`;
+  g+=`<path d="${days.map((d,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(d.c).toFixed(1)).join('')}" fill="none" stroke="#1f4d3a" stroke-width="2.6"/>`;
+  g+=`<circle cx="${X(n-1)}" cy="${Y(days[n-1].c)}" r="4" fill="#1f4d3a"/><text x="${X(n-1)-6}" y="${Y(days[n-1].c)-8}" text-anchor="end" fill="#1f4d3a" font-weight="700">${nf(days[n-1].c)} m³</text>`;
+  return g+'</svg>'}
+function weekBars(weeks,plants,col,w=560,h=260){const ml=56,mr=12,mt=16,mb=50,W=w-ml-mr,H=h-mt-mb;const n=weeks.length;if(!n)return'';const ymax=Math.max(...weeks.map(k=>k.t))*1.1||1;
+  const bw=W/n*0.68,X=i=>ml+W*(i+0.5)/n,Y=v=>mt+H-v/ymax*H;let g=SVGH(w,h,'Poured per week');
+  for(const t of niceTicks(0,ymax,6))g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(t)}" y2="${Y(t)}" stroke="#000" stroke-opacity=".07"/><text x="${ml-6}" y="${Y(t)+4}" text-anchor="end" fill="#333">${nf(t)}</text>`;
+  weeks.forEach((k,i)=>{let y0=0;plants.forEach(p=>{const v=k.by[p]||0;if(!v)return;g+=`<rect x="${X(i)-bw/2}" y="${Y(y0+v)}" width="${bw}" height="${Y(y0)-Y(y0+v)}" fill="${col[p]}"><title>${dlab(k.d)} · ${esc(p)}: ${nf(v)} m³</title></rect>`;y0+=v});
+    g+=`<text x="${X(i)}" y="${mt+H+14}" text-anchor="middle" fill="#333" font-size="10">${dlab(k.d)}</text>`});
+  let lx=ml;plants.forEach(p=>{g+=`<rect x="${lx}" y="${h-16}" width="10" height="10" fill="${col[p]}"/><text x="${lx+14}" y="${h-7}" fill="#333">${esc(p)}</text>`;lx+=24+p.length*6.5});
+  return g+'</svg>'}
+function mixBars(rows,key,{w=560,refs=[],title='',fmt=f1}){const ml=150,mr=40,mt=24,mb=26,bh=20,gap=12,H=Math.max(110,mt+rows.length*(bh+gap)+mb),W=w-ml-mr;
+  const vals=rows.map(r=>r[key]).concat(refs.map(r=>r.v)).concat(key==='mean'?rows.map(r=>r.mark):[]).filter(has);const lo=key==='mean'?Math.floor(Math.min(...vals)*0.95/10)*10:0,hi=Math.max(...vals)*1.06||1;const X=v=>ml+(v-lo)/(hi-lo)*W;
+  let g=SVGH(w,H,title);for(const t of niceTicks(lo,hi,5))g+=`<line x1="${X(t)}" x2="${X(t)}" y1="${mt-4}" y2="${H-mb}" stroke="#000" stroke-opacity=".07"/><text x="${X(t)}" y="${mt-8}" text-anchor="middle" fill="#333">${+t.toFixed(1)}</text>`;
+  for(const r of refs)g+=`<line x1="${X(r.v)}" x2="${X(r.v)}" y1="${mt-4}" y2="${H-mb}" stroke="${r.c}" stroke-dasharray="5 4" stroke-width="1.4"/><text x="${X(r.v)>ml+W-70?X(r.v)-3:X(r.v)+3}" text-anchor="${X(r.v)>ml+W-70?'end':'start'}" y="${H-mb+12}" fill="${r.c}" font-size="10">${r.t}</text>`;
+  rows.forEach((r,i)=>{const y=mt+i*(bh+gap);g+=`<text x="${ml-8}" y="${y+bh/2+4}" text-anchor="end" fill="#222" font-size="11">${esc(r.label)}</text>`;
+    if(has(r[key])){g+=`<rect x="${X(lo)}" y="${y}" width="${Math.max(1,X(r[key])-X(lo))}" height="${bh}" fill="${r.c}"/><text x="${X(r[key])+4}" y="${y+bh/2+4}" fill="#222" font-weight="700">${fmt(r[key])}</text>`;
+      if(key==='mean'&&has(r.mark))g+=`<line x1="${X(r.mark)}" x2="${X(r.mark)}" y1="${y-3}" y2="${y+bh+3}" stroke="#d32f2f" stroke-width="2.6"/><text x="${X(r.mark)-3}" y="${y+bh/2+4}" text-anchor="end" fill="#fff" font-size="10" font-weight="700">fcu ${f1(r.mark).replace('.0','')}</text>`}});
+  return g+'</svg>'}
+// ---- data
+function pourData(pl){const pours=(S.reg.pours||[]).filter(p=>pl==='All'||p.sup===pl);const B=boqOf();const{order,col}=plantColors();
+  const items=[...new Set((S.reg.pours||[]).map(p=>p.item))].sort((a,b)=>{const va=(S.reg.pours||[]).filter(p=>p.item===a).reduce((s,p)=>s+p.qty,0),vb=(S.reg.pours||[]).filter(p=>p.item===b).reduce((s,p)=>s+p.qty,0);return vb-va});
+  const plants=order.filter(s=>pours.some(p=>p.sup===s));
+  const rows=items.map(it=>{const b=B[it]||{};const ps=pours.filter(p=>p.item===it);const by={};ps.forEach(p=>by[p.sup]=(by[p.sup]||0)+p.qty);const poured=ps.reduce((s,p)=>s+p.qty,0);
+    return{item:it,name:b.name||it||'(no item)',ar:b.ar||'',no:b.no||'',boq:pl==='All'&&+b.qty>0?+b.qty:null,poured,by,cards:new Set(ps.map(p=>p.card||p.pour+p.qty)).size}});
+  const tot={poured:rows.reduce((s,r)=>s+r.poured,0),boq:rows.every(r=>r.boq>0)?rows.reduce((s,r)=>s+r.boq,0):rows.some(r=>r.boq>0)?rows.reduce((s,r)=>s+(r.boq||0),0):null};
+  const dmap=new Map();pours.forEach(p=>dmap.set(p.pour,(dmap.get(p.pour)||0)+p.qty));const dd=[...dmap.keys()].sort();let c=0;
+  const days=[];if(dd.length){for(let d=dd[0];d<=dd[dd.length-1];d=addDays(d,1)){c+=dmap.get(d)||0;days.push({d,c})}}
+  const wm=new Map();pours.forEach(p=>{const k=weekStart(p.pour);const o=wm.get(k)||{d:k,by:{},t:0};o.by[p.sup]=(o.by[p.sup]||0)+p.qty;o.t+=p.qty;wm.set(k,o)});
+  const weeks=[...wm.values()].sort((a,b)=>a.d<b.d?-1:1);
+  const cards=new Set(pours.map(p=>p.card||p.pour+'|'+p.qty)).size,pdays=dmap.size;
+  return{pours,rows,tot,days,weeks,plants,col,cards,pdays,items}}
+function vOverview(){const T=S.set,pl=S.dplant||'All',{order,col}=plantColors();
+  const P=pourData(pl);const hasQ=(S.reg.pours||[]).length>0;
+  const list=mixListX().filter(g=>pl==='All'||g.f.sup===pl),ok=list.filter(g=>g.ok);
+  const recs=S.reg.recs.filter(r=>(pl==='All'||r.sup===pl)&&hasResult(r));const below=ok.reduce((s,g)=>s+g.A.below.length,0),Nok=ok.reduce((s,g)=>s+g.A.N,0);
+  const title=S.set.title||S.reg.title||'Project';
+  let h=`<div class="ovd"><div class="band">${esc(title)} — Concrete Pouring &amp; Quality Dashboard<span>${esc(S.reg.file)} · ${S.reg.loaded}</span></div>
+   <div class="row" style="align-items:center;gap:10px;margin:10px 0"><b>Concrete batch plant ▸</b><select id="ov-plant" style="max-width:220px;background:#fff59d;font-weight:700"><option ${pl==='All'?'selected':''}>All</option>${order.map(s=>`<option ${pl===s?'selected':''} value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
+    <span class="sp"></span><button class="btn primary" id="d-xl">Export Excel</button></div>
+   <div class="otiles">
+    <div class="otile"><div class="l">Poured</div><div class="v">${hasQ?nf(P.tot.poured):'–'}</div><div class="s">m³ · ${pl==='All'?'all batch plants':esc(pl)}</div></div>
+    <div class="otile"><div class="l">Progress vs BOQ</div><div class="v">${P.tot.boq>0?(P.tot.poured/P.tot.boq*100).toFixed(1)+'%':'–'}</div><div class="s">${pl!=='All'?'select All to compare with BOQ':P.tot.boq>0?`of ${nf(P.tot.boq)} m³ contract`:'enter the BOQ quantities below'}</div></div>
+    <div class="otile"><div class="l">Pour cards</div><div class="v">${hasQ?P.cards:'–'}</div><div class="s">over ${P.pdays} pouring days</div></div>
+    <div class="otile q"><div class="l">28-day results</div><div class="v">${recs.length}</div><div class="s">samples tested · ${S.reg.recs.filter(r=>(pl==='All'||r.sup===pl)&&!hasResult(r)).length} awaiting</div></div>
+    <div class="otile q"><div class="l">Results ≥ fcu</div><div class="v" style="color:var(--${below?'warn':'ok'})">${Nok?((Nok-below)/Nok*100).toFixed(1)+'%':'–'}</div><div class="s">${below?below+' below fcu':'none below fcu'} · ${ok.length} mixes analysed</div></div>
+    <div class="otile q"><div class="l">Unstable mixes</div><div class="v" style="color:var(--${ok.some(g=>g.A.stab==='unstable')?'bad':'ok'})">${ok.filter(g=>g.A.stab==='unstable').length}</div><div class="s">of ${ok.filter(g=>g.A.stab!=='insufficient').length} with ≥ ${T.minSPC} samples</div></div></div>`;
+  if(!hasQ)h+=`<div class="insuf" style="margin-top:10px"><b>No quantities read.</b> Load the register again from the Register tab and check that the Quantity (m³) column is matched.</div>`;
+  else{
+    h+=`<div class="ogrid"><div class="opanel"><div class="ot">BOQ tracking — <span dir="rtl">مقارنة المصبوب مع المقايسة</span></div><div class="tw"><table class="xt"><thead><tr><th>Element</th><th>العنصر</th><th>BOQ item</th><th class="n">BOQ m³</th><th class="n">Poured m³</th><th class="n">Remaining m³</th><th style="min-width:110px">Progress</th></tr></thead><tbody>
+      ${P.rows.map(r=>{const pr=r.boq>0?r.poured/r.boq*100:null;return`<tr><td>${esc(r.name)}</td><td dir="rtl">${esc(r.ar)}</td><td>${esc(r.no)}</td><td class="n">${r.boq>0?nf(r.boq):'–'}</td><td class="n">${nf(r.poured)}</td><td class="n">${r.boq>0?nf(r.boq-r.poured):'–'}</td><td>${has(pr)?`<div class="pbar"><div style="width:${Math.min(100,pr).toFixed(1)}%"></div><span>${pr.toFixed(1)}%</span></div>`:'<span class="muted">–</span>'}</td></tr>`}).join('')}
+      <tr class="tot"><td>Total</td><td dir="rtl">الإجمالي</td><td></td><td class="n">${P.tot.boq>0?nf(P.tot.boq):'–'}</td><td class="n">${nf(P.tot.poured)}</td><td class="n">${P.tot.boq>0?nf(P.tot.boq-P.tot.poured):'–'}</td><td class="n">${P.tot.boq>0?(P.tot.poured/P.tot.boq*100).toFixed(1)+'%':'–'}</td></tr></tbody></table></div>
+      <details class="boqed" ${P.rows.every(r=>!(r.boq>0))&&pl==='All'?'open':''}><summary>Edit BOQ quantities</summary><div class="tw"><table><thead><tr><th>Register item</th><th>Element name</th><th>العنصر</th><th>BOQ item</th><th>BOQ m³</th></tr></thead><tbody>
+       ${P.items.map((it,i)=>{const b=boqOf()[it]||{};return`<tr><td class="muted">${esc(it||'(no item)')}</td><td><input type="text" id="bq-n-${i}" value="${esc(b.name||'')}" placeholder="${esc(it)}"></td><td><input type="text" dir="rtl" id="bq-a-${i}" value="${esc(b.ar||'')}"></td><td><input type="text" id="bq-no-${i}" value="${esc(b.no||'')}" style="max-width:90px"></td><td><input type="number" id="bq-q-${i}" value="${esc(b.qty||'')}" style="max-width:120px"></td></tr>`}).join('')}</tbody></table></div>
+       <div class="row" style="margin-top:8px"><button class="btn primary" id="bq-save">Save BOQ</button><span class="muted small">Saved for “${esc(title)}”.</span></div></details></div>
+     <div class="opanel"><div class="ot" dir="rtl">كميات الخرسانة من كل محطة</div><div class="tw"><table class="xt"><thead><tr><th>Station</th>${P.rows.map(r=>`<th class="n">${esc(r.name)}</th>`).join('')}<th class="n">Total</th><th class="n">Share</th></tr></thead><tbody>
+      ${P.plants.map(s=>{const t=P.rows.reduce((a,r)=>a+(r.by[s]||0),0);return`<tr><td><span class="st" style="background:${col[s]}">${esc(s)}</span></td>${P.rows.map(r=>`<td class="n">${r.by[s]?nf(r.by[s]):'–'}</td>`).join('')}<td class="n"><b>${nf(t)}</b></td><td class="n">${(t/P.tot.poured*100).toFixed(1)}%</td></tr>`}).join('')}
+      <tr class="tot"><td>Total</td>${P.rows.map(r=>`<td class="n">${nf(r.poured)}</td>`).join('')}<td class="n">${nf(P.tot.poured)}</td><td class="n">100.0%</td></tr></tbody></table></div></div></div>
+    <div class="ogrid"><div class="ochart"><div class="ct">Poured vs BOQ</div>${hStack(P.rows,P.plants,P.col)}</div>
+     <div class="ochart"><div class="ct">Volume by batch plant</div>${donut(P.plants.map(s=>({n:s,c:P.col[s],v:P.rows.reduce((a,r)=>a+(r.by[s]||0),0)})))}</div></div>
+    <div class="ogrid"><div class="ochart"><div class="ct">Cumulative poured (m³)</div>${cumLine(P.days,pl==='All'?P.tot.boq:null)}</div>
+     <div class="ochart"><div class="ct">Poured per week (m³)</div>${weekBars(P.weeks,P.plants,P.col)}</div></div>`}
+  // ---- quality block
+  h+=`<div class="band b2">Concrete quality — 28-day cube strength <span dir="rtl">جودة الخرسانة — نتائج مكعبات 28 يوم</span></div>`;
+  if(!ok.length)h+=insuf(Math.max(0,...list.map(g=>g.A.N)),T.minDesc,'The quality summary');
+  else{const ev=supplierEval(mixListX());const rate=s=>{const e=ev.find(e=>e.sup===s);return!e?'':e.insuf?chip('Insufficient','na'):chip(e.rate[1]+' · '+e.rate[2],e.rate[3])};
+    h+=`<div class="tw" style="margin-top:8px"><table class="xt"><thead><tr><th>Plant</th><th>Grade</th><th>Mix</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP</th><th class="n">&lt; fcu</th><th>Stability</th><th class="n">Cpk</th><th class="n">Sigma</th><th>Plant rating</th></tr></thead><tbody>
+     ${list.map(g=>{const a=g.A;if(!g.ok)return`<tr class="out2"><td><span class="st" style="background:${col[g.f.sup]||'#999'}">${esc(g.f.sup)}</span></td><td>${esc(g.f.grade)}</td><td>${esc(g.f.mix||'–')}</td><td class="n">${a.N}</td><td colspan="9" class="muted">Insufficient Data (needs ${T.minDesc} samples)</td></tr>`;const l=ecpLevel(a.cv);const un=a.stab==='unstable';
+       return`<tr><td><span class="st" style="background:${col[g.f.sup]||'#999'}">${esc(g.f.sup)}</span></td><td>${esc(g.f.grade)}</td><td>${esc(g.f.mix||'–')}</td><td class="n">${a.N}</td><td class="n">${f1(a.mean)}</td><td class="n">${f2(a.sd)}</td><td class="n">${f2(a.cv)}</td><td>${a.N>=T.minECP?chip(ECPN[l],ECPC[l]):chip('–','na')}</td><td class="n">${a.below.length}</td><td>${chip(STABN[a.stab].replace(' Process','').replace('Potential Special Causes Detected','Signals').replace('Insufficient Data','N < '+T.minSPC),STABC[a.stab])}</td>
+        <td class="n">${a.N<T.minCap?'–':un?'<span class="muted">not assessed</span>':f2(a.Cpk)}</td><td class="n">${a.N<T.minCap?'–':un?'<span class="muted">not assessed</span>':sig1(a.sigma)}</td><td>${rate(g.f.sup)}</td></tr>`}).join('')}</tbody></table></div>`;
+    const mr=ok.map(g=>({label:`${g.f.sup} · ${g.f.grade} · ${g.f.mix||''}`,mean:g.A.mean,cv:g.A.cv,mark:g.A.fcu,c:col[g.f.sup]||'#999'}));
+    h+=`<div class="ogrid"><div class="ochart"><div class="ct">Mean 28-day strength vs fcu (${U()})</div>${mixBars(mr,'mean',{title:'Mean strength',refs:[]})}<div class="muted small" style="text-align:center">Red tick = fcu of the mix</div></div>
+     <div class="ochart"><div class="ct">CV % by mix vs ECP 203 levels</div>${mixBars(mr,'cv',{title:'CV',fmt:f2,refs:[{v:T.ecp[0],c:'#2e8b3e',t:'Excellent < '+T.ecp[0]},{v:T.ecp[1],c:'#c77700',t:'Very good < '+T.ecp[1]}]})}</div></div>
+     <p class="note">Statistics per plant and mix (never pooled). Cpk and sigma are not assessed while a mix is unstable. Plant rating from the Supplier Evaluation tab.</p>`}
+  return h+`</div>`}
 /* ================= views ================= */
 function vReg(){
   let h=`<div class="card"><h2>Load the concrete pouring register</h2><div class="drop" id="drop"><p style="margin:0 0 10px">Excel (.xlsx) or CSV, from any project. The app finds the 28-day cube strengths itself; you check what it found before the analysis.</p>
@@ -1283,7 +1421,7 @@ function vReg(){
     const cubeTxt=m.c1>=0?(m.layout==='long'?`column ${colName(m.c1)}, one row per cube (${B.n} per sample)`:`${colName(m.c1)}${m.n>1?'–'+colName(m.c1+m.n-1):''} (${m.n} cube${m.n>1?'s':''} per sample)`):m.avg>=0?`average only, column ${colName(m.avg)}`:'<b style="color:var(--bad)">not found: set it below</b>';
     const found=[['28-day strengths',cubeTxt+(m.c1>=0&&m.avg>=0?` · checked against average column ${colName(m.avg)}`:'')+` · ${m.unit==='mpa'?'N/mm²':'kg/cm²'}`,m.c1>=0||m.avg>=0],
       ['Sample ID',m.id>=0?lbl(m.id):'not found: row numbers used',m.id>=0],['Pouring date',m.pour>=0?lbl(m.pour):'<b style="color:var(--bad)">not found: set it below</b>',m.pour>=0],
-      ['Supplier / plant',lbl(m.sup)||'not found',m.sup>=0],['Grade',lbl(m.grade)||'not found: enter fcu in the report settings',m.grade>=0],['Mix ID',lbl(m.mix)||'not found',m.mix>=0],['Cement',lbl(m.cem)||'not found',m.cem>=0],['Item',lbl(m.item)||'not found',m.item>=0]];
+      ['Supplier / plant',lbl(m.sup)||'not found',m.sup>=0],['Grade',lbl(m.grade)||'not found: enter fcu in the report settings',m.grade>=0],['Mix ID',lbl(m.mix)||'not found',m.mix>=0],['Cement',lbl(m.cem)||'not found',m.cem>=0],['Item',lbl(m.item)||'not found',m.item>=0],['Quantity (m³)',m.qty>=0?lbl(m.qty)+` · ${(B.pours||[]).length} pours, ${Math.round((B.pours||[]).reduce((s,x)=>s+x.qty,0)).toLocaleString('en-US')} m³`:'not found: the pouring dashboard needs it',m.qty>=0],['Pour card no.',lbl(m.card)||'not found',m.card>=0]];
     if(m.age>=0)found.splice(1,0,['Test age',`column ${lbl(m.age)}, rows with ${m.ageVal} days`,true]);
     const prev=B.recs.filter(r=>B.mode==='cubes'?r.c.some(v=>v!=null):r.avg!=null).slice(0,6);
     h+=`<div class="card"><h2>What the app found in ${esc(p.file)}</h2>
@@ -1311,7 +1449,7 @@ function vReg(){
        <span class="req">Date of pouring</span>${opt('pour',m.pour)}
        <span>Sample / set ID</span>${opt('id',m.id)}
        <span>Supplier / plant</span>${opt('sup',m.sup)}<span>Item (PC, RC…)</span>${opt('item',m.item)}<span>Concrete grade</span>${opt('grade',m.grade)}
-       <span>Mix ID</span>${opt('mix',m.mix)}<span>Cement type</span>${opt('cem',m.cem)}<span>Element / description</span>${opt('el',m.el)}</div>
+       <span>Mix ID</span>${opt('mix',m.mix)}<span>Cement type</span>${opt('cem',m.cem)}<span>Element / description</span>${opt('el',m.el)}<span>Quantity (m³)</span>${opt('qty',m.qty)}<span>Pour card no.</span>${opt('card',m.card)}</div>
       <p class="note">The app remembers these columns for this layout, so the next update of the same register opens straight away.</p></details></div>`}
   if(S.reg&&!pending){const f=curFilt(),D=dataset(f);
     h+=`<div class="card"><h2>Samples in the selected group (${D.rows.length})</h2><p class="note">Tap a row to exclude it from the analysis or bring it back. Rows the app excluded automatically show the reason.</p>
@@ -1402,7 +1540,7 @@ function overview(list,sel=[]){
   return h+`</section></div>`}
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tab));
-  $('#app').innerHTML=S.tab==='reg'?vReg():S.tab==='dash'?vDash():vRep();
+  $('#app').innerHTML=S.tab==='reg'?vReg():S.tab==='dash'?vDash():vRep();$('#app').style.maxWidth=S.tab==='dash'&&S.dtab==='ov'?'1440px':'';
   $('#hdrSub').textContent=S.reg?(S.set.title||S.reg.title||S.reg.file):'28-day cube strength analysis · ECP 203-2020';
   bind()}
 function bind(){
