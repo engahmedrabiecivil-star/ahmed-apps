@@ -22,6 +22,17 @@ ipcMain.handle('print-pdf', async (event, name) => {
   return '';
 });
 
+ipcMain.handle('save-file', async (event, { name, b64 }) => {
+  const base = String(name || 'Concrete SPC.xlsx').replace(/[\\/:*?"<>|]/g, '_');
+  const ext = path.extname(base), stem = base.slice(0, base.length - ext.length);
+  let target = path.join(outDir(), base);
+  for (let i = 1; i <= 50; i++) {
+    try { fs.writeFileSync(target, Buffer.from(b64, 'base64')); shell.openPath(target); return target; }
+    catch (e) { target = path.join(outDir(), `${stem} (${i})${ext}`); } // the file is open in Excel
+  }
+  return '';
+});
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   win = new BrowserWindow({

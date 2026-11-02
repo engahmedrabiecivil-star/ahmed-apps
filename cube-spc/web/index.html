@@ -98,7 +98,33 @@ section.sec>h2{border-bottom:2px solid var(--accent);padding-bottom:4px;color:va
 tr.pick{cursor:pointer}tr.pick:hover td,tr.pick:focus-visible td{background:var(--accent-soft)}tr.out2 td{color:var(--muted)}tr.gh td{background:var(--soft);border-top:2px solid var(--line)}
 .ovt td,.ovt th{padding:5px 7px}
 
-@media (max-width:560px){.map{grid-template-columns:1fr}.big{font-size:32px}.rep{padding:12px}}
+
+/* ---------- dashboard ---------- */
+.dhead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.crumb{font-size:12px;color:var(--muted)}
+.dt{font-size:24px;margin:2px 0;letter-spacing:-.2px}
+.mono{font-family:var(--num);font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.tile .l{font-size:12px;color:var(--muted)}.tile .v{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}.tile .v small{font-size:14px;font-weight:600;color:var(--muted)}.tile .s{font-size:11px;color:var(--muted);font-family:var(--num)}
+nav.stabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:-4px 0 12px;overflow-x:auto}
+nav.stabs button{border:0;background:none;padding:10px 14px;font:600 13px var(--ui);color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+nav.stabs button.on{color:var(--fg);border-bottom-color:var(--fg)}
+.ctsel{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+.cbtn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 12px;font:600 12px var(--num);cursor:pointer;color:var(--fg)}
+.cbtn.on{background:var(--fg);color:var(--surface);border-color:var(--fg)}
+.mcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.mcard{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px;cursor:pointer;font:inherit;color:inherit;min-width:0}
+.mcard.on{border:2px solid var(--fg);padding:11px}.mcard.oocb{border-color:#e57373}.mcard.oocb.on{border-color:var(--bad)}.mcard.grey{background:var(--soft)}
+.mcard .mt{margin-top:6px;overflow-wrap:anywhere}
+.tag{border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:11px;margin-left:4px}
+.dot{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}.dot::before{content:"● "}
+.dot.ok{background:var(--ok-soft);color:var(--ok)}.dot.bad{background:var(--bad-soft);color:var(--bad)}.dot.warn{background:var(--warn-soft);color:var(--warn)}
+.sel{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px;min-width:0}
+.spec{border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:12px;background:var(--soft)}
+tr.hit td{background:var(--hl);font-weight:700}
+table.sig tr.hit td{outline:2px solid #d32f2f;outline-offset:-2px}
+@media (max-width:560px){.chart{overflow-x:auto;-webkit-overflow-scrolling:touch}.chart>svg{min-width:600px}.dt{font-size:20px}.tile .v{font-size:24px}.map{grid-template-columns:1fr}.big{font-size:32px}.rep{padding:12px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media print{
   @page{size:A4 portrait;margin:10mm}
@@ -115,7 +141,7 @@ tr.pick{cursor:pointer}tr.pick:hover td,tr.pick:focus-visible td{background:var(
 <header class="top">
   <div><h1>Concrete SPC</h1><div class="sub" id="hdrSub">28-day cube strength analysis · ECP 203-2020</div></div>
   <span class="sp"></span>
-  <nav class="tabs" id="tabs"><button data-t="reg">Register</button><button data-t="rep">Report</button></nav>
+  <nav class="tabs" id="tabs"><button data-t="reg">Register</button><button data-t="dash">Dashboard</button><button data-t="rep">Report</button></nav>
 </header>
 <main id="app"></main>
 <div class="toast" id="toast" hidden></div>
@@ -163,14 +189,13 @@ function andersonDarling(a){const n=a.length;if(n<8)return null;const m=ST.mean(
   return{A2:A,p:Math.min(Math.max(p,0),1)}}
 function linreg(y){const n=y.length,x=y.map((_,i)=>i+1),mx=ST.mean(x),my=ST.mean(y);let sxx=0,sxy=0;for(let i=0;i<n;i++){sxx+=(x[i]-mx)**2;sxy+=(x[i]-mx)*(y[i]-my)}
   const b=sxy/sxx,a=my-b*mx;let sse=0;for(let i=0;i<n;i++)sse+=(y[i]-a-b*x[i])**2;const se=Math.sqrt(sse/(n-2)/sxx);const t=b/se;return{a,b,t,p:n>2&&se>0?tTwoSided(t,n-2):1}}
-const CONST={2:{A2:1.880,D3:0,D4:3.267,d2:1.128},3:{A2:1.023,D3:0,D4:2.574,d2:1.693},4:{A2:0.729,D3:0,D4:2.282,d2:2.059},5:{A2:0.577,D3:0,D4:2.114,d2:2.326},6:{A2:0.483,D3:0,D4:2.004,d2:2.534}};
 
 /* ================= storage ================= */
-const DEF={v:2,minDesc:10,minECP:10,finalECP:30,minSPC:20,minCap:25,minSup:10,minTrend:20,
-  ecp:[8,11,14,17],rules:'all',usl:'',fcuOv:'',lslOv:'',title:'',autoTypo:true,spreadPct:20,binW:''};
-let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{},pick:{sup:'*',grade:'*',mix:'*'}};
-function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.pick=r.pick||{sup:'*',grade:'*',mix:'*'};S.set={...DEF,...r.set};if(!r.set||r.set.v!==2){S.set.v=2;S.set.minDesc=Math.max(10,S.set.minDesc);S.set.minECP=Math.max(10,Math.min(S.set.minECP,10))}S.ov=r.ov||{}}}catch(e){}}
-function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,pick:S.pick,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
+const DEF={v:3,chart:'auto',defect:'result',cubeLim:'',shift:true,g:{cp:[1,1.5],cpk:[1,1.33],pp:[1,1.5],ppk:[1,1.5],si:[1.33,1.67],ti:[0.5,1.0]},minDesc:10,minECP:10,finalECP:30,minSPC:20,minCap:25,minSup:10,minTrend:20,
+  ecp:[8,11,14,17],rules:'minitab8',title:'',autoTypo:true,spreadPct:20,binW:''};
+let S={reg:null,set:{...DEF},ov:{},filt:null,tab:'reg',projs:{},profiles:{},pick:{sup:'*',grade:'*',mix:'*'},specs:{},dtab:'mon',dsel:''};
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){S={...S,...r};S.pick=r.pick||{sup:'*',grade:'*',mix:'*'};S.set={...DEF,...r.set};if(!r.set||r.set.v<2){S.set.minDesc=Math.max(10,S.set.minDesc);S.set.minECP=Math.max(10,Math.min(S.set.minECP,10))}if(!r.set||r.set.v<3){S.set.v=3;S.set.rules='minitab8';S.set.g=JSON.parse(JSON.stringify(DEF.g))}S.set.g={...DEF.g,...S.set.g};if(!TSETS[S.set.rules])S.set.rules='minitab8';S.specs=r.specs||{};S.dtab=r.dtab||'mon';S.dsel=r.dsel||'';S.ov=r.ov||{}}}catch(e){}}
+function save(){try{stash();localStorage.setItem(KEY,JSON.stringify({reg:S.reg,set:S.set,ov:S.ov,filt:S.filt,tab:S.tab,pick:S.pick,specs:S.specs,dtab:S.dtab,dsel:S.dsel,projs:S.projs,profiles:S.profiles}))}catch(e){toast('Could not save on this device. The analysis still works until you close the app.')}}
 
 /* ================= reading files ================= */
 async function readXlsx(buf){
@@ -386,9 +411,9 @@ function doImport(){
   pending=null;stash();save();
   const withRes=B.recs.filter(hasResult).length;
   toast(`${B.recs.length} samples read · ${withRes} have 28-day results`+(B.skip.noDate?` · ${B.skip.noDate} rows skipped (no pour date)`:''));
-  S.tab='rep';render();scrollTo(0,0)}
+  S.tab='dash';render();scrollTo(0,0)}
 function stash(){if(!S.reg)return;S.projs=S.projs||{};S.projs[S.reg.title]={reg:S.reg,filt:S.filt,ov:S.ov}}
-function switchProj(t){stash();const p=S.projs[t];if(!p)return;S.reg=p.reg;S.filt=p.filt;S.ov=p.ov||{};S.set.title=t;S.set.fcuOv='';save();render()}
+function switchProj(t){stash();const p=S.projs[t];if(!p)return;S.reg=p.reg;S.filt=p.filt;S.ov=p.ov||{};S.set.title=t;S.dsel='';save();render()}
 const hasResult=r=>S.reg.mode==='cubes'?r.c.some(v=>v!=null):r.avg!=null;
 const hasResultB=r=>pending&&pending.built.mode==='cubes'?r.c.some(v=>v!=null):r.avg!=null;
 const U=()=>S.reg&&S.reg.unit==='mpa'?'N/mm²':'kg/cm²';
@@ -402,7 +427,6 @@ function groups(){const g=new Map();for(const r of S.reg.recs){if(!hasResult(r))
 function curFilt(){if(S.filt&&!S.reg.recs.some(r=>hasResult(r)&&match(r,S.filt)))S.filt=null;if(!S.filt){const g=groups()[0];S.filt={...(g?g.f:{}),from:'',to:''}}return S.filt}
 function match(r,f,skip=[]){for(const k of FK){if(skip.includes(k))continue;if(f[k]!=='*'&&f[k]!=null&&r[k]!==f[k])return false}
   if(f.from&&r.pour<f.from)return false;if(f.to&&r.pour>f.to)return false;return true}
-function fcuOf(f){if(S.set.fcuOv!=='')return +S.set.fcuOv;const m=String(f.grade||'').match(/(\d+(\.\d+)?)/);if(!m)return NaN;const v=+m[1];return U()==='N/mm²'?(v>=100?v/10:v):(v<100?v*10:v)}
 function classify(r,fcu){
   // returns {use:true/false, why, flags:[]}
   const flags=[];let x,R=null;
@@ -410,133 +434,340 @@ function classify(r,fcu){
     const c=r.c;const got=c.filter(v=>v!=null);
     if(!got.length)return{skip:true};
     if(got.length<S.reg.n)return{use:false,why:`incomplete set (${got.length} of ${S.reg.n} cubes)`,x:ST.mean(got),R:null,flags};
-    x=ST.mean(got);R=Math.max(...got)-Math.min(...got);
+    x=ST.mean(got);R=Math.max(...got)-Math.min(...got);var Sd=got.length>1?ST.sd(got):0;
     if(S.set.autoTypo&&isFinite(fcu)&&got.some(v=>v<0.3*fcu||v>3*fcu))return{use:false,why:'cube entry looks mistyped',x,R,flags,auto:true};
     if(r.avg!=null&&Math.abs(r.avg-x)>0.02*x)flags.push(`register average ${r.avg.toFixed(1)} ≠ cubes average ${x.toFixed(1)}`);
     if(R>S.set.spreadPct/100*x)flags.push(`wide spread in set (range ${R.toFixed(0)})`);
   }else{if(r.avg==null)return{skip:true};x=r.avg;if(S.set.autoTypo&&isFinite(fcu)&&(x<0.3*fcu||x>3*fcu))return{use:false,why:'result looks mistyped',x,R,flags,auto:true}}
-  return{use:true,x,R,flags}}
+  return{use:true,x,R,S:typeof Sd==='number'?Sd:null,flags}}
 function dataset(f,skip=[]){
   const fcu=fcuOf(f);const rows=[];const excl=[],flag=[];let pendingN=0;
   const list=S.reg.recs.filter(r=>match(r,f,skip)).sort((a,b)=>a.pour<b.pour?-1:a.pour>b.pour?1:a.r-b.r);
   for(const r of list){const c=classify(r,fcu);if(c.skip){pendingN++;continue}
     let use=c.use;const ov=S.ov[r.id];let why=c.why;if(ov==='out'){use=false;why='excluded by you'}else if(ov==='in'&&!c.use&&c.x!=null&&(S.reg.mode!=='cubes'||c.R!=null)){use=true;why=''}
-    const o={...r,x:c.x,R:c.R,use,why,flags:c.flags};rows.push(o);if(!use)excl.push(o);else if(c.flags.length)flag.push(o)}
-  return{fcu,rows,used:rows.filter(o=>o.use),excl,flag,pendingN}}
+    const o={...r,x:c.x,R:c.R,S:c.S??(c.x!=null&&r.c.filter(v=>v!=null).length>1?ST.sd(r.c.filter(v=>v!=null)):null),use,why,flags:c.flags};rows.push(o);if(!use)excl.push(o);else if(c.flags.length)flag.push(o)}
+  return{f,fcu,rows,used:rows.filter(o=>o.use),excl,flag,pendingN}}
+
+/* ================= control chart constants (SPC Formulas and Tables, H. B. Rowe) ================= */
+// X̄-R: [A2, D3, D4, d2] for n = 2..10
+const XR={2:[1.880,0,3.267,1.128],3:[1.023,0,2.574,1.693],4:[0.729,0,2.282,2.059],5:[0.577,0,2.115,2.326],6:[0.483,0,2.004,2.534],7:[0.419,0.076,1.924,2.704],8:[0.373,0.136,1.864,2.847],9:[0.337,0.184,1.816,2.970],10:[0.308,0.223,1.777,3.078]};
+// X̄-S: [c4, A3, B3, B4]; n = 8..25 from the table, n < 8 standard values, n > 25 from the approximation formulas
+const XS={2:[0.7979,2.659,0,3.267],3:[0.8862,1.954,0,2.568],4:[0.9213,1.628,0,2.266],5:[0.9400,1.427,0,2.089],6:[0.9515,1.287,0.030,1.970],7:[0.9594,1.182,0.118,1.882],
+  8:[0.9650,1.099,0.185,1.815],9:[0.9693,1.032,0.239,1.761],10:[0.9727,0.975,0.284,1.716],11:[0.9754,0.927,0.321,1.679],12:[0.9776,0.886,0.354,1.646],13:[0.9794,0.850,0.382,1.618],14:[0.9810,0.817,0.406,1.594],15:[0.9823,0.789,0.428,1.572],
+  16:[0.9835,0.763,0.448,1.552],17:[0.9845,0.739,0.466,1.534],18:[0.9854,0.718,0.482,1.518],19:[0.9862,0.698,0.497,1.503],20:[0.9869,0.680,0.510,1.490],21:[0.9876,0.663,0.523,1.477],22:[0.9882,0.647,0.534,1.466],23:[0.9887,0.633,0.545,1.455],24:[0.9892,0.619,0.555,1.445],25:[0.9896,0.606,0.565,1.435]};
+function xsConst(n){if(XS[n])return XS[n];const c4=4*(n-1)/(4*n-3),q=c4*Math.sqrt(2*(n-1));return[c4,3/(c4*Math.sqrt(n)),Math.max(0,1-3/q),1+3/q]}
+const CTN={xr:'X̄-R',xs:'X̄-S',imr:'I-MR'};
+function chartType(n){let c=S.set.chart||'auto';if(n<2)return'imr';if(c==='auto')c=n<10?'xr':'xs';if(c==='xr'&&!XR[n])c='xs';return c}
+
+/* ================= special-cause tests (Minitab tests 1-8, TQM L5; WECO rules, SPC Formulas p.6) ================= */
+const TESTS={1:'1 point more than 3σ from the centre line',2:'K points in a row on the same side of the centre line',3:'K points in a row, all increasing or all decreasing',4:'K points in a row, alternating up and down',
+  5:'K out of K+1 points more than 2σ from the centre line (same side)',6:'K out of K+1 points more than 1σ from the centre line (same side)',7:'K points in a row within 1σ of the centre line (either side)',8:'K points in a row more than 1σ from the centre line (either side)'};
+const TEST_K={1:3,2:9,3:6,4:14,5:2,6:4,7:15,8:8};
+const TSETS={minitab8:{name:'Nelson / Minitab 8 tests',tests:[1,2,3,4,5,6,7,8],k:{}},weco:{name:'Western Electric (WECO) rules',tests:[1,2,5,6],k:{2:8}},r1:{name:'Test 1 only',tests:[1],k:{}}};
+const TSHORT={1:'beyond 3σ',2:'run on one side',3:'trend up/down',4:'alternating',5:'2 of 3 beyond 2σ',6:'4 of 5 beyond 1σ',7:'hugging the centre line',8:'mixture (8 beyond 1σ)'};
+function tk(t){const s=TSETS[S.set.rules]||TSETS.minitab8;return s.k[t]??TEST_K[t]}
+function tdesc(t){return TESTS[t].replace('K out of K+1',`${tk(t)} out of ${tk(t)+1}`).replace(/^K /,tk(t)+' ')}
+function runTests(x,cl,s,ucl,lcl,list){
+  const hits={};const add=(t,i)=>{(hits[t]=hits[t]||[]).push(i)};const N=x.length;const side=v=>v>cl?1:v<cl?-1:0;
+  for(const t of list){const K=tk(t);
+    if(t===1)x.forEach((v,i)=>{if(v==null)return;if(v>ucl+1e-9||(lcl!=null&&v<lcl-1e-9))add(1,i)});
+    if(t===2){let run=0,prev=0;x.forEach((v,i)=>{const sd=side(v);run=sd&&sd===prev?run+1:sd?1:0;prev=sd;if(run>=K)add(2,i)})}
+    if(t===3){let up=1,dn=1;for(let i=1;i<N;i++){up=x[i]>x[i-1]?up+1:1;dn=x[i]<x[i-1]?dn+1:1;if(up>=K||dn>=K)add(3,i)}}
+    if(t===4){let pts=1,pd=0;for(let i=1;i<N;i++){const d=Math.sign(x[i]-x[i-1]);if(d===0){pts=1;pd=0;continue}pts=pd&&d===-pd?pts+1:2;pd=d;if(pts>=K)add(4,i)}}
+    if(t===5||t===6){const z=t===5?2:1;for(let i=K;i<N;i++){for(const sg of[1,-1]){if((x[i]-cl)*sg<=z*s)continue;let c=0;for(let j=i-K;j<=i;j++)if((x[j]-cl)*sg>z*s)c++;if(c>=K){add(t,i);break}}}}
+    if(t===7){let run=0;x.forEach((v,i)=>{run=Math.abs(v-cl)<s?run+1:0;if(run>=K)add(7,i)})}
+    if(t===8){let run=0;x.forEach((v,i)=>{run=Math.abs(v-cl)>s?run+1:0;if(run>=K)add(8,i)})}}
+  return hits}
+
+/* ================= specification limits (per mix, from the code / project) ================= */
+const mkey=f=>[f.sup,f.grade,f.mix,f.cem].join('|');
+function gradeFcu(g){const m=String(g||'').match(/(\d+(\.\d+)?)/);if(!m)return NaN;const v=+m[1];return U()==='N/mm²'?(v>=100?v/10:v):(v<100?v*10:v)}
+function specOf(f){const sp=(S.specs||{});const s=sp[mkey(f)]||sp['grade:'+f.grade]||{};const has=v=>v!==''&&v!=null&&isFinite(+v);
+  const gf=gradeFcu(f.grade);const fcu=has(s.fcu)?+s.fcu:gf;
+  return{fcu,lsl:has(s.lsl)?+s.lsl:fcu,usl:has(s.usl)?+s.usl:null,tgt:has(s.tgt)?+s.tgt:null,src:s.src||'',confirmed:!!s.saved,level:sp[mkey(f)]?'mix':sp['grade:'+f.grade]?'grade':'default',lslIsFcu:!has(s.lsl),fcuFromGrade:!has(s.fcu)}}
+function fcuOf(f){return specOf(f).fcu}
 
 /* ================= analysis ================= */
+const has=v=>v!=null&&isFinite(v);
 function analyze(D){
-  const T=S.set,u=D.used,N=u.length,x=u.map(o=>o.x);const A={N,fcu:D.fcu};
-  A.lsl=T.lslOv!==''?+T.lslOv:D.fcu;A.usl=T.usl!==''?+T.usl:null;
+  const T=S.set,u=D.used,N=u.length,x=u.map(o=>o.x),sp=specOf(D.f||{});
+  const A={N,fcu:sp.fcu,sp,lsl:sp.lsl,usl:sp.usl,tgt:sp.tgt};
   if(N>=2){A.mean=ST.mean(x);A.sd=ST.sd(x);A.cv=A.sd/A.mean*100;A.min=Math.min(...x);A.max=Math.max(...x);A.median=ST.median(x);
-    A.below=u.filter(o=>o.x<D.fcu);A.margin=A.mean-D.fcu}
-  // control chart
-  const n=S.reg.mode==='cubes'?S.reg.n:1;A.n=n;
-  if(N>=2){
-    if(n>=2){const K=CONST[n];const r=u.map(o=>o.R);A.Rbar=ST.mean(r);A.cl=A.mean;A.ucl=A.mean+K.A2*A.Rbar;A.lcl=A.mean-K.A2*A.Rbar;A.uclR=K.D4*A.Rbar;A.lclR=K.D3*A.Rbar;
-      A.sigInd=A.Rbar/K.d2;A.sigW=A.sigInd/Math.sqrt(n);A.K=K;A.rSeries=r;A.rName='Range';}
-    else{const mr=x.slice(1).map((v,i)=>Math.abs(v-x[i]));A.Rbar=ST.mean(mr);A.cl=A.mean;A.ucl=A.mean+2.66*A.Rbar;A.lcl=A.mean-2.66*A.Rbar;A.uclR=3.267*A.Rbar;A.lclR=0;
-      A.sigW=A.Rbar/1.128;A.rSeries=[null,...mr];A.rName='Moving range';A.K={A2:2.66,D3:0,D4:3.267,d2:1.128}}}
-  // stability
-  A.viol=[];A.flagX=new Set();A.flagR=new Set();A.out1=new Set();
-  if(N>=2&&A.sigW>0){const s=(A.ucl-A.cl)/3,cl=A.cl;const side=v=>v>cl?1:v<cl?-1:0;
-    const add=(rule,idx,chart='X')=>{(chart==='X'?A.flagX:A.flagR).add(idx);let v=A.viol.find(z=>z.rule===rule);if(!v)A.viol.push(v={rule,idx:new Set()});v.idx.add(idx)};
-    x.forEach((v,i)=>{if(v>A.ucl||v<A.lcl){add('Rule 1 – point beyond the 3σ control limits (X̄ chart)',i);A.out1.add(i)}});
-    if(T.rules==='all'){
-    let run=0,prev=0;x.forEach((v,i)=>{const sd=side(v);if(sd&&sd===prev)run++;else run=sd?1:0;prev=sd;if(run>=9)for(let j=i-8;j<=i;j++)add('Rule 2 – 9 points in a row on one side of the centre line',j)});
-    let up=1,dn=1;for(let i=1;i<N;i++){up=x[i]>x[i-1]?up+1:1;dn=x[i]<x[i-1]?dn+1:1;if(up>=6||dn>=6)for(let j=i-5;j<=i;j++)add('Rule 3 – 6 points in a row steadily rising or falling',j)}
-    for(let i=2;i<N;i++){for(const sg of[1,-1]){const w=[i-2,i-1,i].filter(j=>(x[j]-cl)*sg>2*s);if(w.length>=2)w.forEach(j=>add('Rule 5 – 2 of 3 points beyond 2σ on the same side',j))}}
-    for(let i=4;i<N;i++){for(const sg of[1,-1]){const w=[i-4,i-3,i-2,i-1,i].filter(j=>(x[j]-cl)*sg>s);if(w.length>=4)w.forEach(j=>add('Rule 6 – 4 of 5 points beyond 1σ on the same side',j))}}
-    }
-    A.rSeries.forEach((v,i)=>{if(v!=null&&(v>A.uclR||(A.lclR>0&&v<A.lclR)))add(`Rule 1 – point beyond the control limit (${A.rName} chart)`,i,'R')});
-  }
-  A.stab=N<T.minSPC?'insufficient':A.viol.length?'unstable':'stable';
-  // normality
-  A.ad=N>=8?andersonDarling(x):null;
-  // capability
-  if(N>=2&&A.sd>0){const so=A.sd,sw=A.sigW,L=A.lsl,U=A.usl;
-    A.Cpl=(A.mean-L)/(3*sw);A.Ppl=(A.mean-L)/(3*so);
-    if(U!=null){A.Cpu=(U-A.mean)/(3*sw);A.Cp=(U-L)/(6*sw);A.Ppu=(U-A.mean)/(3*so);A.Pp=(U-L)/(6*so)}
-    A.Cpk=U!=null?Math.min(A.Cpl,A.Cpu):A.Cpl;A.Ppk=U!=null?Math.min(A.Ppl,A.Ppu):A.Ppl;
-    A.pBelow=Phi((L-A.mean)/so);A.pAbove=U!=null?1-Phi((U-A.mean)/so):0;A.pNC=A.pBelow+A.pAbove;
-    A.obsBelow=u.filter(o=>o.x<L).length;A.obsAbove=U!=null?u.filter(o=>o.x>U).length:0;
-    A.zLT=A.pNC>0?-invPhi(A.pNC):(A.mean-L)/so;if(!isFinite(A.zLT))A.zLT=(A.mean-L)/so;
-    A.sigma=A.zLT+1.5;A.dpmo=A.pNC*1e6}
-  A.capState=N<T.minCap?'insufficient':A.stab!=='stable'?'unstable':'ok';
-  // trend
+    A.below=u.filter(o=>o.x<A.fcu);A.margin=A.mean-A.fcu}
+  const n=S.reg.mode==='cubes'?S.reg.n:1;A.n=n;const ct=chartType(n);A.ct=ct;
+  // ---- control limits
+  if(N>=2){A.cl=A.mean;
+    if(ct==='xr'){const[A2,D3,D4,d2]=XR[n];const r=u.map(o=>o.R);A.dbar=ST.mean(r);A.ucl=A.mean+A2*A.dbar;A.lcl=A.mean-A2*A.dbar;A.uclD=D4*A.dbar;A.lclD=D3*A.dbar;
+      A.sigHat=A.dbar/d2;A.sigST=A.sigHat/Math.sqrt(n);A.K={A2,D3,D4,d2};A.disp=r;A.dName='Range';A.dSym='R̄';A.sigTxt=`σ̂ = R̄ / d2 = ${f2(A.dbar)} / ${d2}`}
+    else if(ct==='xs'){const[c4,A3,B3,B4]=xsConst(n);const s=u.map(o=>o.S);A.dbar=ST.mean(s);A.ucl=A.mean+A3*A.dbar;A.lcl=A.mean-A3*A.dbar;A.uclD=B4*A.dbar;A.lclD=B3*A.dbar;
+      A.sigHat=A.dbar/c4;A.sigST=A.sigHat/Math.sqrt(n);A.K={c4,A3,B3,B4};A.disp=s;A.dName='Std dev';A.dSym='S̄';A.sigTxt=`σ̂ = S̄ / c4 = ${f2(A.dbar)} / ${c4}`}
+    else{const mr=x.slice(1).map((v,i)=>Math.abs(v-x[i]));A.dbar=ST.mean(mr);A.ucl=A.mean+2.660*A.dbar;A.lcl=A.mean-2.660*A.dbar;A.uclD=3.267*A.dbar;A.lclD=0;
+      A.sigHat=A.dbar/1.128;A.sigST=A.sigHat;A.K={E2:2.660,D3:0,D4:3.267,d2:1.128};A.disp=[null,...mr];A.dName='Moving range';A.dSym='MR̄';A.sigTxt=`σ̂ = MR̄ / d2 = ${f2(A.dbar)} / 1.128`}
+    A.s1=(A.ucl-A.cl)/3}
+  // ---- stability
+  A.hits={};A.hitsD={};A.marks=new Map();A.marksD=new Map();
+  const set=(TSETS[T.rules]||TSETS.minitab8);A.tset=set;
+  if(N>=2&&A.s1>0){A.hits=runTests(x,A.cl,A.s1,A.ucl,A.lcl,set.tests);
+    A.hitsD=runTests(A.disp.map(v=>v??NaN),A.dbar,0,A.uclD,A.lclD>0?A.lclD:null,[1]);
+    for(const[t,is]of Object.entries(A.hits))for(const i of is)A.marks.set(i,[...(A.marks.get(i)||[]),+t]);
+    for(const i of A.hitsD[1]||[])A.marksD.set(i,[1])}
+  A.ooc=[...new Set([...(A.hits[1]||[]),...(A.hitsD[1]||[])])].sort((a,b)=>a-b);
+  const other=Object.keys(A.hits).filter(t=>t!=='1');
+  A.stab=N<T.minSPC?'insufficient':A.ooc.length?'unstable':other.length?'potential':'stable';
+  // runs on one side, variation components
+  if(N>=2){let best={len:0},run=0,prev=0,st=0;x.forEach((v,i)=>{const sd=v>A.cl?1:v<A.cl?-1:0;if(sd&&sd===prev)run++;else{run=sd?1:0;st=i}prev=sd;if(run>best.len)best={len:run,side:sd,from:st,to:i}});A.longRun=best;
+    A.sigB=Math.sqrt(Math.max(0,A.sd**2-A.sigST**2));A.pctW=Math.min(100,A.sigST**2/A.sd**2*100)}
+  // ---- normality (TQM L7: p must be > 0.05 before capability)
+  A.ad=N>=8?andersonDarling(x):null;A.normal=A.ad?A.ad.p>=0.05:null;
+  // ---- capability (σST for Cp family, σLT = sample SD for Pp family)
+  if(N>=2&&A.sd>0&&A.sigST>0){const L=A.lsl,Uu=A.usl,Tg=A.tgt,m=A.mean,ss=A.sigST,so=A.sd;
+    if(has(L)){A.Cpl=(m-L)/(3*ss);A.Ppl=(m-L)/(3*so)}
+    if(has(Uu)){A.Cpu=(Uu-m)/(3*ss);A.Ppu=(Uu-m)/(3*so)}
+    if(has(L)&&has(Uu)){A.Cp=(Uu-L)/(6*ss);A.Pp=(Uu-L)/(6*so);A.Cr=1/A.Cp;if(has(Tg))A.Kidx=(m-Tg)/(0.5*(Uu-L))}
+    const mn=(a,b)=>has(a)&&has(b)?Math.min(a,b):has(a)?a:b;A.Cpk=mn(A.Cpl,A.Cpu);A.Ppk=mn(A.Ppl,A.Ppu);
+    if(has(Tg)){const d=Math.sqrt(ss*ss+(m-Tg)**2);A.Cpm=has(L)&&has(Uu)?(Uu-L)/(6*d):has(L)?(Tg-L)/(3*d):has(Uu)?(Uu-Tg)/(3*d):null;A.TI=Math.abs(m-Tg)/ss}
+    A.SI=so/ss;
+    const pr=s=>({lo:has(L)?Phi((L-m)/s):0,hi:has(Uu)?1-Phi((Uu-m)/s):0});A.expW=pr(ss);A.expO=pr(so);
+    A.obsLo=has(L)?u.filter(o=>o.x<L).length:0;A.obsHi=has(Uu)?u.filter(o=>o.x>Uu).length:0}
+  A.capState=N<T.minCap||A.stab==='insufficient'?'insufficient':A.stab==='unstable'?'unstable':A.normal===false?'nonnormal':A.stab==='potential'?'caution':'reliable';
+  // ---- Six Sigma
+  if(N>=2&&A.sd>0){const L=A.lsl,Uu=A.usl,m=A.mean,so=A.sd;const cube=T.defect==='cube'&&S.reg.mode==='cubes';
+    const cl=T.cubeLim!==''&&T.cubeLim!=null&&isFinite(+T.cubeLim)?+T.cubeLim:L;
+    let D=0,Dd=0,fp=0;for(const o of u){const rDef=(has(L)&&o.x<L)||(has(Uu)&&o.x>Uu);const cDef=S.reg.mode==='cubes'&&has(cl)?o.c.filter(v=>v!=null&&v<cl).length:0;
+      if(cube){D+=cDef;if(cDef)Dd++}else if(rDef){D++;Dd++}if(!rDef&&!cDef)fp++}
+    const opp=cube?n:1;const ZL=has(L)?(m-L)/so:null,ZU=has(Uu)?(Uu-m)/so:null;const Zmin=has(ZL)&&has(ZU)?Math.min(ZL,ZU):has(ZL)?ZL:ZU;
+    const P=A.expO?A.expO.lo+A.expO.hi:0;const Zb=P>1e-15?-invPhi(P):Zmin;
+    const Pst=A.expW?A.expW.lo+A.expW.hi:0;const ZbST=A.sigST>0?(Pst>1e-15?-invPhi(Pst):Math.min(has(L)?(m-L)/A.sigST:Infinity,has(Uu)?(Uu-m)/A.sigST:Infinity)):null;
+    A.ss={units:N,opp,cube,cubeLim:cl,D,Dd,rate:Dd/N,DPU:D/N,DPMOobs:D/(N*opp)*1e6,yield:(N-Dd)/N,FPY:fp/N,ZL,ZU,Zmin,Zbench:Zb,ZbST,P,DPMOexp:P*1e6,
+      obsSigma:D>0?-invPhi(D/(N*opp))+1.5:null};
+    A.zLT=Zb;A.sigma=Zb+(T.shift===false?0:1.5)}
+  // ---- trends and shifts over time
   if(N>=T.minTrend){A.lr=linreg(x);const h=Math.floor(N/2),a1=x.slice(0,h),a2=x.slice(N-h);A.h1={m:ST.mean(a1),s:ST.sd(a1)};A.h2={m:ST.mean(a2),s:ST.sd(a2)};
     A.h1.cv=A.h1.s/A.h1.m*100;A.h2.cv=A.h2.s/A.h2.m*100;const F=(A.h2.s**2)/(A.h1.s**2);const c=fCdf(F,h-1,h-1);A.fp=2*Math.min(c,1-c);
+    const se=Math.sqrt(A.h1.s**2/h+A.h2.s**2/h),tt=(A.h2.m-A.h1.m)/se,df=(A.h1.s**2/h+A.h2.s**2/h)**2/((A.h1.s**2/h)**2/(h-1)+(A.h2.s**2/h)**2/(h-1));A.shiftP=tTwoSided(tt,df);
     const meanDir=A.lr.p<0.05?(A.lr.b>0?'rising':'falling'):'steady';const varDir=A.fp<0.05?(A.h2.s<A.h1.s?'lower':'higher'):'same';
     A.trend=varDir==='lower'&&meanDir!=='falling'?'improving':(varDir==='higher'||meanDir==='falling')?'deteriorating':meanDir==='rising'?'improving':'steady';
     A.meanDir=meanDir;A.varDir=varDir}
-  // monthly
-  const mm=new Map();u.forEach(o=>{const k=o.pour.slice(0,7);(mm.get(k)||mm.set(k,[]).get(k)).push(o.x)});
-  A.months=[...mm.entries()].map(([k,v])=>({k,n:v.length,m:ST.mean(v),s:ST.sd(v)}));
+  const mm=new Map();u.forEach(o=>{const k=o.pour.slice(0,7);(mm.get(k)||mm.set(k,[]).get(k)).push(o)});
+  A.months=[...mm.entries()].map(([k,v])=>{const xs=v.map(o=>o.x);const ds=ct==='imr'?xs.slice(1).map((z,i)=>Math.abs(z-xs[i])):v.map(o=>ct==='xs'?o.S:o.R);return{k,n:v.length,m:ST.mean(xs),s:ST.sd(xs),d:ds.length?ST.mean(ds):NaN}});
   return A}
+// cumulative indices after each sample (Cp/Cpk trend)
+function capPath(D){const T=S.set,u=D.used,sp=specOf(D.f),n=S.reg.mode==='cubes'?S.reg.n:1,ct=chartType(n);const out=[];
+  for(let k=Math.max(T.minCap,5);k<=u.length;k++){const w=u.slice(0,k),x=w.map(o=>o.x),m=ST.mean(x),so=ST.sd(x);let ss;
+    if(ct==='xr')ss=ST.mean(w.map(o=>o.R))/XR[n][3]/Math.sqrt(n);else if(ct==='xs')ss=ST.mean(w.map(o=>o.S))/xsConst(n)[0]/Math.sqrt(n);else ss=ST.mean(x.slice(1).map((v,i)=>Math.abs(v-x[i])))/1.128;
+    const c=(s)=>{const a=has(sp.lsl)?(m-sp.lsl)/(3*s):null,b=has(sp.usl)?(sp.usl-m)/(3*s):null;return has(a)&&has(b)?Math.min(a,b):has(a)?a:b};
+    out.push({k,id:w[k-1].id,date:w[k-1].pour,cpk:c(ss),ppk:c(so)})}return out}
 function ecpLevel(cv){const t=S.set.ecp;if(!isFinite(cv))return null;return cv<t[0]?0:cv<t[1]?1:cv<t[2]?2:cv<=t[3]?3:4}
 const ECPN=['Excellent','Very Good','Good','Acceptable','Poor'];const ECPA=['ممتاز','جيد جداً','جيد','مقبول','ضعيف'];
 const ECPC=['ok','ok','ok','warn','bad'];
+// guideline traffic lights (TQM L7 slides 59, 73, 76-79)
+const GUIDE={cp:{n:'Cp',src:'L7 Cp guidelines'},cpk:{n:'Cpk',src:'L7 capability study, min 1.33'},pp:{n:'Pp',src:'L7 Cp/Pp guidelines'},ppk:{n:'Ppk',src:'L7 Ppk guidelines'},cpm:{n:'Cpm',src:'same as Cpk'},si:{n:'Stability index',src:'L7 stability index guidelines',low:true},ti:{n:'Target index',src:'L7 target index guidelines',low:true}};
+function light(k,v){if(!has(v))return null;const g=S.set.g[k==='cpm'?'cpk':k];if(GUIDE[k].low)return v<=g[0]?'ok':v<=g[1]?'warn':'bad';return v<g[0]?'bad':v<g[1]?'warn':'ok'}
+const LN={ok:'Adequate',warn:'Marginal',bad:'Poor'};
+const STABN={stable:'Stable Process',unstable:'Unstable Process',potential:'Potential Special Causes Detected',insufficient:'Insufficient Data'};
+const STABC={stable:'ok',unstable:'bad',potential:'warn',insufficient:'na'};
+const CAPN={reliable:'Reliable',caution:'Use with caution',unstable:'Not reliable – process unstable',nonnormal:'Not reliable – data not normal',insufficient:'Insufficient Data'};
+const CAPC={reliable:'ok',caution:'warn',unstable:'bad',nonnormal:'bad',insufficient:'na'};
+// action from the L7 "Using the indices" flowchart
+function flowAction(A){if(A.capState==='insufficient')return null;const lp=light('ppk',A.Ppk);if(lp==='ok')return A.stab==='stable'?{c:'ok',t:'Ppk is adequate and the process is stable: likely do nothing, keep monitoring.'}:{c:'warn',t:`Ppk is adequate, but the process is ${A.stab==='unstable'?'unstable':'showing pattern signals'}: remove the special causes (see OCAP) so that future performance can be predicted.`};
+  const acts=[];if(A.stab==='unstable'||light('si',A.SI)!=='ok')acts.push('Improve stability (remove special causes)');if(has(A.TI)&&light('ti',A.TI)!=='ok')acts.push('Work on the level (move the average to the target)');
+  if(has(A.Cp)?light('cp',A.Cp)!=='ok':light('cpk',A.Cpk)!=='ok')acts.push('Improve capability (reduce common-cause variation)');
+  return{c:lp,t:`Ppk is ${LN[lp].toLowerCase()}. `+(acts.length?acts.join('; ')+'.':'Review specification limits and target.')}}
+// out-of-control action plan for concrete (OCAP)
+const OCAP={
+ 1:{c:'A single pour far from the process: batching error (cement or water weights), wrong mix delivered, retempering with water, cube making / curing / testing fault, or a data-entry error.',a:'Check the batch ticket, slump and temperature of that pour; check cube making, curing and testing records; verify the entry. If the result is low, assess the element (cores / NDT as the code requires) and raise an NCR.'},
+ 2:{c:'A sustained shift of the mean: new cement lot or source, aggregate source or grading change, admixture dosage change, mix design adjustment, or seasonal temperature.',a:'Compare material certificates and mix design revisions around the start of the run; agree a corrective adjustment with the plant.'},
+ 3:{c:'A gradual drift: batching scale calibration drift, moisture correction of aggregates, cement storage age, rising or falling ambient temperature.',a:'Check plant calibration certificates and moisture correction; review slump and temperature over the same period.'},
+ 4:{c:'Two sources alternating: two mixers, trucks, shifts, plants or testing machines used in turn.',a:'Split the data by mixer / shift / lab and chart each one separately.'},
+ 5:{c:'Early warning of a shift in the mean (see test 2).',a:'Watch the next pours closely; check materials and batching for the flagged pours.'},
+ 6:{c:'Early warning of a smaller shift in the mean.',a:'Check materials and batching for the flagged pours.'},
+ 7:{c:'Points hug the centre line: the limits are too wide, often because different populations are mixed in the subgroups, or within-set ranges are overstated.',a:'Check that only one plant, grade and mix is charted; recalculate the limits.'},
+ 8:{c:'A mixture of two populations: two plants, two mix versions or two labs in the same data.',a:'Separate the data by source and analyse each one alone.'},
+ R:{c:'Large difference between cubes of the same set: poor compaction, damaged moulds, curing differences, capping or loading faults.',a:'Check cube moulds, compaction method, curing tank temperature and testing machine calibration.'}};
 
 /* ================= charts (SVG) ================= */
 const f1=v=>v==null||!isFinite(v)?'–':(+v).toFixed(1),f2=v=>v==null||!isFinite(v)?'–':(+v).toFixed(2);
 function niceTicks(lo,hi,k=5){const sp=hi-lo||1;const raw=sp/k;const p=10**Math.floor(Math.log10(raw));const st=[1,2,2.5,5,10].map(m=>m*p).find(s=>s>=raw);const t=[];for(let v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)t.push(+v.toFixed(6));return t}
-function lineChart({ys,ids,cl,ucl,lcl,flags,yl,lines=[],w=640,h=250,label,lab1}){
-  const ml=52,mr=82,mt=14,mb=34,W=w-ml-mr,H=h-mt-mb;const vals=ys.filter(v=>v!=null);
-  let lo=Math.min(...vals,lcl??Infinity,...lines.map(l=>l.v)),hi=Math.max(...vals,ucl??-Infinity,...lines.map(l=>l.v));const pd=(hi-lo)*0.08||1;lo-=pd;hi+=pd;
-  const X=i=>ml+(ys.length<2?W/2:i*W/(ys.length-1)),Y=v=>mt+H-(v-lo)/(hi-lo)*H;
-  let g=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}" font-family="Segoe UI,Roboto,Arial,sans-serif" font-size="11">`;
-  g+=`<rect x="${ml}" y="${mt}" width="${W}" height="${H}" fill="#fff" stroke="#9aa5a2"/>`;
-  for(const t of niceTicks(lo,hi))g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(t)}" y2="${Y(t)}" stroke="#eef1f0"/><text x="${ml-6}" y="${Y(t)+4}" text-anchor="end" fill="#333">${+t.toFixed(1)}</text>`;
+const SVGH=(w,h,label)=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(label)}" font-family="Segoe UI,Roboto,Arial,sans-serif" font-size="11">`;
+// ys: values; marks: Map idx -> [test numbers]; zones: σ of plotted statistic; specs: [{v,t,c}]
+function lineChart({ys,ids,cl,ucl,lcl,marks,yl,specs=[],zones=0,w=640,h=250,label,clName='X̿',xl='Sample'}){
+  const ml=52,mr=92,mt=14,mb=34,W=w-ml-mr,H=h-mt-mb;const vals=ys.filter(v=>v!=null&&isFinite(v));if(!vals.length)return'';
+  let lo=Math.min(...vals,lcl??Infinity),hi=Math.max(...vals,ucl??-Infinity);const span0=hi-lo||1;
+  const inS=[],offS=[];for(const s of specs){if(!has(s.v))continue;if(s.v>=lo-0.6*span0&&s.v<=hi+0.6*span0){inS.push(s);lo=Math.min(lo,s.v);hi=Math.max(hi,s.v)}else offS.push(s)}
+  const pd=(hi-lo)*0.08||1;lo-=pd;hi+=pd;
+  const X=i=>ml+(ys.length<2?W/2:i*W/(ys.length-1)),Y=v=>mt+H-(v-lo)/(hi-lo)*H;const clip=v=>Math.max(mt,Math.min(mt+H,Y(v)));
+  let g=SVGH(w,h,label)+`<rect x="${ml}" y="${mt}" width="${W}" height="${H}" fill="#fff" stroke="#9aa5a2"/>`;
+  if(zones>0&&has(cl)){const z=(a,b,f)=>{const y1=clip(cl+b*zones),y2=clip(cl+a*zones);if(y2>y1)g+=`<rect x="${ml}" y="${y1}" width="${W}" height="${y2-y1}" fill="${f}"/>`};
+    z(-1,1,'#e3f3e8');z(1,2,'#fbf6dd');z(-2,-1,'#fbf6dd');z(2,3,'#fbe9e7');z(-3,-2,'#fbe9e7')}
+  for(const t of niceTicks(lo,hi))g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(t)}" y2="${Y(t)}" stroke="#000" stroke-opacity=".06"/><text x="${ml-6}" y="${Y(t)+4}" text-anchor="end" fill="#333">${+t.toFixed(2)}</text>`;
   const step=Math.max(1,Math.ceil(ys.length/20));for(let i=0;i<ys.length;i+=step)g+=`<line x1="${X(i)}" x2="${X(i)}" y1="${mt+H}" y2="${mt+H+4}" stroke="#555"/><text x="${X(i)}" y="${mt+H+15}" text-anchor="middle" fill="#333">${i+1}</text>`;
-  g+=`<text x="${ml+W/2}" y="${h-4}" text-anchor="middle" fill="#333">Sample</text><text transform="translate(12 ${mt+H/2}) rotate(-90)" text-anchor="middle" fill="#333">${esc(yl)}</text>`;
-  const hl=(v,col,lab,dash='')=>{if(v==null||!isFinite(v))return;g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(v)}" y2="${Y(v)}" stroke="${col}" stroke-width="1.6" ${dash?`stroke-dasharray="${dash}"`:''}/><text x="${ml+W+4}" y="${Y(v)+4}" fill="#222">${lab}</text>`};
-  hl(ucl,'#d32f2f',`UCL=${f1(ucl)}`);hl(cl,'#2e8b3e',`${label.startsWith('R')||label.startsWith('M')?'R̄':'X̿'}=${f2(cl)}`);hl(lcl,'#d32f2f',`LCL=${f1(lcl)}`);
-  for(const l of lines)hl(l.v,l.c,l.t,'5 4');
-  let d='';ys.forEach((v,i)=>{if(v==null)return;d+=(d?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)});g+=`<path d="${d}" fill="none" stroke="#222" stroke-width="1.2"/>`;
-  ys.forEach((v,i)=>{if(v==null)return;const f=flags&&flags.has(i);g+=f?`<rect x="${X(i)-4}" y="${Y(v)-4}" width="8" height="8" fill="#d32f2f"><title>${esc(ids[i])}: ${f1(v)}</title></rect><text x="${X(i)}" y="${Y(v)-7}" text-anchor="middle" fill="#d32f2f" font-size="10">${lab1&&lab1.has(i)?esc(ids[i]):''}</text>`
-    :`<circle cx="${X(i)}" cy="${Y(v)}" r="2.8" fill="#222"><title>${esc(ids[i])}: ${f1(v)}</title></circle>`});
+  g+=`<text x="${ml+W/2}" y="${h-4}" text-anchor="middle" fill="#333">${xl}</text><text transform="translate(12 ${mt+H/2}) rotate(-90)" text-anchor="middle" fill="#333">${esc(yl)}</text>`;
+  const lab=[];const hl=(v,col,t,dash='',wd=1.6)=>{if(!has(v))return;g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(v)}" y2="${Y(v)}" stroke="${col}" stroke-width="${wd}" ${dash?`stroke-dasharray="${dash}"`:''}/>`;lab.push({y:Y(v),t,col})};
+  hl(ucl,'#d32f2f',`UCL=${f2(ucl)}`);hl(cl,'#2e8b3e',`${clName}=${f2(cl)}`);hl(lcl,'#d32f2f',`LCL=${f2(lcl)}`);
+  for(const s of inS)hl(s.v,s.c||'#c77700',`${s.t} ${f1(s.v)}`,'6 4',1.4);
+  lab.sort((a,b)=>a.y-b.y);for(let i=1;i<lab.length;i++)if(lab[i].y-lab[i-1].y<11)lab[i].y=lab[i-1].y+11;
+  for(const l of lab)g+=`<text x="${ml+W+4}" y="${l.y+4}" fill="${l.col==='#2e8b3e'?'#1b5e2a':l.col}">${l.t}</text>`;
+  offS.forEach((s,k)=>{const below=s.v<lo;g+=`<text x="${ml+6}" y="${below?mt+H-6-k*12:mt+12+k*12}" fill="${s.c||'#c77700'}" font-weight="600">${below?'↓':'↑'} ${s.t} ${f1(s.v)} (off scale)</text>`});
+  let d='',pv=false;ys.forEach((v,i)=>{if(v==null||!isFinite(v)){pv=false;return}d+=(pv?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);pv=true});g+=`<path d="${d}" fill="none" stroke="#222" stroke-width="1.2"/>`;
+  ys.forEach((v,i)=>{if(v==null||!isFinite(v))return;const m=marks&&marks.get(i);const tip=`${esc(ids[i])}: ${f2(v)}${m?' · test '+m.join(', '):''}`;
+    g+=m?`<circle cx="${X(i)}" cy="${Y(v)}" r="4.2" fill="#d32f2f"><title>${tip}</title></circle><text x="${X(i)}" y="${Y(v)-7}" text-anchor="middle" fill="#d32f2f" font-size="10" font-weight="700">${m.join(',')}</text>`
+      :`<circle cx="${X(i)}" cy="${Y(v)}" r="2.8" fill="#222"><title>${tip}</title></circle>`});
   return g+'</svg>'}
-function histChart(x,A,w=520,h=300){
+function histChart(x,A,w=520,h=300,cap=false){
   const ml=46,mr=14,mt=14,mb=40,W=w-ml-mr,H=h-mt-mb;
   let bw=+S.set.binW||0;if(!bw){const raw=(A.max-A.min)/Math.max(5,Math.ceil(Math.sqrt(x.length)));bw=[0.5,1,2,2.5,5,10,20,25,50].find(s=>s>=raw)||raw}
   const b0=Math.floor(A.min/bw)*bw;const nb=Math.max(1,Math.ceil((A.max-b0)/bw+1e-9));const cnt=Array(nb).fill(0);x.forEach(v=>cnt[Math.min(nb-1,Math.floor((v-b0)/bw))]++);
-  const near=v=>v!=null&&isFinite(v)&&Math.abs(v-A.mean)<=4.5*A.sd;let lo=Math.min(b0,A.mean-3.2*A.sd,near(A.lsl)?A.lsl:Infinity),hi=Math.max(b0+nb*bw,A.mean+3.2*A.sd,near(A.usl)?A.usl:-Infinity);const pd=(hi-lo)*0.03;lo-=pd;hi+=pd;
-  const peak=x.length*bw/(A.sd*Math.sqrt(2*Math.PI));const top=Math.max(...cnt,peak)*1.12;
-  const X=v=>ml+(v-lo)/(hi-lo)*W,Y=v=>mt+H-v/top*H;
-  let g=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Histogram" font-family="Segoe UI,Roboto,Arial,sans-serif" font-size="11"><rect x="${ml}" y="${mt}" width="${W}" height="${H}" fill="#fff" stroke="#9aa5a2"/>`;
-  for(const t of niceTicks(0,top))g+=`<text x="${ml-6}" y="${Y(t)+4}" text-anchor="end" fill="#333">${t}</text><line x1="${ml}" x2="${ml+W}" y1="${Y(t)}" y2="${Y(t)}" stroke="#eef1f0"/>`;
+  const near=v=>has(v)&&Math.abs(v-A.mean)<=4.5*A.sd;let lo=Math.min(b0,A.mean-3.2*A.sd,near(A.lsl)?A.lsl:Infinity,near(A.tgt)?A.tgt:Infinity),hi=Math.max(b0+nb*bw,A.mean+3.2*A.sd,near(A.usl)?A.usl:-Infinity,near(A.tgt)?A.tgt:-Infinity);const pd=(hi-lo)*0.03;lo-=pd;hi+=pd;
+  const peak=x.length*bw/(A.sd*Math.sqrt(2*Math.PI));const peakW=cap&&A.sigST>0?x.length*bw/(A.sigST*Math.sqrt(2*Math.PI)):0;const top=Math.max(...cnt,peak,Math.min(peakW,Math.max(...cnt,peak)*1.6))*1.12;
+  const X=v=>ml+(v-lo)/(hi-lo)*W,Y=v=>mt+H-Math.min(v,top)/top*H;
+  let g=SVGH(w,h,'Histogram')+`<rect x="${ml}" y="${mt}" width="${W}" height="${H}" fill="#fff" stroke="#9aa5a2"/>`;
+  for(const t of niceTicks(0,top))g+=`<text x="${ml-6}" y="${Y(t)+4}" text-anchor="end" fill="#333">${t}</text><line x1="${ml}" x2="${ml+W}" y1="${Y(t)}" y2="${Y(t)}" stroke="#000" stroke-opacity=".06"/>`;
   cnt.forEach((c,i)=>{if(!c)return;const a=b0+i*bw;g+=`<rect x="${X(a)}" y="${Y(c)}" width="${X(a+bw)-X(a)}" height="${Y(0)-Y(c)}" fill="#6f93cf" stroke="#2c3e66" stroke-width=".8"><title>${f1(a)}–${f1(a+bw)}: ${c}</title></rect>`});
   for(const t of niceTicks(lo,hi,6))g+=`<line x1="${X(t)}" x2="${X(t)}" y1="${mt+H}" y2="${mt+H+4}" stroke="#555"/><text x="${X(t)}" y="${mt+H+15}" text-anchor="middle" fill="#333">${t}</text>`;
-  let d='';for(let i=0;i<=120;i++){const v=lo+(hi-lo)*i/120;const y=peak*Math.exp(-0.5*((v-A.mean)/A.sd)**2);d+=(i?'L':'M')+X(v).toFixed(1)+' '+Y(y).toFixed(1)}
-  g+=`<path d="${d}" fill="none" stroke="#b3261e" stroke-width="2"/>`;
-  const vl=(v,t,c)=>{if(v==null||!isFinite(v))return;if(v<lo){g+=`<text x="${ml+4}" y="${mt+12}" fill="${c}" font-weight="700">← ${t} (off scale)</text>`;return}if(v>hi){g+=`<text x="${ml+W-120}" y="${mt+H-6}" fill="${c}" font-weight="700">${t} (off scale) →</text>`;return}g+=`<line x1="${X(v)}" x2="${X(v)}" y1="${mt}" y2="${mt+H}" stroke="${c}" stroke-width="1.6" stroke-dasharray="5 4"/><text x="${X(v)+3}" y="${mt+12}" fill="${c}" font-weight="700">${t}</text>`};
-  vl(A.lsl,`LSL ${f1(A.lsl)}`,'#d32f2f');vl(A.usl,`USL ${f1(A.usl)}`,'#d32f2f');
-  const bx=ml+W-112;g+=`<rect x="${bx}" y="${mt+6}" width="106" height="64" fill="#fff" stroke="#999"/>`;
-  [['Mean',f1(A.mean)],['StDev',f2(A.sd)],['N',A.N],['CoV',f2(A.cv)+'%']].forEach(([k,v],i)=>g+=`<text x="${bx+6}" y="${mt+20+i*14}" font-family="Consolas,monospace" font-size="10.5">${k}</text><text x="${bx+100}" y="${mt+20+i*14}" text-anchor="end" font-family="Consolas,monospace" font-size="10.5">${v}</text>`);
-  g+=`<text x="${ml+W/2}" y="${h-6}" text-anchor="middle" fill="#333">28-Day Strength (${U()})</text><text transform="translate(12 ${mt+H/2}) rotate(-90)" text-anchor="middle" fill="#333">Frequency</text></svg>`;return g}
+  const curve=(s,pk,col,dash)=>{let d='';for(let i=0;i<=160;i++){const v=lo+(hi-lo)*i/160;const y=pk*Math.exp(-0.5*((v-A.mean)/s)**2);d+=(i?'L':'M')+X(v).toFixed(1)+' '+Y(y).toFixed(1)}g+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="2" ${dash?'stroke-dasharray="6 4"':''}/>`};
+  curve(A.sd,peak,'#b3261e');if(cap&&A.sigST>0)curve(A.sigST,peakW,'#1f6b4a',true);
+  const vl=(v,t,c,k)=>{if(!has(v))return;if(v<lo){g+=`<text x="${ml+4}" y="${mt+12+k*13}" fill="${c}" font-weight="700">← ${t} (off scale)</text>`;return}if(v>hi){g+=`<text x="${ml+W-130}" y="${mt+H-6-k*13}" fill="${c}" font-weight="700">${t} (off scale) →</text>`;return}g+=`<line x1="${X(v)}" x2="${X(v)}" y1="${mt}" y2="${mt+H}" stroke="${c}" stroke-width="1.6" stroke-dasharray="5 4"/><text x="${X(v)+3}" y="${mt+12+k*13}" fill="${c}" font-weight="700">${t}</text>`};
+  vl(A.lsl,`LSL ${f1(A.lsl)}`,'#d32f2f',0);vl(A.usl,`USL ${f1(A.usl)}`,'#d32f2f',1);vl(A.tgt,`Target ${f1(A.tgt)}`,'#1f6b4a',2);
+  const bx=ml+W-112;g+=`<rect x="${bx}" y="${mt+6}" width="106" height="${cap?92:64}" fill="#fff" stroke="#999"/>`;
+  const rows=[['Mean',f1(A.mean)],['StDev',f2(A.sd)],['N',A.N],['CoV',f2(A.cv)+'%']];if(cap)rows.push(['σ within',f2(A.sigST)],['Ppk',f2(A.Ppk)]);
+  rows.forEach(([k,v],i)=>g+=`<text x="${bx+6}" y="${mt+20+i*14}" font-family="Consolas,monospace" font-size="10.5">${k}</text><text x="${bx+100}" y="${mt+20+i*14}" text-anchor="end" font-family="Consolas,monospace" font-size="10.5">${v}</text>`);
+  if(cap)g+=`<line x1="${ml+8}" x2="${ml+28}" y1="${mt+H+28}" y2="${mt+H+28}" stroke="#b3261e" stroke-width="2"/><text x="${ml+32}" y="${mt+H+32}" fill="#333" font-size="10">Overall (σLT)</text><line x1="${ml+110}" x2="${ml+130}" y1="${mt+H+28}" y2="${mt+H+28}" stroke="#1f6b4a" stroke-width="2" stroke-dasharray="6 4"/><text x="${ml+134}" y="${mt+H+32}" fill="#333" font-size="10">Within (σST)</text>`;
+  else g+=`<text x="${ml+W/2}" y="${h-6}" text-anchor="middle" fill="#333">28-Day Strength (${U()})</text>`;
+  g+=`<text transform="translate(12 ${mt+H/2}) rotate(-90)" text-anchor="middle" fill="#333">Frequency</text></svg>`;return g}
 function trendChart(x,ids,A,w=640,h=240){
   const ma=x.map((_,i)=>i<4?null:ST.mean(x.slice(i-4,i+1)));
-  let svg=lineChart({ys:x,ids,flags:null,yl:'Result ('+U()+')',label:'Trend',w,h,lines:[{v:A.fcu,c:'#d32f2f',t:`fcu ${f1(A.fcu)}`}]});
-  const ml=52,mr=82,mt=14,mb=34,W=w-ml-mr,H=h-mt-mb;const vals=[...x,A.fcu];let lo=Math.min(...vals),hi=Math.max(...vals);const pd=(hi-lo)*0.08||1;lo-=pd;hi+=pd;
+  let svg=lineChart({ys:x,ids,yl:'Result ('+U()+')',label:'Trend',w,h,specs:[{v:A.fcu,c:'#d32f2f',t:'fcu'}]});
+  const ml=52,mr=92,mt=14,mb=34,W=w-ml-mr,H=h-mt-mb;let lo=Math.min(...x),hi=Math.max(...x);const sp0=hi-lo||1;if(A.fcu>=lo-0.6*sp0&&A.fcu<=hi+0.6*sp0){lo=Math.min(lo,A.fcu);hi=Math.max(hi,A.fcu)}const pd=(hi-lo)*0.08||1;lo-=pd;hi+=pd;
   const X=i=>ml+i*W/(x.length-1),Y=v=>mt+H-(v-lo)/(hi-lo)*H;let d='';ma.forEach((v,i)=>{if(v==null)return;d+=(d?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)});
   let extra=`<path d="${d}" fill="none" stroke="#1f6b4a" stroke-width="2.4" opacity=".85"/>`;
   if(A.lr)extra+=`<line x1="${X(0)}" y1="${Y(A.lr.a+A.lr.b)}" x2="${X(x.length-1)}" y2="${Y(A.lr.a+A.lr.b*x.length)}" stroke="#b7791f" stroke-width="2" stroke-dasharray="7 4"/>`;
   return svg.replace('</svg>',extra+'</svg>')}
+// several series against sample number (Cp/Cpk trend)
+function multiChart(series,refs,{w=640,h=230,yl='Index',xs}){const ml=46,mr=70,mt=14,mb=34,W=w-ml-mr,H=h-mt-mb;
+  const all=series.flatMap(s=>s.v.filter(has)).concat(refs.map(r=>r.v));if(!all.length)return'';let lo=Math.min(0,...all),hi=Math.max(...all)*1.08;
+  const n=Math.max(...series.map(s=>s.v.length)),X=i=>ml+(n<2?W/2:i*W/(n-1)),Y=v=>mt+H-(v-lo)/(hi-lo)*H;
+  let g=SVGH(w,h,yl)+`<rect x="${ml}" y="${mt}" width="${W}" height="${H}" fill="#fff" stroke="#9aa5a2"/>`;
+  for(const t of niceTicks(lo,hi))g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(t)}" y2="${Y(t)}" stroke="#000" stroke-opacity=".06"/><text x="${ml-6}" y="${Y(t)+4}" text-anchor="end" fill="#333">${+t.toFixed(2)}</text>`;
+  const step=Math.max(1,Math.ceil(n/12));for(let i=0;i<n;i+=step)g+=`<text x="${X(i)}" y="${mt+H+15}" text-anchor="middle" fill="#333">${xs?xs[i]:i+1}</text>`;
+  g+=`<text x="${ml+W/2}" y="${h-4}" text-anchor="middle" fill="#333">Samples included</text>`;
+  for(const r of refs)g+=`<line x1="${ml}" x2="${ml+W}" y1="${Y(r.v)}" y2="${Y(r.v)}" stroke="${r.c}" stroke-dasharray="6 4" stroke-width="1.4"/><text x="${ml+W+4}" y="${Y(r.v)+4}" fill="${r.c}">${r.t}</text>`;
+  series.forEach((s,k)=>{let d='';s.v.forEach((v,i)=>{if(!has(v))return;d+=(d?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)});g+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.2" ${s.dash?'stroke-dasharray="6 4"':''}/>`;
+    const li=s.v.length-1;if(has(s.v[li]))g+=`<circle cx="${X(li)}" cy="${Y(s.v[li])}" r="3.5" fill="${s.c}"/>`;g+=`<line x1="${ml+8+k*90}" x2="${ml+28+k*90}" y1="${mt+10}" y2="${mt+10}" stroke="${s.c}" stroke-width="2.2" ${s.dash?'stroke-dasharray="6 4"':''}/><text x="${ml+32+k*90}" y="${mt+14}" fill="#333">${s.n}</text>`});
+  return g+'</svg>'}
 
 /* ================= report ================= */
 const insuf=(N,need,what)=>`<div class="insuf"><b>Insufficient Data</b> — ${what} needs at least <b>${need}</b> samples (subgroups); this selection has <b>${N}</b>. No result is shown so the report doesn't give a misleading figure.</div>`;
 const chip=(t,c)=>`<span class="chip ${c}">${t}</span>`;
-function capChip(v){if(v==null||!isFinite(v))return chip('–','na');return v>=1.33?chip('Capable (≥ 1.33)','ok'):v>=1.0?chip('Marginal (1.00–1.33)','warn'):chip('Not capable (< 1.00)','bad')}
+const lchip=(k,v)=>{const l=light(k,v);return l?chip(LN[l],l):chip('–','na')};
+const sig1=v=>!has(v)?'–':v>9?'> 9':v.toFixed(2);
+const ppm=p=>!has(p)?'–':p*1e6<0.005?'0.00':(p*1e6).toFixed(2);
+const pct=(p,d=2)=>!has(p)?'–':(p*100).toFixed(d)+'%';
+function mixLabel(f){return[f.sup,f.grade,f.mix].filter(v=>v&&v!=='*').join(' · ')}
+function specLine(A){const sp=A.sp;return`LSL ${has(A.lsl)?f1(A.lsl):'none'}${sp.lslIsFcu?' (= fcu)':''} · USL ${has(A.usl)?f1(A.usl):'none'} · Target ${has(A.tgt)?f1(A.tgt):'not set'} ${U()}${sp.src?' · source: '+esc(sp.src):''} ${sp.confirmed?chip('Confirmed','ok'):chip('Default – confirm against the code / project specification','warn')}`}
+function limitsHtml(A){
+  const K=A.K;const kTxt=A.ct==='xr'?`A2 = ${K.A2}, D3 = ${K.D3}, D4 = ${K.D4}, d2 = ${K.d2}`:A.ct==='xs'?`c4 = ${K.c4}, A3 = ${K.A3}, B3 = ${K.B3}, B4 = ${K.B4}`:'E2 = 2.660, D3 = 0, D4 = 3.267, d2 = 1.128';
+  const fx=A.ct==='xr'?['X̿ ± A2·R̄','D4·R̄ / D3·R̄']:A.ct==='xs'?['X̿ ± A3·S̄','B4·S̄ / B3·S̄']:['X̄ ± 2.660·MR̄','3.267·MR̄ / 0'];
+  return`<h3>Control limits (${CTN[A.ct]}, n = ${A.n})</h3><div class="tw"><table><thead><tr><th>Chart</th><th class="n">Centre line</th><th class="n">UCL</th><th class="n">LCL</th><th>Formula</th></tr></thead><tbody>
+   <tr><td>${A.ct==='imr'?'Individuals (sample results)':'X̄ (sample means)'}</td><td class="n">${f2(A.cl)}</td><td class="n">${f2(A.ucl)}</td><td class="n">${f2(A.lcl)}</td><td>${fx[0]}</td></tr>
+   <tr><td>${A.dName}</td><td class="n">${f2(A.dbar)}</td><td class="n">${f2(A.uclD)}</td><td class="n">${f2(A.lclD)}</td><td>${fx[1]}</td></tr></tbody></table></div>
+   <p class="note">Constants (SPC Formulas and Tables): ${kTxt}. ${A.sigTxt} = ${f2(A.sigHat)} per ${A.ct==='imr'?'result':'cube'}${A.ct!=='imr'?`; σ of a sample result = σ̂/√n = ${f2(A.sigST)}`:''}.</p>`;
+}
+function stabilityHtml(A,ids,T){
+  let h=`<div class="row" style="align-items:center"><span class="big" style="color:var(--${STABC[A.stab]==='na'?'na':STABC[A.stab]})">${STABN[A.stab]}</span>
+   <span class="muted" style="flex:1;min-width:220px">${A.stab==='stable'?'No special-cause signals. Only common-cause (random) variation is present, so the process is predictable.':A.stab==='unstable'?`${A.ooc.length} point${A.ooc.length>1?'s':''} outside the control limits. Special causes are acting; find and remove them before relying on capability.`:'No point is outside the control limits, but run or pattern tests are triggered. Investigate these pours as possible special causes.'}</span></div>`;
+  h+=limitsHtml(A);
+  // tests
+  h+=`<h3>Special-cause tests (${A.tset.name})</h3><div class="tw"><table><thead><tr><th>Test</th><th>Description</th><th>Result</th><th style="white-space:normal">Samples where the test fails</th></tr></thead><tbody>
+   ${A.tset.tests.map(t=>{const hs=A.hits[t]||[];return`<tr><td>${t}</td><td style="white-space:normal">${tdesc(t)}</td><td>${hs.length?chip(t===1?'Out of control':'Signal','bad'):chip('Pass','ok')}</td><td style="white-space:normal">${hs.map(i=>esc(ids[i])).join(', ')||'–'}</td></tr>`}).join('')}
+   <tr><td>1 (${A.dName.toLowerCase()})</td><td style="white-space:normal">1 point above the ${A.dName.toLowerCase()} chart UCL</td><td>${(A.hitsD[1]||[]).length?chip('Out of control','bad'):chip('Pass','ok')}</td><td style="white-space:normal">${(A.hitsD[1]||[]).map(i=>esc(ids[i])).join(', ')||'–'}</td></tr></tbody></table></div>`;
+  // ooc, runs, trends
+  const lr=A.longRun||{};
+  h+=`<div class="kpis" style="margin-top:8px">
+   <div class="kpi"><div class="l">Out-of-control points</div><div class="v">${A.ooc.length}</div><div class="s">${A.ooc.map(i=>esc(ids[i])).join(', ')||'none beyond the limits'}</div></div>
+   <div class="kpi"><div class="l">Longest run on one side</div><div class="v">${lr.len||0}</div><div class="s">${lr.len?`${lr.side>0?'above':'below'} the centre line, ${esc(ids[lr.from])} → ${esc(ids[lr.to])} (signal at ${tk(2)})`:'–'}</div></div>
+   <div class="kpi"><div class="l">Trends and shifts</div><div class="v" style="font-size:15px">${(A.hits[3]||[]).length?'Trend found':'No trend run'}${(A.hits[2]||[]).length||(A.hits[5]||[]).length||(A.hits[6]||[]).length?' · shift signals':''}</div><div class="s">${A.lr?`slope ${f2(A.lr.b*10)} ${U()} per 10 samples (p = ${A.lr.p.toFixed(3)}); 1st vs 2nd half mean p = ${A.shiftP.toFixed(3)}`:`regression needs ${T.minTrend} samples`}</div></div></div>`;
+  // variation components
+  h+=`<h3>Common-cause and special-cause variation</h3><div class="tw"><table><thead><tr><th>Component</th><th class="n">σ (${U()})</th><th>What it represents</th></tr></thead><tbody>
+   <tr><td>Short-term σ<sub>ST</sub> (within)</td><td class="n">${f2(A.sigST)}</td><td style="white-space:normal">Common-cause variation: ${A.ct==='imr'?'between successive results':'between cubes of the same set (sampling and testing)'}. Used for control limits and Cp/Cpk.</td></tr>
+   <tr><td>Long-term σ<sub>LT</sub> (overall)</td><td class="n">${f2(A.sd)}</td><td style="white-space:normal">All variation in the results, common + special causes. Used for Pp/Ppk.</td></tr>
+   <tr><td>Between / over-time σ</td><td class="n">${f2(A.sigB)}</td><td style="white-space:normal">√(σ<sub>LT</sub>² − σ<sub>ST</sub>²): variation from pour to pour and over time. Within part = ${f1(A.pctW)}% of total variance.</td></tr>
+   <tr><td>Stability index σ<sub>LT</sub>/σ<sub>ST</sub></td><td class="n">${f2(A.SI)}</td><td>${lchip('si',A.SI)} <span class="muted">adequate ≤ ${S.set.g.si[0]}, poor &gt; ${S.set.g.si[1]} (TQM L7)</span></td></tr></tbody></table></div>`;
+  if(A.months.length>1)h+=`<h3>Process variation over time</h3><div class="tw"><table><thead><tr><th>Month</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th class="n">${A.dSym}</th><th class="n">Pours beyond limits</th></tr></thead><tbody>
+   ${A.months.map(m=>`<tr><td>${m.k}</td><td class="n">${m.n}</td><td class="n">${f1(m.m)}</td><td class="n">${m.n>1?f2(m.s):'–'}</td><td class="n">${m.n>1?f2(m.s/m.m*100):'–'}</td><td class="n">${f2(m.d)}</td><td class="n">${A.ooc.filter(i=>ids.__pour&&ids.__pour[i].slice(0,7)===m.k).length}</td></tr>`).join('')}</tbody></table></div>`;
+  if(A.ct!=='imr')h+=`<p class="note"><b>Concrete note:</b> ${CTN[A.ct]} limits come from the spread inside each set of ${A.n} cubes, which is mainly sampling and testing variation. Pour-to-pour variation therefore often shows as points outside these limits. To judge pour-to-pour stability, switch the chart type to I-MR (sample results) in the settings.</p>`;
+  return h}
+function capabilityHtml(A,T,x){
+  let h=`<div class="note" style="font-size:13px"><b>Specification limits:</b> ${specLine(A)}</div>`;
+  if(A.capState==='insufficient')return h+insuf(A.N,T.minCap,'Process capability');
+  const ok=v=>v?chip('✓','ok'):chip('✗','bad');
+  h+=`<div class="tw"><table><thead><tr><th>Before capability (TQM L7)</th><th>Check</th><th>Result</th></tr></thead><tbody>
+   <tr><td>1. Data come from a stable process</td><td>${ok(A.stab==='stable')}${A.stab==='potential'?' '+chip('pattern signals','warn'):''}</td><td>${STABN[A.stab]}</td></tr>
+   <tr><td>2. Data are normally distributed</td><td>${A.ad?ok(A.normal):chip('–','na')}</td><td>${A.ad?`Anderson-Darling A² = ${f2(A.ad.A2)}, p = ${A.ad.p<0.001?'< 0.001':A.ad.p.toFixed(3)} (needs p > 0.05)`:'not enough data'}</td></tr>
+   <tr><td>3. Enough samples</td><td>${ok(A.N>=T.minCap)}</td><td>N = ${A.N} (minimum ${T.minCap}; short-term studies 30–50, long-term 100–200)</td></tr></tbody></table></div>
+   <div class="banner ${CAPC[A.capState]==='ok'?'':CAPC[A.capState]==='warn'?'b-warn':'b-bad'}">Capability indices: ${CAPN[A.capState].toUpperCase()}</div>`;
+  const two=has(A.lsl)&&has(A.usl),noT='<span class="muted">needs Target</span>',noU='<span class="muted">needs LSL and USL</span>';
+  const row=(n,v,k,form,mean,naTxt)=>`<tr><td><b>${n}</b></td><td class="n">${has(v)?f2(v):naTxt||'–'}</td><td>${k&&has(v)?lchip(k,v):''}</td><td>${form}</td><td style="white-space:normal">${mean}</td></tr>`;
+  h+=`<div class="tw"><table><thead><tr><th>Index</th><th class="n">Value</th><th>Status</th><th>Formula</th><th>Meaning</th></tr></thead><tbody>
+   ${row('Cp',A.Cp,'cp','(USL − LSL) / 6σ<sub>ST</sub>','Potential process capability: spread only, as if perfectly centred',noU)}
+   ${row('Cpk',A.Cpk,'cpk','min(Cpu, Cpl)','Actual process capability: spread and position')}
+   ${row('Cpu',A.Cpu,'','(USL − X̄) / 3σ<sub>ST</sub>','Upper capability',has(A.usl)?'':'<span class="muted">no USL</span>')}
+   ${row('Cpl',A.Cpl,'','(X̄ − LSL) / 3σ<sub>ST</sub>','Lower capability, the side that matters for strength')}
+   ${row('Pp',A.Pp,'pp','(USL − LSL) / 6σ<sub>LT</sub>','Overall process performance',noU)}
+   ${row('Ppk',A.Ppk,'ppk','min(Ppu, Ppl) with σ<sub>LT</sub>','Overall process performance index: how the process actually ran')}
+   ${row('Cpm',A.Cpm,'cpm',two?'(USL − LSL) / 6√(σ<sub>ST</sub>² + (X̄ − T)²)':'(T − LSL) / 3√(σ<sub>ST</sub>² + (X̄ − T)²)','Taguchi capability index: penalises distance from the target',noT)}
+   ${row('Target index',A.TI,'ti','|X̄ − T| / σ<sub>ST</sub>','How many short-term σ the average is from the target',noT)}
+   ${row('Stability index',A.SI,'si','σ<sub>LT</sub> / σ<sub>ST</sub>','Long-term vs short-term variation')}
+   ${two?row('K (centring)',A.Kidx,'','(X̄ − T) / ½(USL − LSL)','Off-centre ratio',noT)+row('Cr',A.Cr,'','6σ<sub>ST</sub> / (USL − LSL) = 1/Cp','Capability ratio'):''}
+   </tbody></table></div>
+   <p class="note">σ<sub>ST</sub> = ${f2(A.sigST)} (${A.sigTxt}${A.ct!=='imr'?', ÷ √'+A.n:''}); σ<sub>LT</sub> = ${f2(A.sd)} (sample standard deviation, n − 1). Guidelines: Cp, Pp, Ppk poor &lt; ${T.g.cp[0]}, adequate ≥ ${T.g.cp[1]}; Cpk adequate ≥ ${T.g.cpk[1]}; target index adequate ≤ ${T.g.ti[0]}. ${A.capState!=='reliable'?`<b>${CAPN[A.capState]}:</b> Cp/Cpk are shown for information only. Pp/Ppk describe how the process ran in the past.`:''}</p>`;
+  h+=`<div class="charts"><div class="chart"><div class="t">Capability histogram against LSL / USL / Target</div>${histChart(x,A,560,320,true)}</div>
+   <div><h3 style="margin-top:0">Expected performance</h3><div class="tw"><table><thead><tr><th>PPM</th><th class="n">Observed</th><th class="n">Expected within</th><th class="n">Expected overall</th></tr></thead><tbody>
+   <tr><td>&lt; LSL</td><td class="n">${has(A.lsl)?(A.obsLo/A.N*1e6).toFixed(0):'–'}</td><td class="n">${has(A.lsl)?ppm(A.expW.lo):'–'}</td><td class="n">${has(A.lsl)?ppm(A.expO.lo):'–'}</td></tr>
+   <tr><td>&gt; USL</td><td class="n">${has(A.usl)?(A.obsHi/A.N*1e6).toFixed(0):'–'}</td><td class="n">${has(A.usl)?ppm(A.expW.hi):'–'}</td><td class="n">${has(A.usl)?ppm(A.expO.hi):'–'}</td></tr>
+   <tr><td><b>Total</b></td><td class="n">${((A.obsLo+A.obsHi)/A.N*1e6).toFixed(0)}</td><td class="n">${ppm(A.expW.lo+A.expW.hi)}</td><td class="n">${ppm(A.expO.lo+A.expO.hi)}</td></tr>
+   <tr><td>% below LSL</td><td class="n">${pct(A.obsLo/A.N)}</td><td class="n">${pct(A.expW.lo,4)}</td><td class="n">${pct(A.expO.lo,4)}</td></tr>
+   <tr><td>% above USL</td><td class="n">${has(A.usl)?pct(A.obsHi/A.N):'–'}</td><td class="n">${has(A.usl)?pct(A.expW.hi,4):'–'}</td><td class="n">${has(A.usl)?pct(A.expO.hi,4):'–'}</td></tr></tbody></table></div>
+   ${(()=>{const fa=flowAction(A);return fa?`<h3>Recommended action (TQM L7 flowchart)</h3><div class="qa"><div><span class="chip ${fa.c}">&nbsp;</span><span>${fa.t}</span></div></div>`:''})()}</div></div>`;
+  return h}
+const SIGTAB=[[1,691462,'Non-competitive','> 40%'],[2,308538,'Non-competitive','30–40%'],[3,66807,'Industry average','20–30%'],[4,6210,'Industry average','15–20%'],[5,233,'World class','10–15%'],[6,3.4,'World class','< 10%'],[7,0.019,'World class','–']];
+function sixSigmaHtml(A,T){
+  if(A.N<T.minCap||!A.ss)return insuf(A.N,T.minCap,'The sigma level');
+  const s=A.ss,sh=T.shift!==false;
+  const lvl=Math.min(7,Math.max(1,Math.floor(A.sigma+1e-9)));
+  let h=`<h3 style="margin-top:0">What sigma level is our concrete production process operating at?</h3>
+   <div class="row" style="align-items:center"><div><div class="muted small">Sigma Level${sh?' (with 1.5σ shift)':''}</div><div class="big">${A.sigma>9?'> 9':A.sigma.toFixed(2)} σ</div></div>
+   <div style="flex:1;min-width:240px">${A.sigma>=6?chip('World class','ok'):A.sigma>=4?chip('Industry average or better','ok'):A.sigma>=3?chip('Industry average','warn'):chip('Non-competitive','bad')}
+   <p class="note">Process Z-value (no shift) Z<sub>bench</sub> = <b>${sig1(s.Zbench)}</b>. ${sh?'The 1.5σ shift is a Six Sigma convention for long-term drift, shown as a separate term, not a statistical result.':''} ${A.capState!=='reliable'?'The process is not confirmed stable, so this describes past results.':''}</p></div></div>
+   <div class="tw"><table><thead><tr><th>Parameter</th><th class="n">Value</th><th>Description</th><th>Basis</th></tr></thead><tbody>
+   <tr><td>Defect Rate</td><td class="n">${pct(s.rate)}</td><td>نسبة النتائج غير المطابقة</td><td>${s.Dd} defective of ${s.units} samples</td></tr>
+   <tr><td>DPU</td><td class="n">${s.DPU.toFixed(4)}</td><td>Defects Per Unit</td><td>${s.D} defects ÷ ${s.units} units</td></tr>
+   <tr><td>DPMO (observed)</td><td class="n">${s.DPMOobs.toFixed(1)}</td><td>Defects Per Million Opportunities</td><td>DPU × 10⁶ ÷ ${s.opp} opportunit${s.opp>1?'ies':'y'} per unit</td></tr>
+   <tr><td>DPMO (expected)</td><td class="n">${s.DPMOexp<0.01?'< 0.01':s.DPMOexp.toFixed(2)}</td><td>From the normal model and the spec limits</td><td>σ<sub>LT</sub> = ${f2(A.sd)}</td></tr>
+   <tr><td>Yield</td><td class="n">${pct(s.yield)}</td><td>نسبة النتائج المطابقة</td><td>conforming samples ÷ samples</td></tr>
+   <tr><td>FPY</td><td class="n">${pct(s.FPY)}</td><td>First Pass Yield</td><td>samples passing every check first time${S.reg.mode==='cubes'?` (result within spec and each cube ≥ ${f1(s.cubeLim)})`:''}</td></tr>
+   <tr><td>Z-Score (Z<sub>LSL</sub>)</td><td class="n">${sig1(s.ZL)}</td><td>Standardized distance</td><td>(μ − LSL) / σ</td></tr>
+   <tr><td>Z-Score (Z<sub>USL</sub>)</td><td class="n">${has(s.ZU)?sig1(s.ZU):'–'}</td><td>Standardized distance</td><td>${has(s.ZU)?'(USL − μ) / σ':'no USL'}</td></tr>
+   <tr><td>Z<sub>min</sub></td><td class="n">${sig1(s.Zmin)}</td><td>min(Z<sub>LSL</sub>, Z<sub>USL</sub>)</td><td>nearest specification limit</td></tr>
+   <tr><td>Z<sub>bench</sub></td><td class="n">${sig1(s.Zbench)}</td><td>Benchmark Sigma Performance</td><td>Φ⁻¹(1 − total expected nonconforming), long-term</td></tr>
+   <tr><td>Z<sub>ST</sub></td><td class="n">${sig1(s.ZbST)}</td><td>Short-term Z (= 3·Cpk)</td><td>σ<sub>ST</sub> = ${f2(A.sigST)}</td></tr>
+   <tr><td><b>Sigma Level</b></td><td class="n"><b>${sig1(A.sigma)}</b></td><td>مستوى السيجما</td><td>Z<sub>bench</sub>${sh?' + 1.5 (shift convention)':''}</td></tr>
+   <tr><td>Process Z-Value</td><td class="n">${sig1(s.Zbench)}</td><td>مستوى الأداء بالنسبة للمواصفات</td><td>long-term, no shift</td></tr>
+   ${has(s.obsSigma)?`<tr><td>Sigma from observed DPMO</td><td class="n">${sig1(s.obsSigma)}</td><td>Attribute method (TQM L7)</td><td>Φ⁻¹(1 − DPMO/10⁶) + 1.5</td></tr>`:''}
+   </tbody></table></div>
+   <p class="note"><b>Definitions.</b> Unit = one 28-day sample (${S.reg.mode==='cubes'?'average of '+A.n+' cubes':'one result'}). ${s.cube?`Defect = one cube below ${f1(s.cubeLim)} ${U()}; ${s.opp} opportunities per unit (one per cube).`:`Defect = a sample result outside the specification (below LSL${has(A.usl)?' or above USL':''}); 1 opportunity per unit.`} ${s.D===0?`No defects were observed in ${s.units} samples, so the observed DPMO cannot resolve below about ${(1e6/(s.units*s.opp)).toFixed(0)}; the sigma level is taken from the distance between the mean and the spec limits in units of σ.`:''}</p>
+   <div class="tw"><table class="sig"><thead><tr><th class="n">Sigma level</th><th class="n">DPMO</th><th class="n">Defective %</th><th class="n">Yield %</th><th class="n">Short-term Cpk</th><th class="n">Long-term Cpk</th><th>Competitive level</th><th>Cost of quality</th></tr></thead><tbody>
+   ${SIGTAB.map(([l,d,c,q])=>`<tr class="${l===lvl?'hit':''}"><td class="n"><b>${l}</b></td><td class="n">${d.toLocaleString('en-US')}</td><td class="n">${(d/1e4).toPrecision(3)}%</td><td class="n">${(100-d/1e4).toFixed(l>=7?7:l>=6?5:l>=4?3:1)}%</td><td class="n">${(l/3).toFixed(2)}</td><td class="n">${((l-1.5)/3).toFixed(2)}</td><td>${c}</td><td>${q}</td></tr>`).join('')}</tbody></table></div>
+   <p class="foot">Highlighted: this process (${sig1(A.sigma)} σ). Table values include the 1.5σ shift; cost of quality from TQM L7.</p>`;
+  return h}
 function report(f=curFilt(),k=0){
-  const D=dataset(f),A=analyze(D),T=S.set,u=D.used,N=A.N,x=u.map(o=>o.x),ids=u.map(o=>o.id);
-  const mixed=FK.filter(k=>['grade','mix','sup'].includes(k)&&f[k]==='*');
+  const D=dataset(f),A=analyze(D),T=S.set,u=D.used,N=A.N,x=u.map(o=>o.x),ids=u.map(o=>o.id);ids.__pour=u.map(o=>o.pour);
+  const mixed=['grade','mix','sup'].filter(k=>f[k]==='*');
   const title=T.title||S.reg.title||'Project';
-  const lab=[f.item&&f.item!=='*'?f.item:'',f.grade&&f.grade!=='*'?`${f.grade} (fcu = ${f1(D.fcu).replace('.0','')} ${U()})`:'',f.mix&&f.mix!=='*'?f.mix:'',f.cem&&f.cem!=='*'?f.cem:''].filter(Boolean).join(' · ');
+  const lab=[f.grade&&f.grade!=='*'?`${f.grade} (fcu = ${f1(D.fcu).replace('.0','')} ${U()})`:'',f.mix&&f.mix!=='*'?f.mix:'',f.cem&&f.cem!=='*'?f.cem:''].filter(Boolean).join(' · ');
   const nlab=S.reg.mode==='cubes'?`(n = ${S.reg.n} cubes)`:'(individual results)';
   const supT=f.sup&&f.sup!=='*'?`Concrete Plant ${f.sup}`:'All Plants';
-  let h=`<div class="rep ${k?'pb':''}" ${k?'':'id="report"'}><div class="rhead"><p class="proj">${esc(title)}</p><div class="b1">${esc(supT)} — Statistical Analysis of 28-Day Cube Strength</div><div class="b2">${esc(lab)} — Subgroups N = ${N} ${nlab}${f.from||f.to?` · ${f.from||'start'} to ${f.to||'latest'}`:''}</div></div>`;
-  if(mixed.length)h+=`<div class="insuf"><b>Mixed population:</b> this selection combines more than one ${mixed.map(k=>FL[k].toLowerCase()).join(' / ')}. ECP and SPC results are only meaningful for one plant, one grade and one mix. Pick a single group above.</div>`;
-  // 1 data
+  let h=`<div class="rep ${k>1?'pb':''}" ${k<=1?'id="report"':''}><div class="rhead"><p class="proj">${esc(title)}</p><div class="b1">${esc(supT)} — Statistical Analysis of 28-Day Cube Strength</div><div class="b2">${esc(lab)} — Subgroups N = ${N} ${nlab}${f.from||f.to?` · ${f.from||'start'} to ${f.to||'latest'}`:''}</div></div>`;
+  if(mixed.length)h+=`<div class="insuf"><b>Mixed population:</b> this selection combines more than one ${mixed.map(k=>FL[k].toLowerCase()).join(' / ')}. Results are only meaningful for one plant, one grade and one mix.</div>`;
   h+=`<section class="sec"><h2>1. Data Basis</h2><div class="kpis">
     <div class="kpi"><div class="l">Samples analysed (N)</div><div class="v">${N}</div><div class="s">each = average of ${S.reg.mode==='cubes'?S.reg.n+' cubes':'1 result'}</div></div>
     <div class="kpi"><div class="l">Excluded</div><div class="v">${D.excl.length}</div><div class="s">${D.excl.length?'see list below':'none'}</div></div>
@@ -546,7 +777,6 @@ function report(f=curFilt(),k=0){
     ${D.flag.length?`<p class="note">Checked and kept: ${D.flag.map(o=>`${esc(o.id)} – ${esc(o.flags.join('; '))}`).join(' · ')}</p>`:''}
     <p class="note">7-day results are not used. Only 28-day compressive strength enters the analysis. Source: ${esc(S.reg.file)} (${esc(S.reg.sheet)}).</p></section>`;
   if(N<T.minDesc){h+=`<section class="sec"><h2>2. Descriptive Statistics</h2>${insuf(N,T.minDesc,'Any statistical analysis')}</section></div>`;return h}
-  // 2 descriptive
   h+=`<section class="sec"><h2>2. Descriptive Statistics</h2><div class="kpis">
    <div class="kpi"><div class="l">Mean</div><div class="v">${f1(A.mean)}</div><div class="s">${U()}</div></div>
    <div class="kpi"><div class="l">Standard deviation</div><div class="v">${f2(A.sd)}</div><div class="s">${U()} (between samples)</div></div>
@@ -554,16 +784,14 @@ function report(f=curFilt(),k=0){
    <div class="kpi"><div class="l">Min / Max</div><div class="v" style="font-size:16px">${f1(A.min)} / ${f1(A.max)}</div><div class="s">median ${f1(A.median)}</div></div>
    <div class="kpi"><div class="l">Mean − fcu</div><div class="v">${f1(A.margin)}</div><div class="s">fcu = ${f1(D.fcu)} ${U()}</div></div>
    <div class="kpi"><div class="l">Results &lt; fcu</div><div class="v">${A.below.length}</div><div class="s">${A.below.length?esc(A.below.map(o=>o.id).join(', ')):'all results ≥ fcu'}</div></div></div>
-   ${A.ad?`<p class="note">Normality (Anderson-Darling): A² = ${f2(A.ad.A2)}, p = ${A.ad.p<0.001?'< 0.001':A.ad.p.toFixed(3)} → ${A.ad.p>=0.05?'consistent with a normal distribution.':'<b>not normal</b>; capability indices below are approximate.'}</p>`:''}</section>`;
-  // 3 charts
-  const spcOk=N>=T.minSPC;
+   ${A.ad?`<p class="note">Normality (Anderson-Darling): A² = ${f2(A.ad.A2)}, p = ${A.ad.p<0.001?'< 0.001':A.ad.p.toFixed(3)} → ${A.ad.p>=0.05?'consistent with a normal distribution.':'<b>not normal</b> (p ≤ 0.05).'}</p>`:''}</section>`;
+  const spcOk=N>=T.minSPC;const specs=[{v:A.lsl,t:'LSL',c:'#c77700'},{v:A.usl,t:'USL',c:'#c77700'},{v:A.tgt,t:'Target',c:'#1f6b4a'}];
   h+=`<section class="sec pb"><h2>3. Statistical Charts</h2>${spcOk?'':`<div class="insuf"><b>Trial limits only</b> — control limits need at least <b>${T.minSPC}</b> subgroups to be reliable; this selection has <b>${N}</b>. Charts are shown for viewing; stability is not judged.</div>`}
-   <div class="charts"><div class="chart"><div class="t">${S.reg.mode==='cubes'?'X̄-R':'I-MR'} Chart of 28-Day Strength${f.sup&&f.sup!=='*'?' — '+esc(f.sup):''}</div>
-   ${lineChart({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,flags:spcOk?A.flagX:null,lab1:A.out1,yl:S.reg.mode==='cubes'?'Sample Mean':'Result',label:'Xbar'})}
-   ${lineChart({ys:A.rSeries,ids,cl:A.Rbar,ucl:A.uclR,lcl:A.lclR,flags:spcOk?A.flagR:null,lab1:A.flagR,yl:S.reg.mode==='cubes'?'Sample Range':'Moving Range',label:'Range',h:200})}</div>
+   <div class="charts"><div class="chart"><div class="t">${CTN[A.ct]} Chart of 28-Day Strength${f.sup&&f.sup!=='*'?' — '+esc(f.sup):''}</div>
+   ${lineChart({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,marks:spcOk?A.marks:null,zones:A.s1,specs,yl:A.ct==='imr'?'Individual result':'Sample Mean',label:'Xbar',clName:A.ct==='imr'?'X̄':'X̿'})}
+   ${lineChart({ys:A.disp,ids,cl:A.dbar,ucl:A.uclD,lcl:A.lclD,marks:spcOk?A.marksD:null,yl:A.ct==='xs'?'Sample StDev':A.ct==='xr'?'Sample Range':'Moving Range',label:'Range',h:200,clName:A.dSym})}</div>
    <div class="chart"><div class="t">Histogram &amp; Normal Distribution Curve</div>${histChart(x,A)}</div></div>
-   <p class="foot">${S.reg.mode==='cubes'?`X̄-R constants n = ${S.reg.n}: A2 = ${A.K.A2}, D3 = ${A.K.D3}, D4 = ${A.K.D4}, d2 = ${A.K.d2}`:'I-MR constants: E2 = 2.66, D4 = 3.267, d2 = 1.128'} · ${D.excl.length?'Excluded: '+esc(D.excl.map(o=>o.id).join(', '))+' · ':''}Source: ${esc(S.reg.file)}</p></section>`;
-  // 4 ECP
+   <p class="foot">Red points carry the number of the failed test (1 = beyond 3σ). Shaded bands: ±1σ, ±2σ, ±3σ zones. ${D.excl.length?'Excluded: '+esc(D.excl.map(o=>o.id).join(', '))+' · ':''}Source: ${esc(S.reg.file)}</p></section>`;
   const lv=ecpLevel(A.cv),t=T.ecp;
   if(N<T.minECP)h+=`<section class="sec"><h2>4. Quality Control Assessment – ECP 203-2020</h2>${insuf(N,T.minECP,'The ECP coefficient-of-variation assessment')}</section>`;
   else{const prov=N<T.finalECP;
@@ -574,79 +802,242 @@ function report(f=curFilt(),k=0){
    <tbody><tr><td>Site tests during construction<span class="ar">اختبارات الموقع أثناء الإنشاء</span></td>
    ${[`&lt; ${t[0]}`,`${t[0]} – ${t[1]}`,`${t[1]} – ${t[2]}`,`${t[2]} – ${t[3]}`,`&gt; ${t[3]}`].map((s,i)=>`<td class="${i===lv?'hit':''}">${s}%</td>`).join('')}</tr></tbody></table></div>
    <p class="note">CV = standard deviation of the ${N} sample results ÷ their mean × 100. ${prov?`<b>Provisional:</b> fewer than ${T.finalECP} results; the level may change as more results come in.`:''} This is the code assessment and is not replaced by the SPC or Six Sigma results below.</p></section>`}
-  // 5 stability
-  h+=`<section class="sec"><h2>5. Process Stability</h2>`;
-  if(A.stab==='insufficient')h+=insuf(N,T.minSPC,'Process stability');
-  else{h+=`<div class="row"><span class="big" style="color:var(--${A.stab==='stable'?'ok':'bad'})">${A.stab==='stable'?'Stable':'Unstable'}</span><span class="muted">${A.stab==='stable'?'No out-of-control signals: only common-cause variation.':'Special-cause signals found. Investigate these pours before trusting capability figures.'}</span></div>`;
-    if(A.viol.length)h+=`<ul class="viol">${A.viol.map(v=>`<li><b>${esc(v.rule)}</b>: ${[...v.idx].sort((a,b)=>a-b).map(i=>esc(ids[i])).join(', ')}</li>`).join('')}</ul>`;
-    h+=`<p class="note">Rules checked: ${T.rules==='all'?'Western Electric / Nelson 1, 2, 3, 5 and 6':'rule 1 only'} on the X̄ chart, rule 1 on the ${A.rName.toLowerCase()} chart (change in settings). Flagged points are red squares; points beyond the limits are labelled.</p>`}
-  h+=`</section>`;
-  // 6 capability
-  h+=`<section class="sec"><h2>6. Process Capability</h2>`;
-  if(A.capState==='insufficient')h+=insuf(N,T.minCap,'Process capability');
-  else{const one=A.usl==null;
-    const na1=one?'<span class="muted">n/a – no USL</span>':null;
-    const cpCell=v=>A.capState==='ok'?f2(v):'<span class="muted">not valid – unstable</span>';
-    h+=`<div class="tw"><table><thead><tr><th>Index</th><th class="n">Value</th><th>Meaning</th></tr></thead><tbody>
-    <tr><td>Cp</td><td class="n">${one?na1:cpCell(A.Cp)}</td><td>Potential capability, spread vs. tolerance (within σ)</td></tr>
-    <tr><td>Cpk</td><td class="n">${cpCell(A.Cpk)}</td><td>${A.capState==='ok'?capChip(A.Cpk):chip('Needs a stable process','na')}</td></tr>
-    <tr><td>Cpl</td><td class="n">${cpCell(A.Cpl)}</td><td>Distance from mean to LSL in 3σ<sub>within</sub> units</td></tr>
-    <tr><td>Cpu</td><td class="n">${one?na1:cpCell(A.Cpu)}</td><td>Distance from mean to USL</td></tr>
-    <tr><td>Pp</td><td class="n">${one?na1:f2(A.Pp)}</td><td>Performance, overall σ</td></tr>
-    <tr><td>Ppk</td><td class="n">${f2(A.Ppk)}</td><td>${capChip(A.Ppk)}</td></tr>
-    <tr><td>% below LSL (expected)</td><td class="n">${A.pBelow*100<0.0001?'< 0.0001':(A.pBelow*100).toFixed(4)}%</td><td>Observed: ${A.obsBelow} of ${N}</td></tr>
-    <tr><td>% above USL (expected)</td><td class="n">${one?na1:(A.pAbove*100).toFixed(4)+'%'}</td><td>${one?'One-sided specification':`Observed: ${A.obsAbove} of ${N}`}</td></tr>
-    <tr><td>Estimated nonconforming</td><td class="n">${A.pNC*100<0.0001?'< 0.0001':(A.pNC*100).toFixed(4)}%</td><td>${A.dpmo<0.5?'≈ 0':A.dpmo.toFixed(1)} PPM (normal model, overall σ)</td></tr></tbody></table></div>
-    <p class="note">LSL = ${f1(A.lsl)} ${U()}${T.lslOv===''?' (= fcu)':''}${one?'; no upper limit (USL) set, so Cp, Cpu, Pp and % above USL do not apply':`; USL = ${f1(A.usl)} ${U()}`}. σ<sub>within</sub> of a sample result = R̄/d2/√n = ${f2(A.sigW)}; σ<sub>overall</sub> = ${f2(A.sd)}. ${A.capState!=='ok'?'<b>Cp/Cpk are withheld</b> because the process is not stable; Pp/Ppk describe past performance only.':''} ${A.ad&&A.ad.p<0.05?'<b>Data not normal</b>: indices are approximate.':''}</p>`}
-  h+=`</section>`;
-  // 7 six sigma
-  h+=`<section class="sec"><h2>7. Six Sigma Analysis</h2>`;
-  if(N<T.minCap)h+=insuf(N,T.minCap,'The sigma level');
-  else h+=`<div class="row" style="align-items:center"><div><div class="muted small">Final Sigma Performance</div><div class="big">${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ</div></div>
-    <div style="flex:1;min-width:220px">${A.sigma>=6?chip('World class (≥ 6σ)','ok'):A.sigma>=4?chip('Good (4–6σ)','ok'):A.sigma>=3?chip('Average (3–4σ)','warn'):chip('Low (< 3σ)','bad')}
-    <p class="note">Calculated from the actual 28-day results: Z<sub>LT</sub> = ${f2(A.zLT)} (from the expected nonconforming rate against the spec limits, overall σ) + 1.5σ conventional shift. DPMO ≈ ${A.dpmo<0.5?'0':A.dpmo.toFixed(1)}.${A.stab==='unstable'?' The process is unstable, so this describes past results, not future output.':''}</p></div></div>`;
-  h+=`</section>`;
-  // 8 concrete & supplier performance
+  h+=`<section class="sec"><h2>5. Process Stability Analysis</h2><p class="muted" style="margin:0">Is the concrete production process statistically stable?</p>${A.stab==='insufficient'?insuf(N,T.minSPC,'Process stability'):stabilityHtml(A,ids,T)}</section>`;
+  h+=`<section class="sec pb"><h2>6. Process Capability</h2>${capabilityHtml(A,T,x)}</section>`;
+  h+=`<section class="sec"><h2>7. Six Sigma Calculations</h2>${sixSigmaHtml(A,T)}</section>`;
   h+=`<section class="sec pb"><h2>8. Concrete Performance</h2>`;
   if(N<T.minTrend)h+=insuf(N,T.minTrend,'The trend analysis');
   else{const tc={improving:'ok',steady:'na',deteriorating:'bad'}[A.trend];
     h+=`<div class="row" style="align-items:center"><span class="big" style="font-size:28px">${chip(A.trend[0].toUpperCase()+A.trend.slice(1),tc)}</span>
     <span class="muted">Strength level is <b>${A.meanDir}</b> (${f2(A.lr.b*10)} ${U()} per 10 samples, p = ${A.lr.p.toFixed(3)}); variability is <b>${A.varDir==='same'?'unchanged':A.varDir}</b> (CV ${f2(A.h1.cv)}% → ${f2(A.h2.cv)}%, first vs second half, F-test p = ${A.fp.toFixed(3)}).</span></div>
     <div class="chart" style="max-width:760px">${trendChart(x,ids,A)}</div><p class="foot">Black: sample results · green: 5-sample moving average · amber dashed: linear trend · red dashed: fcu</p>`}
-  if(A.months.length>1)h+=`<h3>By month</h3><div class="tw"><table><thead><tr><th>Month</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP level</th></tr></thead><tbody>
-    ${A.months.map(m=>{const cv=m.s/m.m*100;const l=m.n>=T.minDesc?ecpLevel(cv):null;return`<tr><td>${m.k}</td><td class="n">${m.n}</td><td class="n">${f1(m.m)}</td><td class="n">${m.n>1?f2(m.s):'–'}</td><td class="n">${m.n>1?f2(cv):'–'}</td><td>${l==null?chip('few data','na'):chip(ECPN[l],ECPC[l])}</td></tr>`}).join('')}</tbody></table></div>`;
-  // supplier comparison: same item/grade/cement & dates, any supplier/mix
-  const pairs=[...new Map(S.reg.recs.filter(r=>match(r,{...f,sup:'*',mix:'*'})&&hasResult(r)).map(r=>[r.sup+'\u0001'+r.mix,[r.sup,r.mix]])).values()];
+  const pairs=[...new Map(S.reg.recs.filter(r=>match(r,{...f,sup:'*',mix:'*',cem:'*'})&&hasResult(r)).map(r=>[r.sup+'\u0001'+r.mix+'\u0001'+r.cem,[r.sup,r.mix,r.cem]])).values()];
   if(pairs.length>1){h+=`<h3>Plant Performance — all ${esc(f.grade&&f.grade!=='*'?f.grade:'')} mixes, one row per plant per mix</h3><div class="tw"><table><thead><tr><th>Plant</th><th>Mix</th><th class="n">N</th><th class="n">Mean</th><th class="n">SD</th><th class="n">CV %</th><th>ECP</th><th class="n">&lt; fcu</th><th>Stability</th><th class="n">Ppk</th><th class="n">σ level</th></tr></thead><tbody>`;
-    const rowsS=pairs.map(([s,mx])=>{const AA=analyze(dataset({...f,sup:s,mix:mx}));return{s,mx,AA}}).sort((a,b)=>(b.AA.N>=T.minSup)-(a.AA.N>=T.minSup)||(a.AA.cv||99)-(b.AA.cv||99)||b.AA.N-a.AA.N);
+    const rowsS=pairs.map(([s,mx,cm])=>{const AA=analyze(dataset({...f,sup:s,mix:mx,cem:cm}));return{s,mx,AA}}).sort((a,b)=>(b.AA.N>=T.minSup)-(a.AA.N>=T.minSup)||(a.AA.cv||99)-(b.AA.cv||99)||b.AA.N-a.AA.N);
     for(const{s,mx,AA}of rowsS){const ok=AA.N>=T.minSup;const l=ok?ecpLevel(AA.cv):null;
-      h+=`<tr class="${s===f.sup&&mx===f.mix?'flag':''}"><td><b>${esc(s||'(blank)')}</b></td><td>${esc(mx||'–')}</td><td class="n">${AA.N}</td>${ok?`<td class="n">${f1(AA.mean)}</td><td class="n">${f2(AA.sd)}</td><td class="n">${f2(AA.cv)}</td><td>${chip(ECPN[l],ECPC[l])}</td><td class="n">${AA.below.length}</td><td>${AA.stab==='insufficient'?chip('Insufficient','na'):chip(AA.stab==='stable'?'Stable':'Unstable',AA.stab==='stable'?'ok':'bad')}</td><td class="n">${AA.N>=T.minCap?f2(AA.Ppk):'–'}</td><td class="n">${AA.N>=T.minCap?(AA.sigma>9?'> 9':AA.sigma.toFixed(1)):'–'}</td>`:`<td colspan="8" class="muted">Insufficient Data (needs ≥ ${T.minSup} samples)</td>`}</tr>`}
+      h+=`<tr class="${s===f.sup&&mx===f.mix?'flag':''}"><td><b>${esc(s||'(blank)')}</b></td><td>${esc(mx||'–')}</td><td class="n">${AA.N}</td>${ok?`<td class="n">${f1(AA.mean)}</td><td class="n">${f2(AA.sd)}</td><td class="n">${f2(AA.cv)}</td><td>${chip(ECPN[l],ECPC[l])}</td><td class="n">${AA.below.length}</td><td>${chip(STABN[AA.stab].replace(' Process','').replace('Potential Special Causes Detected','Potential'),STABC[AA.stab])}</td><td class="n">${AA.N>=T.minCap?f2(AA.Ppk):'–'}</td><td class="n">${AA.N>=T.minCap?sig1(AA.sigma):'–'}</td>`:`<td colspan="8" class="muted">Insufficient Data (needs ≥ ${T.minSup} samples)</td>`}</tr>`}
     h+=`</tbody></table></div><p class="note">Ranked by CV (lowest variability first). The highlighted row is this report's mix. Mixes are not pooled.</p>`}
   h+=`</section>`;
-  // 9 dashboard
   const dRow=(k,v,c)=>`<tr><td>${k}</td><td class="n"><b>${v}</b></td><td>${c||''}</td></tr>`;
-  const ecpTxt=N<T.minECP?'Insufficient Data':ECPN[lv]+(N<T.finalECP?' (provisional)':'');
+  const ecpTxt=N<T.minECP?'Insufficient Data':ECPN[lv]+(N<T.finalECP?' (provisional)':'');const ci=A.capState==='insufficient';
   h+=`<section class="sec"><h2>9. Final Assessment Dashboard</h2><div class="tw"><table class="dash"><thead><tr><th>Indicator</th><th class="n">Final Result</th><th>Status</th></tr></thead><tbody>
    ${dRow('Mean Strength',f1(A.mean)+' '+U(),A.margin>=0?chip(`${f1(A.margin)} above fcu`,'ok'):chip('below fcu','bad'))}
    ${dRow('Standard Deviation',f2(A.sd)+' '+U())}
    ${dRow('CV%',f2(A.cv)+'%')}
    ${dRow('ECP Quality Level',ecpTxt,N<T.minECP?chip('Insufficient','na'):chip(ECPN[lv],ECPC[lv]))}
-   ${dRow('Process Stability',A.stab==='insufficient'?'Insufficient Data':A.stab==='stable'?'Stable':'Unstable',chip(A.stab==='insufficient'?'Insufficient':A.stab==='stable'?'Stable':'Unstable',A.stab==='stable'?'ok':A.stab==='unstable'?'bad':'na'))}
-   ${dRow('Process Capability (Cp / Cpk)',A.capState==='insufficient'?'Insufficient Data':A.capState==='unstable'?'Not valid (unstable)':`${A.usl==null?'n/a':f2(A.Cp)} / ${f2(A.Cpk)}`,A.capState==='ok'?capChip(A.Cpk):chip(A.capState==='unstable'?'Withheld':'Insufficient','na'))}
-   ${dRow('Process Performance (Pp / Ppk)',A.capState==='insufficient'?'Insufficient Data':`${A.usl==null?'n/a':f2(A.Pp)} / ${f2(A.Ppk)}`,A.capState==='insufficient'?chip('Insufficient','na'):capChip(A.Ppk))}
-   ${dRow('Sigma Level',N<T.minCap?'Insufficient Data':(A.sigma>9?'> 9':A.sigma.toFixed(1))+' σ')}
+   ${dRow('Process Stability',STABN[A.stab],chip(A.stab==='insufficient'?'Insufficient':A.stab==='potential'?'Investigate':A.stab==='stable'?'Stable':'Unstable',STABC[A.stab]))}
+   ${dRow('Process Capability (Cp / Cpk)',ci?'Insufficient Data':`${has(A.Cp)?f2(A.Cp):'n/a'} / ${f2(A.Cpk)}`,ci?chip('Insufficient','na'):chip(CAPN[A.capState],CAPC[A.capState])+' '+lchip('cpk',A.Cpk))}
+   ${dRow('Process Performance (Pp / Ppk)',ci?'Insufficient Data':`${has(A.Pp)?f2(A.Pp):'n/a'} / ${f2(A.Ppk)}`,ci?chip('Insufficient','na'):lchip('ppk',A.Ppk))}
+   ${dRow('Cpm (Taguchi)',ci?'Insufficient Data':has(A.Cpm)?f2(A.Cpm):'needs Target',ci||!has(A.Cpm)?'':lchip('cpm',A.Cpm))}
+   ${dRow('Sigma Level',N<T.minCap?'Insufficient Data':sig1(A.sigma)+' σ'+(T.shift!==false?' (incl. 1.5σ shift)':''))}
    ${dRow('Performance Trend',N<T.minTrend?'Insufficient Data':A.trend[0].toUpperCase()+A.trend.slice(1))}
    </tbody></table></div>`;
+  const fa=flowAction(A);
   const ans=[
    ['Does the concrete meet the specified strength?',A.below.length?`${A.below.length} of ${N} results are below fcu (${esc(A.below.map(o=>o.id).join(', '))}). Review against the ECP acceptance criteria.`:`Yes. All ${N} results are at or above fcu = ${f1(D.fcu)}; mean is ${f1(A.margin)} ${U()} above it.`,A.below.length?'warn':'ok'],
-   ['Is production stable?',A.stab==='insufficient'?`Not enough data yet (${N} of ${T.minSPC}).`:A.stab==='stable'?'Yes, no special-cause signals.':`No, ${A.viol.length} type(s) of out-of-control signal. See section 5.`,A.stab==='stable'?'ok':A.stab==='unstable'?'bad':'na'],
-   ['Can the plant reliably produce the required strength?',A.capState==='insufficient'?'Not enough data yet.':A.capState==='unstable'?`Not confirmed: the process is unstable. Past performance Ppk = ${f2(A.Ppk)}.`:A.Cpk>=1.33?`Yes, Cpk = ${f2(A.Cpk)} (≥ 1.33).`:`Marginal, Cpk = ${f2(A.Cpk)}.`,A.capState==='ok'&&A.Cpk>=1.33?'ok':A.capState==='insufficient'?'na':'warn'],
+   ['Is production stable?',A.stab==='insufficient'?`Not enough data yet (${N} of ${T.minSPC}).`:A.stab==='stable'?'Yes, no special-cause signals.':A.stab==='potential'?'No point beyond the limits, but pattern tests flag potential special causes. See section 5.':`No. ${A.ooc.length} point(s) beyond the control limits. See section 5.`,STABC[A.stab]],
+   ['Can the plant reliably produce the required strength?',ci?'Not enough data yet.':A.capState==='reliable'?(light('cpk',A.Cpk)==='ok'?`Yes, Cpk = ${f2(A.Cpk)}.`:`Marginal, Cpk = ${f2(A.Cpk)}.`):`Not confirmed (${CAPN[A.capState].toLowerCase()}). Past performance Ppk = ${f2(A.Ppk)}.`,A.capState==='reliable'&&light('cpk',A.Cpk)==='ok'?'ok':ci?'na':'warn'],
    ['How much variation is there?',N<T.minECP?`CV = ${f2(A.cv)}% (too few results for an ECP grade).`:`CV = ${f2(A.cv)}%, ECP level ${ECPN[lv]}.`,N<T.minECP?'na':ECPC[lv]],
-   ['What is the sigma level?',N<T.minCap?'Not enough data yet.':`${A.sigma>9?'> 9':A.sigma.toFixed(1)} σ.`,N<T.minCap?'na':A.sigma>=4?'ok':'warn'],
-   ['Is plant performance improving or getting worse?',N<T.minTrend?'Not enough data yet.':`${A.trend[0].toUpperCase()+A.trend.slice(1)}: strength ${A.meanDir}, variability ${A.varDir==='same'?'unchanged':A.varDir}.`,{improving:'ok',steady:'na',deteriorating:'bad'}[A.trend]||'na']];
+   ['What is the sigma level?',N<T.minCap?'Not enough data yet.':`${sig1(A.sigma)} σ${T.shift!==false?' (with the 1.5σ shift; '+sig1(A.zLT)+' without)':''}.`,N<T.minCap?'na':A.sigma>=4?'ok':'warn'],
+   ['Is plant performance improving or getting worse?',N<T.minTrend?'Not enough data yet.':`${A.trend[0].toUpperCase()+A.trend.slice(1)}: strength ${A.meanDir}, variability ${A.varDir==='same'?'unchanged':A.varDir}.`,{improving:'ok',steady:'na',deteriorating:'bad'}[A.trend]||'na'],
+   ['What should be done?',fa?fa.t:'Collect more results first.',fa?fa.c:'na']];
   h+=`<div class="qa">${ans.map(([q,a,c])=>`<div><span class="chip ${c}" style="min-width:12px">&nbsp;</span><b>${q}</b><span style="flex:2">${a}</span></div>`).join('')}</div>
-   <p class="foot">Order of assessment: ECP 203-2020 (code assessment) → Process Stability → Process Capability → Six Sigma. Capability is relied on only after stability is confirmed. Generated by Concrete SPC on ${new Date().toISOString().slice(0,10)}.</p></section></div>`;
+   <p class="foot">Order of assessment: ECP 203-2020 (code assessment) → Process Stability → Process Capability → Six Sigma. Capability is relied on only after stability and normality are confirmed (TQM L7). Generated by Concrete SPC on ${new Date().toISOString().slice(0,10)}.</p></section></div>`;
   return h}
+
+/* ================= dashboard ================= */
+function specEditor(f){const sp=specOf(f),raw=(S.specs||{})[mkey(f)]||(S.specs||{})['grade:'+f.grade]||{};const gf=gradeFcu(f.grade);
+  return`<div class="spec"><div class="row" style="justify-content:space-between;align-items:center"><b>Specification limits — ${esc(mixLabel(f))}</b>${sp.confirmed?chip('Confirmed'+(sp.level==='grade'?' for all '+esc(f.grade)+' mixes':''),'ok'):chip('Default values – confirm them','warn')}</div>
+   <div class="grid" style="margin-top:6px">
+    <label class="f"><span>fcu (${U()})</span><input type="number" id="sp-fcu" placeholder="${has(gf)?f1(gf)+' from grade':'enter'}" value="${esc(raw.fcu??'')}"></label>
+    <label class="f"><span>LSL (${U()})</span><input type="number" id="sp-lsl" placeholder="= fcu" value="${esc(raw.lsl??'')}"></label>
+    <label class="f"><span>USL (optional)</span><input type="number" id="sp-usl" placeholder="none" value="${esc(raw.usl??'')}"></label>
+    <label class="f"><span>Target strength</span><input type="number" id="sp-tgt" placeholder="mix design target" value="${esc(raw.tgt??'')}"></label>
+    <label class="f" style="grid-column:span 2"><span>Source of the limits</span><input type="text" id="sp-src" placeholder="e.g. ECP 203-2020 / project specification clause / approved mix design" value="${esc(raw.src??'')}"></label></div>
+   <div class="row" style="margin-top:8px"><button class="btn primary" id="sp-save">Confirm for this mix</button><button class="btn" id="sp-grade">Confirm for all ${esc(f.grade)} mixes</button>${raw.saved?'<button class="btn" id="sp-clear">Back to defaults</button>':''}</div>
+   <p class="note">Set the limits from the code and the project specification. The app does not assume the target strength is the LSL: until you confirm, LSL defaults to fcu and the report marks it as a default.</p></div>`}
+function saveSpec(f,scope){S.specs=S.specs||{};const v=id=>{const e=$('#sp-'+id);return e?e.value.trim():''};const rec={fcu:v('fcu'),lsl:v('lsl'),usl:v('usl'),tgt:v('tgt'),src:v('src'),saved:1};
+  if(rec.usl&&rec.lsl&&+rec.usl<=+rec.lsl){toast('USL must be higher than LSL.');return false}
+  if(scope==='grade'){for(const k of Object.keys(S.specs))if(k.split('|')[1]===f.grade)delete S.specs[k];S.specs['grade:'+f.grade]=rec}else S.specs[mkey(f)]=rec;save();return true}
+function dashSel(list){const ok=list.filter(g=>g.ok);let g=list.find(g=>mkey(g.f)===S.dsel);if(!g)g=[...ok].sort((a,b)=>b.A.N-a.A.N)[0]||list[0];if(g)S.dsel=mkey(g.f);return g}
+function vDash(){
+  if(!S.reg)return`<div class="card"><h2>No register loaded</h2><p>Load the concrete pouring register from the Register tab.</p><button class="btn primary" id="pick">Choose register file</button></div>`;
+  const T=S.set,list=mixList(),ok=list.filter(g=>g.ok),sel=dashSel(list);if(!sel)return'';
+  const ooc=ok.filter(g=>g.A.stab==='unstable'),pot=ok.filter(g=>g.A.stab==='potential');
+  const capL=ok.filter(g=>g.A.N>=T.minCap&&has(g.A.Cpk)),avg=capL.length?ST.mean(capL.map(g=>g.A.Cpk)):NaN,okCpk=capL.filter(g=>light('cpk',g.A.Cpk)==='ok').length;
+  const grey=list.filter(g=>g.A.N<T.minCap);const ct=chartType(S.reg.mode==='cubes'?S.reg.n:1);
+  let h=`<div class="dhead"><div style="min-width:0"><div class="crumb">${esc(T.title||S.reg.title)} / Inspection / SPC Control Chart</div><h2 class="dt">SPC Control Chart</h2>
+   <div class="muted small">Statistical Process Control · Monitor ${ok.length} mixes · OOC ${ooc.length} items · Avg Cpk ${f2(avg)} · ISO 7870-2 + ${esc(TSETS[T.rules].name)}</div></div>
+   <div class="row"><button class="btn" id="d-rep">Capability report</button><button class="btn primary" id="d-xl">Export Excel</button></div></div>
+  <div class="tiles">
+   <div class="tile"><div class="l">Monitor Chart</div><div class="v">${ok.length}<small> / ${list.length}</small></div><div class="s">mixes with ≥ ${T.minDesc} samples</div></div>
+   <div class="tile"><div class="l">OOC Active</div><div class="v" style="color:var(--bad)">${ooc.length}<small> items</small></div><div class="s" style="color:var(--bad)">${ooc.length?'Out-of-control chart':'none'}${pot.length?` · ${pot.length} with pattern signals`:''}</div></div>
+   <div class="tile"><div class="l">Avg Cpk</div><div class="v" style="color:var(--${has(avg)?light('cpk',avg):'na'})">${f2(avg)}</div><div class="s">Target ≥ ${T.g.cpk[1]} · OK ${okCpk} item${okCpk===1?'':'s'}${capL.filter(g=>g.A.capState!=='reliable').length?` · ${capL.filter(g=>g.A.capState!=='reliable').length} not reliable`:''}</div></div>
+   <div class="tile"><div class="l">n &lt; ${T.minCap} (grey)</div><div class="v">${grey.length}<small> items</small></div><div class="s">before capability lock</div></div></div>
+  <div class="card"><nav class="stabs">${[['mon','Chart Monitor'],['const','Control constants'],['trend','Cp/Cpk Trend'],['ocap','OCAP']].map(([k,l])=>`<button data-d="${k}" class="${S.dtab===k?'on':''}">${l}</button>`).join('')}</nav>`;
+  const D=sel.D,A=sel.A,u=D.used,x=u.map(o=>o.x),ids=u.map(o=>o.id);
+  if(S.dtab==='mon'){
+    h+=`<div class="ctsel"><div class="row" style="justify-content:space-between"><b>Chart type selection (ISO 7870-2)</b><span class="muted small mono">Active: ${CTN[ct]}</span></div>
+      <div class="row" style="gap:6px;margin-top:6px">${[['auto','Auto'],['xr','X̄-R'],['xs','X̄-S'],['imr','I-MR']].map(([k,l])=>`<button class="cbtn ${(T.chart||'auto')===k?'on':''}" data-ct="${k}">${l}</button>`).join('')}</div>
+      <p class="note">Continuous data: subgroup n = 1 → I-MR · n = 2–9 → X̄-R · n ≥ 10 → X̄-S. Each set of ${S.reg.mode==='cubes'?S.reg.n+' cubes':'results'} is one subgroup. I-MR on sample results shows pour-to-pour stability.</p></div>
+     <div class="mcards">${list.map(g=>{const a=g.A,on=g===sel,st=!g.ok?'na':a.stab;const rules=Object.keys(a.hits||{}).filter(t=>g.ok&&a.N>=T.minSPC);
+       const badge=!g.ok?chip(`n<${T.minDesc}`,'na'):a.stab==='insufficient'?chip(`n<${T.minSPC}`,'na'):a.stab==='stable'?'<span class="dot ok">Stable</span>':a.stab==='unstable'?'<span class="dot bad">OOC</span>':'<span class="dot warn">Signals</span>';
+       return`<button class="mcard ${on?'on':''} ${st==='unstable'?'oocb':''} ${!g.ok||a.N<T.minCap?'grey':''}" data-k="${esc(mkey(g.f))}"><div class="row" style="justify-content:space-between;gap:6px"><span class="mono small">SPC-${esc(String(g.f.sup).toUpperCase().replace(/\s+/g,''))}-${esc(String(g.f.mix||g.f.grade).toUpperCase().replace(/\s+/g,''))} <span class="tag">${CTN[a.ct||ct]}</span></span>${badge}</div>
+         <div class="mt"><b>${esc(g.f.sup)}</b> · ${esc(g.f.grade)} · ${esc(g.f.mix||'–')}</div><div class="muted small mono">n=${a.N}${g.D.used.length?' · last '+g.D.used[g.D.used.length-1].pour:''}</div>
+         <div class="row" style="gap:4px;margin-top:6px">${g.ok&&a.N>=T.minCap&&has(a.Cpk)?chip('Cpk '+f2(a.Cpk),light('cpk',a.Cpk)):''}${rules.length?chip('Rule '+rules.join(','),'warn'):''}${g.ok&&a.N<T.minCap?chip(`n<${T.minCap}`,'na'):''}</div></button>`}).join('')}</div>`;
+    if(sel.ok){const specs=[{v:A.lsl,t:'LSL',c:'#c77700'},{v:A.usl,t:'USL',c:'#c77700'},{v:A.tgt,t:'Target',c:'#1f6b4a'}];const spc=A.N>=T.minSPC;
+      h+=`<div class="sel"><div class="row" style="justify-content:space-between"><b>${esc(mixLabel(sel.f))} · 28-day strength (${U()})</b><span class="muted small">UCL/CL/LCL · LSL/USL/Target · ±1σ ±2σ ±3σ zones</span></div>
+       <div class="kpis" style="margin:8px 0">${[['Stability',chip(STABN[A.stab].replace(' Process',''),STABC[A.stab])],['Cpk',A.N>=T.minCap?f2(A.Cpk)+' '+lchip('cpk',A.Cpk):'–'],['Ppk',A.N>=T.minCap?f2(A.Ppk)+' '+lchip('ppk',A.Ppk):'–'],['Cpm',A.N>=T.minCap&&has(A.Cpm)?f2(A.Cpm):'needs Target'],['Sigma',A.N>=T.minCap?sig1(A.sigma)+' σ':'–'],['ECP',A.N>=T.minECP?chip(ECPN[ecpLevel(A.cv)],ECPC[ecpLevel(A.cv)]):'–']].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:16px">${v}</div></div>`).join('')}</div>
+       <div class="chart">${lineChart({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,marks:spc?A.marks:null,zones:A.s1,specs,yl:A.ct==='imr'?'Individual result':'Sample Mean',label:'Xbar',w:860,h:280,clName:A.ct==='imr'?'X̄':'X̿'})}
+       ${lineChart({ys:A.disp,ids,cl:A.dbar,ucl:A.uclD,lcl:A.lclD,marks:spc?A.marksD:null,yl:A.dName,label:'Range',w:860,h:170,clName:A.dSym})}</div>
+       ${spc?'':`<p class="note">Trial limits: fewer than ${T.minSPC} subgroups, so tests are not applied yet.</p>`}
+       <div class="row" style="margin-top:8px"><button class="btn" id="d-open">Open the full report for this mix</button></div></div>`}
+    else h+=`<div class="insuf" style="margin-top:12px"><b>Insufficient Data</b> — ${esc(mixLabel(sel.f))} has ${sel.A.N} samples; at least ${T.minDesc} are needed.</div>`;
+    h+=specEditor(sel.f)}
+  else if(S.dtab==='const'){const n=S.reg.mode==='cubes'?S.reg.n:1;
+    h+=`<div class="charts"><div><h3 style="margin-top:4px">X̄ and R charts</h3><div class="tw"><table><thead><tr><th class="n">n</th><th class="n">A2</th><th class="n">D3</th><th class="n">D4</th><th class="n">d2</th></tr></thead><tbody>${Object.entries(XR).map(([k,v])=>`<tr class="${+k===n&&ct==='xr'?'hit':''}"><td class="n">${k}</td>${v.map(z=>`<td class="n">${z.toFixed(3)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <h3>Individuals and moving range (n = 2 for MR)</h3><div class="tw"><table><tbody><tr class="${ct==='imr'?'hit':''}"><td>E2 = 3/d2</td><td class="n">2.660</td><td>D4</td><td class="n">3.267</td><td>d2</td><td class="n">1.128</td></tr></tbody></table></div></div>
+     <div><h3 style="margin-top:4px">X̄ and S charts</h3><div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th class="n">n</th><th class="n">c4</th><th class="n">A3</th><th class="n">B3</th><th class="n">B4</th></tr></thead><tbody>${Object.entries(XS).map(([k,v])=>`<tr class="${+k===n&&ct==='xs'?'hit':''}"><td class="n">${k}</td><td class="n">${v[0].toFixed(4)}</td>${v.slice(1).map(z=>`<td class="n">${z.toFixed(3)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="note">n &gt; 25: c4 = 4(n−1)/(4n−3), A3 = 3/(c4√n), B3 = 1 − 3/(c4√(2(n−1))), B4 = 1 + 3/(c4√(2(n−1))).</p></div></div>
+     <p class="note">Source: SPC Formulas and Tables (H. B. Rowe). Highlighted: constants used now (${CTN[ct]}, n = ${ct==='imr'?1:n}).</p>`;
+    if(sel.ok)h+=`<h3>Applied to ${esc(mixLabel(sel.f))}</h3>`+limitsHtml(A)}
+  else if(S.dtab==='trend'){
+    if(sel.ok&&sel.A.N>=T.minCap){const p=capPath(D);h+=`<h3 style="margin-top:4px">${esc(mixLabel(sel.f))}: Cpk and Ppk as results come in</h3><div class="chart">${multiChart([{n:'Cpk',c:'#1f6b4a',v:p.map(z=>z.cpk)},{n:'Ppk',c:'#b3261e',v:p.map(z=>z.ppk),dash:true}],[{v:T.g.cpk[1],c:'#2e8b3e',t:'≥ '+T.g.cpk[1]},{v:T.g.cpk[0],c:'#d32f2f',t:T.g.cpk[0]+''}],{w:860,h:260,xs:p.map(z=>z.k)})}</div>
+      <p class="note">Each point uses all samples up to that one (first point at ${T.minCap} samples). Last: Cpk ${f2(p[p.length-1].cpk)}, Ppk ${f2(p[p.length-1].ppk)} after ${p[p.length-1].id} (${p[p.length-1].date}).</p>`}
+    else h+=insuf(sel.A.N,T.minCap,'The Cp/Cpk trend');
+    const cl=list.filter(g=>g.ok&&g.A.N>=T.minCap);
+    if(cl.length){const mx=Math.max(2,...cl.flatMap(g=>[g.A.Cpk,g.A.Ppk].filter(has)));h+=`<h3>All mixes with N ≥ ${T.minCap}</h3><div class="tw"><table><thead><tr><th>Mix</th><th class="n">N</th><th>Cpk</th><th>Ppk</th><th>Reliability</th></tr></thead><tbody>
+      ${cl.map(g=>`<tr><td><b>${esc(mixLabel(g.f))}</b></td><td class="n">${g.A.N}</td>${['Cpk','Ppk'].map(k=>`<td style="min-width:150px"><div style="display:flex;gap:6px;align-items:center"><div style="flex:1;background:var(--soft);border-radius:3px"><div class="bar" style="width:${Math.max(0,g.A[k]/mx*100).toFixed(1)}%;background:var(--${light(k.toLowerCase(),g.A[k])})"></div></div><span class="mono">${f2(g.A[k])}</span></div></td>`).join('')}<td>${chip(CAPN[g.A.capState],CAPC[g.A.capState])}</td></tr>`).join('')}</tbody></table></div>`}}
+  else{h+=`<h3 style="margin-top:4px">Out-of-Control Action Plan — ${esc(mixLabel(sel.f))}</h3>`;
+    if(!sel.ok||A.stab==='insufficient')h+=insuf(sel.A.N,T.minSPC,'The out-of-control analysis');
+    else{const sigs=[...Object.entries(A.hits).map(([t,is])=>({t:+t,is})),...((A.hitsD[1]||[]).length?[{t:'R',is:A.hitsD[1]}]:[])];
+      if(!sigs.length)h+=`<div class="qa"><div><span class="chip ok">&nbsp;</span><b>No active signals.</b><span style="flex:2">The process shows only common-cause variation. Keep charting each new result.</span></div></div>`;
+      else h+=`<div class="tw"><table><thead><tr><th>Signal</th><th style="white-space:normal">Samples</th><th style="white-space:normal">Possible causes</th><th style="white-space:normal">Action</th><th>Owner / date</th></tr></thead><tbody>
+       ${sigs.map(s=>`<tr><td><b>${s.t==='R'?'Test 1 · '+A.dName:'Test '+s.t}</b><div class="muted small">${s.t==='R'?'beyond the UCL':TSHORT[s.t]}</div></td><td style="white-space:normal">${s.is.map(i=>`${esc(ids[i])} <span class="muted">(${u[i].pour})</span>`).join(', ')}</td><td style="white-space:normal;min-width:220px">${OCAP[s.t].c}</td><td style="white-space:normal;min-width:220px">${OCAP[s.t].a}</td><td class="muted">QC / plant</td></tr>`).join('')}</tbody></table></div>`;
+      const fa=flowAction(A);if(fa)h+=`<h3>Using the indices (TQM L7 flowchart)</h3><div class="qa"><div><span class="chip ${fa.c}">&nbsp;</span><span>${fa.t}</span></div></div>`}}
+  return h+`</div>`}
+
+/* ================= Excel export (.xlsx written directly) ================= */
+const XST={d:0,title:1,h:2,n1:3,n2:4,ok:5,warn:6,bad:7,na:8,b:9,note:10,sec:11,n0:12,n4:13};
+function xlStyles(){return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="3"><numFmt numFmtId="164" formatCode="0.0"/><numFmt numFmtId="165" formatCode="0.00"/><numFmt numFmtId="166" formatCode="0.0000"/></numFmts>
+<fonts count="10"><font><sz val="10"/><name val="Calibri"/></font><font><b/><sz val="15"/><color rgb="FF1F4D3A"/><name val="Calibri"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><sz val="10"/><color rgb="FF006100"/><name val="Calibri"/></font><font><sz val="10"/><color rgb="FF9C5700"/><name val="Calibri"/></font><font><sz val="10"/><color rgb="FF9C0006"/><name val="Calibri"/></font><font><sz val="10"/><color rgb="FF595959"/><name val="Calibri"/></font><font><b/><sz val="10"/><name val="Calibri"/></font><font><i/><sz val="9"/><color rgb="FF595959"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF1F6B4A"/><name val="Calibri"/></font></fonts>
+<fills count="8"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F6B4A"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFC6EFCE"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFEB9C"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFC7CE"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEDEDED"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2F0E8"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD3DAD8"/></left><right style="thin"><color rgb="FFD3DAD8"/></right><top style="thin"><color rgb="FFD3DAD8"/></top><bottom style="thin"><color rgb="FFD3DAD8"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="14"><xf numFmtId="0" fontId="0" fillId="0" borderId="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="center"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="3" fillId="3" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="4" fillId="4" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="5" fillId="5" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="6" fillId="6" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="7" fillId="0" borderId="1" applyFont="1" applyBorder="1"/><xf numFmtId="0" fontId="8" fillId="0" borderId="0" applyFont="1" applyAlignment="1"><alignment wrapText="0"/></xf><xf numFmtId="0" fontId="9" fillId="7" borderId="0" applyFont="1" applyFill="1"/><xf numFmtId="1" fontId="0" fillId="0" borderId="1" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="166" fontId="0" fillId="0" borderId="1" applyNumberFormat="1" applyBorder="1"/></cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`}
+const xe=s=>String(s??'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const plain=s=>String(s??'').replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+// a sheet builder: rows of cells; a cell is a value or {v, s}
+class XSheet{constructor(name){this.name=name;this.rows=[];this.merges=[];this.cols=[];this.imgs=[];this.r=0}
+  add(cells=[]){this.rows[this.r]=cells;this.r++;return this}
+  gap(){this.r++;return this}
+  title(t,span=8){this.merges.push(`A${this.r+1}:${colName(span-1)}${this.r+1}`);return this.add([{v:t,s:'title'}])}
+  sec(t,span=8){this.merges.push(`A${this.r+1}:${colName(span-1)}${this.r+1}`);const c=[{v:t,s:'sec'}];for(let i=1;i<span;i++)c.push({v:'',s:'sec'});return this.add(c)}
+  head(cells){return this.add(cells.map(v=>({v,s:'h'})))}
+  note(t){return this.add([{v:t,s:'note'}])}
+  img(png,col,row,w,h){this.imgs.push({png,col,row,w,h})}
+  xml(drawRel){let x=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="14"/>`;
+    if(this.cols.length)x+=`<cols>${this.cols.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`;
+    x+='<sheetData>';this.rows.forEach((row,ri)=>{if(!row)return;x+=`<row r="${ri+1}"${row.some(c=>c&&c.s==='title')?' ht="22" customHeight="1"':''}>`;
+      row.forEach((c,ci)=>{if(c==null)return;const o=typeof c==='object'?c:{v:c};let v=o.v;const ref=colName(ci)+(ri+1);
+        let s=XST[o.s]??(typeof v==='number'?(Number.isInteger(v)?XST.n0:XST.n2):0);
+        if(typeof v==='number'&&isFinite(v))x+=`<c r="${ref}" s="${s}"><v>${v}</v></c>`;
+        else{v=v==null||(typeof v==='number')?'–':String(v);if(v==='')x+=`<c r="${ref}" s="${s}"/>`;else x+=`<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xe(v)}</t></is></c>`}});x+='</row>'});
+    x+='</sheetData>';if(this.merges.length)x+=`<mergeCells count="${this.merges.length}">${this.merges.map(m=>`<mergeCell ref="${m}"/>`).join('')}</mergeCells>`;
+    x+=`<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToHeight="0"/>`;
+    if(drawRel)x+=`<drawing r:id="${drawRel}"/>`;return x+'</worksheet>'}}
+async function svgPng(svg,scale=2){return new Promise(res=>{try{const m=svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);const w=+m[1],h=+m[2];const img=new Image();
+  img.onload=()=>{try{const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);res({b64:c.toDataURL('image/png').split(',')[1],w,h})}catch(e){res(null)}};
+  img.onerror=()=>res(null);img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)}catch(e){res(null)}})}
+const st3=c=>c==='ok'?'ok':c==='warn'?'warn':c==='bad'?'bad':'na';
+const xnum=(v,d=2)=>has(v)?+v.toFixed(d):'–';
+function sheetName(s,used){let n=String(s).replace(/[\[\]:*?\/\\]/g,' ').replace(/\s+/g,' ').trim().slice(0,31)||'Sheet';let k=n,i=2;while(used.has(k.toLowerCase())){k=n.slice(0,28)+' '+i++}used.add(k.toLowerCase());return k}
+function dashSheet(list){const T=S.set,sh=new XSheet('Dashboard');const ok=list.filter(g=>g.ok);
+  sh.cols=[14,12,12,7,9,8,8,12,26,14,8,8,8,8,8,9,9,9,12,14];
+  sh.title(`${T.title||S.reg.title} — SPC Dashboard, 28-day cube strength`,12);
+  sh.note(`Register: ${S.reg.file} · Exported ${new Date().toISOString().slice(0,16).replace('T',' ')} · Units: ${U()} · Tests: ${TSETS[T.rules].name} · Min samples per mix: ${T.minDesc}`);sh.gap();
+  const ooc=ok.filter(g=>g.A.stab==='unstable').length,capL=ok.filter(g=>g.A.N>=T.minCap&&has(g.A.Cpk)),avg=capL.length?ST.mean(capL.map(g=>g.A.Cpk)):null;
+  sh.head(['Monitored mixes','Total mixes','OOC active','Avg Cpk','Cpk OK','n < '+T.minCap]);
+  sh.add([ok.length,list.length,{v:ooc,s:ooc?'bad':'ok'},{v:xnum(avg),s:has(avg)?light('cpk',avg):'na'},capL.filter(g=>light('cpk',g.A.Cpk)==='ok').length,list.filter(g=>g.A.N<T.minCap).length]);sh.gap();
+  sh.sec('Mix × Plant overview',20);
+  sh.head(['Plant','Grade','Mix','N','Mean','SD','CV %','ECP level','Stability','Tests failed','Cp','Cpk','Pp','Ppk','Cpm','Stab. index','Z bench','Sigma level','DPMO (exp.)','Trend']);
+  for(const g of list){const a=g.A;if(!g.ok){sh.add([g.f.sup,g.f.grade,g.f.mix,a.N,{v:`Insufficient Data (needs ${T.minDesc})`,s:'na'}]);continue}
+    const lv=ecpLevel(a.cv),cap=a.N>=T.minCap;
+    sh.add([g.f.sup,g.f.grade,g.f.mix,a.N,{v:xnum(a.mean,1),s:'n1'},xnum(a.sd),xnum(a.cv),{v:a.N>=T.minECP?ECPN[lv]:'Insufficient',s:a.N>=T.minECP?ECPC[lv]:'na'},{v:STABN[a.stab],s:STABC[a.stab]},a.stab==='insufficient'?'–':Object.keys(a.hits).join(', ')||'none',
+      cap?xnum(a.Cp):'–',cap?{v:xnum(a.Cpk),s:light('cpk',a.Cpk)||'na'}:'–',cap?xnum(a.Pp):'–',cap?{v:xnum(a.Ppk),s:light('ppk',a.Ppk)||'na'}:'–',cap?xnum(a.Cpm):'–',cap?{v:xnum(a.SI),s:light('si',a.SI)||'na'}:'–',cap?xnum(a.ss.Zbench):'–',cap?{v:xnum(a.sigma),s:a.sigma>=4?'ok':a.sigma>=3?'warn':'bad'}:'–',cap?xnum(a.ss.DPMOexp,2):'–',a.trend||'–'])}
+  sh.gap();sh.note('Cp/Cpk use σST (within); Pp/Ppk use σLT (overall). Sigma level includes the conventional 1.5σ shift'+(T.shift===false?' (switched off)':'')+'. Capability is reliable only for stable, normal data (TQM L7).');
+  return sh}
+function mixSheet(g,name){const T=S.set,sh=new XSheet(name),A=g.A,D=g.D,u=D.used,sp=A.sp;sh.cols=[30,14,14,14,40,12,12,12,12,12];
+  sh.title(`${mixLabel(g.f)} — statistical analysis of 28-day strength`,9);
+  sh.note(`${S.reg.title} · ${S.reg.file} · N = ${A.N} samples (${S.reg.mode==='cubes'?'n = '+A.n+' cubes each':'individual results'}) · ${u.length?u[0].pour+' to '+u[u.length-1].pour:''}`);sh.gap();
+  sh.sec('Specification limits',5);sh.head(['Item','Value','Unit','','Source / note']);
+  sh.add(['fcu',xnum(A.fcu,1),U(),'',sp.fcuFromGrade?'from grade name':sp.src]);sh.add(['LSL',xnum(A.lsl,1),U(),'',sp.lslIsFcu?'= fcu (default)':sp.src]);sh.add(['USL',has(A.usl)?xnum(A.usl,1):'none',U(),'',sp.src]);sh.add(['Target',has(A.tgt)?xnum(A.tgt,1):'not set',U(),'',sp.src]);
+  sh.add(['Status',{v:sp.confirmed?'Confirmed':'Default – confirm against code / project spec',s:sp.confirmed?'ok':'warn'}]);sh.gap();
+  sh.sec('Descriptive statistics & ECP 203-2020',5);sh.head(['Indicator','Value','Status','','Note']);
+  const lv=ecpLevel(A.cv);
+  sh.add(['Mean strength',{v:xnum(A.mean,1),s:'n1'},'','',U()]);sh.add(['Standard deviation (σLT)',xnum(A.sd),'','',U()]);sh.add(['CV %',xnum(A.cv),'','','SD ÷ mean × 100']);
+  sh.add(['Min / Max',`${f1(A.min)} / ${f1(A.max)}`]);sh.add(['Results below fcu',A.below.length,{v:A.below.length?'Check':'OK',s:A.below.length?'warn':'ok'},'',A.below.map(o=>o.id).join(', ')]);
+  sh.add(['ECP quality level (Table 8-3)',A.N>=T.minECP?ECPN[lv]:'Insufficient',{v:A.N>=T.minECP?ECPN[lv]:'–',s:A.N>=T.minECP?ECPC[lv]:'na'},'',A.N<T.finalECP?'provisional (< '+T.finalECP+' results)':'']);
+  if(A.ad)sh.add(['Normality (Anderson-Darling)',`A² ${f2(A.ad.A2)}, p ${A.ad.p.toFixed(3)}`,{v:A.normal?'Normal':'Not normal',s:A.normal?'ok':'bad'}]);sh.gap();
+  sh.sec(`Process stability — ${CTN[A.ct]}`,5);sh.add(['Verdict',{v:STABN[A.stab],s:STABC[A.stab]}]);
+  if(A.stab!=='insufficient'){sh.head(['Chart','Centre line','UCL','LCL','Formula']);sh.add([A.ct==='imr'?'Individuals':'X̄',xnum(A.cl),xnum(A.ucl),xnum(A.lcl),A.ct==='xr'?'X̿ ± A2·R̄':A.ct==='xs'?'X̿ ± A3·S̄':'X̄ ± 2.660·MR̄']);sh.add([A.dName,xnum(A.dbar),xnum(A.uclD),xnum(A.lclD),A.ct==='xr'?'D4·R̄ / D3·R̄':A.ct==='xs'?'B4·S̄ / B3·S̄':'3.267·MR̄']);
+    sh.add(['σ short-term (σST)',xnum(A.sigST,3),'','',plain(A.sigTxt)]);sh.add(['σ long-term (σLT)',xnum(A.sd,3)]);sh.add(['σ between / over time',xnum(A.sigB,3)]);sh.add(['Stability index σLT/σST',{v:xnum(A.SI),s:light('si',A.SI)||'na'}]);
+    sh.gap();sh.head(['Test','Result','','','Description / samples']);
+    for(const t of A.tset.tests){const hs=A.hits[t]||[];sh.add(['Test '+t,{v:hs.length?(t===1?'Out of control':'Signal'):'Pass',s:hs.length?'bad':'ok'},'','',tdesc(t)+(hs.length?' — '+hs.map(i=>u[i].id).join(', '):'')])}
+    const hd=A.hitsD[1]||[];sh.add(['Test 1 ('+A.dName+')',{v:hd.length?'Out of control':'Pass',s:hd.length?'bad':'ok'},'','',hd.map(i=>u[i].id).join(', ')])}
+  sh.gap();sh.sec('Process capability',5);sh.add(['Reliability',{v:CAPN[A.capState],s:CAPC[A.capState]}]);
+  if(A.capState!=='insufficient'){sh.head(['Index','Value','Status','','Formula']);
+    const r=(n,v,k,fm)=>sh.add([n,has(v)?xnum(v):'–',k&&has(v)?{v:LN[light(k,v)],s:light(k,v)}:'','',fm]);
+    r('Cp',A.Cp,'cp','(USL − LSL) / 6σST');r('Cpk',A.Cpk,'cpk','min(Cpu, Cpl)');r('Cpu',A.Cpu,'','(USL − X̄) / 3σST');r('Cpl',A.Cpl,'','(X̄ − LSL) / 3σST');r('Pp',A.Pp,'pp','(USL − LSL) / 6σLT');r('Ppk',A.Ppk,'ppk','min(Ppu, Ppl)');
+    r('Cpm (Taguchi)',A.Cpm,'cpm','needs Target');r('Target index',A.TI,'ti','|X̄ − T| / σST');r('Stability index',A.SI,'si','σLT / σST');if(has(A.Kidx))r('K',A.Kidx,'','(X̄ − T) / ½(USL − LSL)');if(has(A.Cr))r('Cr',A.Cr,'','1 / Cp');
+    sh.add(['Expected PPM < LSL (overall)',has(A.lsl)?+(A.expO.lo*1e6).toFixed(3):'–']);sh.add(['Expected PPM > USL (overall)',has(A.usl)?+(A.expO.hi*1e6).toFixed(3):'–']);sh.add(['Observed PPM total',+((A.obsLo+A.obsHi)/A.N*1e6).toFixed(0)]);
+    const fa=flowAction(A);if(fa)sh.add(['Recommended action (L7 flowchart)',{v:fa.t,s:fa.c}])}
+  sh.gap();sh.sec('Six Sigma',5);
+  if(A.N>=T.minCap&&A.ss){const s=A.ss;sh.head(['Parameter','Value','','','Description']);
+    [['Defect Rate',+(s.rate*100).toFixed(3),'% non-conforming samples'],['DPU',+s.DPU.toFixed(5),'Defects per unit'],['DPMO (observed)',+s.DPMOobs.toFixed(1),`${s.D} defects, ${s.opp} opportunit${s.opp>1?'ies':'y'} per unit`],['DPMO (expected)',+s.DPMOexp.toFixed(3),'normal model, σLT'],
+     ['Yield %',+(s.yield*100).toFixed(3),'conforming samples'],['FPY %',+(s.FPY*100).toFixed(3),'first pass yield'],['Z LSL',xnum(s.ZL),'(μ − LSL)/σ'],['Z USL',has(s.ZU)?xnum(s.ZU):'–','(USL − μ)/σ'],['Z min',xnum(s.Zmin),'min(Z LSL, Z USL)'],['Z bench',xnum(s.Zbench),'Φ⁻¹(1 − P total), long-term'],['Z ST',xnum(s.ZbST),'short-term (= 3·Cpk)'],
+     ['Sigma Level',{v:xnum(A.sigma),s:A.sigma>=4?'ok':A.sigma>=3?'warn':'bad'},T.shift!==false?'Z bench + 1.5σ shift (convention)':'Z bench, no shift'],['Process Z-Value',xnum(s.Zbench),'long-term, no shift']].forEach(([a,b,c])=>sh.add([a,b,'','',c]))}
+  else sh.add([{v:`Insufficient Data (needs ${T.minCap} samples)`,s:'na'}]);
+  sh.gap();sh.sec('Sample data (28-day)',10);
+  const nc=S.reg.mode==='cubes'?S.reg.n:0;sh.head(['Sample','Pour date',...Array.from({length:nc},(_,i)=>'Cube '+(i+1)),'Result',A.ct==='xs'?'StDev':'Range','Status','Tests','Note']);
+  for(const o of D.rows){const i=u.indexOf(o);const m=i>=0?A.marks.get(i):null;const md=i>=0?A.marksD.get(i):null;
+    sh.add([o.id,o.pour,...(nc?o.c.map(v=>has(v)?v:'–'):[]),{v:xnum(o.x,2),s:o.use?'n2':'na'},xnum(A.ct==='xs'?o.S:o.R),{v:o.use?(m||md?'Signal':'OK'):'Excluded',s:o.use?(m||md?'bad':'ok'):'na'},[...(m||[]),...(md?['R']:[])].join(', '),o.use?o.flags.join('; '):o.why])}
+  return sh}
+async function exportExcel(list,label){
+  toast('Preparing the Excel file…');const used=new Set();const sheets=[dashSheet(list)];sheets[0].name=sheetName('Dashboard',used);
+  for(const g of list.filter(g=>g.ok)){const sh=mixSheet(g,sheetName(`${g.f.sup} ${g.f.grade} ${g.f.mix||''}`,used));
+    const A=g.A,u=g.D.used,x=u.map(o=>o.x),ids=u.map(o=>o.id);const spc=A.N>=S.set.minSPC;
+    const svgs=[lineChart({ys:x,ids,cl:A.cl,ucl:A.ucl,lcl:A.lcl,marks:spc?A.marks:null,zones:A.s1,specs:[{v:A.lsl,t:'LSL',c:'#c77700'},{v:A.usl,t:'USL',c:'#c77700'},{v:A.tgt,t:'Target',c:'#1f6b4a'}],yl:A.ct==='imr'?'Result':'Sample Mean',label:'Xbar',w:640,h:260,clName:A.ct==='imr'?'X̄':'X̿'}),
+      lineChart({ys:A.disp,ids,cl:A.dbar,ucl:A.uclD,lcl:A.lclD,marks:spc?A.marksD:null,yl:A.dName,label:'Range',w:640,h:180,clName:A.dSym}),histChart(x,A,560,300,A.N>=S.set.minCap)];
+    let row=2;for(const s of svgs){const p=await svgPng(s);if(p){sh.img(p.b64,6,row,p.w,p.h);row+=Math.ceil(p.h/19)+1}}
+    sheets.push(sh)}
+  const cs=new XSheet(sheetName('Control constants',used));cs.cols=[8,10,10,10,10,4,8,10,10,10,10];cs.title('Control chart constants — SPC Formulas and Tables',11);cs.gap();
+  cs.head(['n','A2','D3','D4','d2','','n','c4','A3','B3','B4']);const ks=Object.keys(XS);for(let i=0;i<ks.length;i++){const a=XR[ks[i]],b=XS[ks[i]];cs.add([...(a?[+ks[i],...a]:['','','','','']),'',+ks[i],...b])}sheets.push(cs);
+  const zip=new JSZip();const ct=[`<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>`,`<Default Extension="xml" ContentType="application/xml"/>`,`<Default Extension="png" ContentType="image/png"/>`,
+    `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>`,`<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`];
+  let wbS='',wbR='',img=0,dr=0;
+  sheets.forEach((sh,i)=>{const n=i+1;let rel=null;
+    if(sh.imgs.length){dr++;rel='rId1';let d=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`;let dRel='';
+      sh.imgs.forEach((im,k)=>{img++;zip.file(`xl/media/image${img}.png`,im.png,{base64:true});dRel+=`<Relationship Id="rId${k+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${img}.png"/>`;
+        d+=`<xdr:oneCellAnchor><xdr:from><xdr:col>${im.col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${im.row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${Math.round(im.w*9525)}" cy="${Math.round(im.h*9525)}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${k+2}" name="Chart ${k+1}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${k+1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${Math.round(im.w*9525)}" cy="${Math.round(im.h*9525)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`});
+      zip.file(`xl/drawings/drawing${dr}.xml`,d+'</xdr:wsDr>');zip.file(`xl/drawings/_rels/drawing${dr}.xml.rels`,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${dRel}</Relationships>`);
+      zip.file(`xl/worksheets/_rels/sheet${n}.xml.rels`,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${dr}.xml"/></Relationships>`);
+      ct.push(`<Override PartName="/xl/drawings/drawing${dr}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`)}
+    zip.file(`xl/worksheets/sheet${n}.xml`,sh.xml(rel));ct.push(`<Override PartName="/xl/worksheets/sheet${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`);
+    wbS+=`<sheet name="${xe(sh.name)}" sheetId="${n}" r:id="rId${n}"/>`;wbR+=`<Relationship Id="rId${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${n}.xml"/>`});
+  wbR+=`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`;
+  zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${ct.join('')}</Types>`);
+  zip.file('_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+  zip.file('xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>${wbS}</sheets></workbook>`);
+  zip.file('xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${wbR}</Relationships>`);
+  zip.file('xl/styles.xml',xlStyles());
+  const b64=await zip.generateAsync({type:'base64',compression:'DEFLATE'});
+  const name=`Concrete SPC - ${label} - ${new Date().toISOString().slice(0,10)}.xlsx`.replace(/[\\/:*?"<>|]/g,'_');
+  saveFile(name,b64,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');return b64}
+function saveFile(name,b64,mime){const B=window.AndroidBridge;
+  if(B&&B.saveFile){Promise.resolve(B.saveFile(name,b64,mime,true)).then(p=>toast(p?'Saved: '+name:'Could not save the file.'));return}
+  try{const bin=atob(b64),arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);const url=URL.createObjectURL(new Blob([arr],{type:mime}));const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},2000);toast('Downloaded: '+name)}catch(e){toast('Could not save the file.')}}
 
 /* ================= views ================= */
 function vReg(){
@@ -721,21 +1112,26 @@ function vRep(){
    <div class="grid" style="margin-top:8px">
     <label class="f"><span>Poured from</span><input type="date" id="f-from" value="${f.from||''}"></label><label class="f"><span>Poured to</span><input type="date" id="f-to" value="${f.to||''}"></label></div>
    <div class="grid" style="margin-top:10px">
-    <label class="f"><span>fcu (${U()})</span><input type="number" id="s-fcuOv" placeholder="from grade: ${f1(fcuOf({...f})).replace('NaN','?')}" value="${T.fcuOv}"></label>
-    <label class="f"><span>LSL (${U()})</span><input type="number" id="s-lslOv" placeholder="= fcu" value="${T.lslOv}"></label>
-    <label class="f"><span>USL (optional)</span><input type="number" id="s-usl" placeholder="none" value="${T.usl}"></label>
+    <label class="f"><span>Control chart</span><select id="s-chart">${[['auto','Auto (n = 2–9 X̄-R, n ≥ 10 X̄-S)'],['xr','X̄-R'],['xs','X̄-S'],['imr','I-MR (sample results)']].map(([k,l])=>`<option value="${k}" ${(T.chart||'auto')===k?'selected':''}>${l}</option>`).join('')}</select></label>
+    <label class="f"><span>Special-cause tests</span><select id="s-rules">${Object.entries(TSETS).map(([k,v])=>`<option value="${k}" ${T.rules===k?'selected':''}>${v.name}</option>`).join('')}</select></label>
     <label class="f"><span>Histogram bin width</span><input type="number" id="s-binW" placeholder="auto" value="${T.binW}"></label>
     <label class="f"><span>Project name</span><input type="text" id="s-title" value="${esc(T.title||S.reg.title)}"></label></div>
+   ${sel.length===1?specEditor(sel[0].f):'<p class="note">Choose one mix above to set its specification limits (LSL, USL, Target).</p>'}
+   <h3>Six Sigma definitions</h3><div class="grid">
+    <label class="f"><span>Defect</span><select id="s-defect"><option value="result" ${T.defect!=='cube'?'selected':''}>Sample result outside spec (1 opportunity per sample)</option><option value="cube" ${T.defect==='cube'?'selected':''}>Cube below the cube limit (n opportunities per sample)</option></select></label>
+    <label class="f"><span>Cube limit (${U()})</span><input type="number" id="s-cubeLim" placeholder="= LSL" value="${T.cubeLim}"></label>
+    <label class="f"><span>Sigma level</span><select id="s-shift"><option value="1" ${T.shift!==false?'selected':''}>With the 1.5σ shift (convention)</option><option value="0" ${T.shift===false?'selected':''}>Without shift (Z bench)</option></select></label></div>
+   <h3>Guidelines (TQM L7 traffic lights)</h3><div class="grid">${Object.entries({cp:'Cp',cpk:'Cpk / Cpm',pp:'Pp',ppk:'Ppk',si:'Stability index',ti:'Target index'}).map(([k,l])=>`<label class="f"><span>${l}: ${GUIDE[k].low?'adequate ≤ / poor >':'poor < / adequate ≥'}</span><span class="row" style="gap:4px;flex-wrap:nowrap"><input type="number" step="0.01" id="g-${k}-0" value="${T.g[k][0]}"><input type="number" step="0.01" id="g-${k}-1" value="${T.g[k][1]}"></span></label>`).join('')}</div>
    <h3>Minimum samples (Insufficient Data below these)</h3><div class="grid">
     ${[['minDesc','Minimum samples per mix'],['minECP','ECP assessment'],['finalECP','ECP final (else provisional)'],['minSPC','Control limits & stability'],['minCap','Capability & sigma'],['minTrend','Trend'],['minSup','Plant comparison row']].map(([k,l])=>`<label class="f"><span>${l}</span><input type="number" min="2" id="s-${k}" value="${T[k]}"></label>`).join('')}</div>
    <h3>ECP 203-2020 Table (8-3) CV limits, %</h3><div class="grid">${['Excellent below','Very good below','Good below','Acceptable up to'].map((l,i)=>`<label class="f"><span>${l}</span><input type="number" step="0.5" id="s-ecp${i}" value="${T.ecp[i]}"></label>`).join('')}</div>
    <p class="note">Defaults: &lt;8 Excellent, 8–11 Very Good, 11–14 Good, 14–17 Acceptable, &gt;17 Poor. Check them against your approved copy of the code.</p>
-   <h3>Stability rules</h3><div class="grid"><label class="f"><span>Out-of-control tests on the X̄ chart</span><select id="s-rules"><option value="all" ${T.rules==='all'?'selected':''}>Western Electric / Nelson 1, 2, 3, 5, 6</option><option value="r1" ${T.rules==='r1'?'selected':''}>Rule 1 only (points beyond 3σ)</option></select></label></div>
    <h3>Data checks</h3><div class="grid"><label class="f"><span>Auto-exclude mistyped cubes (&lt;30% or &gt;300% of fcu)</span><select id="s-autoTypo"><option value="1" ${T.autoTypo?'selected':''}>On</option><option value="0" ${T.autoTypo?'':'selected'}>Off</option></select></label>
     <label class="f"><span>Flag set range above (% of mean)</span><input type="number" id="s-spreadPct" value="${T.spreadPct}"></label></div>
    <div class="row" style="margin-top:10px"><button class="btn" id="resetSet">Reset settings</button>${Object.keys(S.ov).length?`<button class="btn" id="resetOv">Clear my ${Object.keys(S.ov).length} include/exclude choices</button>`:''}</div></details>
-   <div class="row" style="margin-top:12px"><button class="btn primary" id="pdf">${NATIVE&&window.AndroidBridge.platform==='desktop'?'Save report as PDF':NATIVE?'Save / print PDF':'Print / save PDF'}</button><button class="btn" id="pick">Load another register</button></div></div>`;
-  if(sel.length===1&&sel[0].f.mix!==(S.filt||{}).mix||sel.length===1&&sel[0].f.sup!==(S.filt||{}).sup){S.filt={...sel[0].f,from:S.filt?.from||'',to:S.filt?.to||''};S.set.fcuOv=''}
+   <div class="row" style="margin-top:12px"><button class="btn primary" id="xl">Export Excel</button><button class="btn" id="pdf">${NATIVE&&window.AndroidBridge.platform==='desktop'?'Save report as PDF':NATIVE?'Save / print PDF':'Print / save PDF'}</button><button class="btn" id="pick">Load another register</button></div></div>`;
+  if(sel.length===1&&sel[0].f.mix!==(S.filt||{}).mix||sel.length===1&&sel[0].f.sup!==(S.filt||{}).sup){S.filt={...sel[0].f,from:S.filt?.from||'',to:S.filt?.to||''}}
+  S.lastSel=sel;
   if(!S.hideOv)h+=overview(list,sel);
   if(sel.length===1)h+=report(sel[0].f,1);
   else{if(!selOk.length)h+=`<div class="insuf"><b>Insufficient Data</b> — none of the chosen mixes has ${T.minDesc} samples yet.</div>`;selOk.forEach((g,i)=>h+=report(g.f,i+1))}
@@ -762,13 +1158,13 @@ function overview(list,sel=[]){
     h+=`<td class="n">${f1(A.mean)}</td><td class="n">${f2(A.sd)}</td><td class="n">${f2(A.cv)}</td>
      <td>${A.N>=T.minECP?chip(ECPN[lv]+(A.N<T.finalECP?' *':''),ECPC[lv]):chip('Insufficient','na')}</td>
      <td class="n">${A.below.length?`<b style="color:var(--bad)">${A.below.length}</b>`:'0'}</td>
-     <td>${A.stab==='insufficient'?chip(`N < ${T.minSPC}`,'na'):chip(A.stab==='stable'?'Stable':'Unstable',A.stab==='stable'?'ok':'bad')}</td>
-     <td class="n">${A.capState==='ok'?f2(A.Cpk):A.capState==='unstable'?'<span class="muted">withheld</span>':'<span class="muted">–</span>'}</td>
+     <td>${A.stab==='insufficient'?chip(`N < ${T.minSPC}`,'na'):chip(A.stab==='potential'?'Signals':A.stab==='stable'?'Stable':'Unstable',STABC[A.stab])}</td>
+     <td class="n">${A.capState==='insufficient'?'<span class="muted">–</span>':`<span style="color:var(--${light('cpk',A.Cpk)})">${f2(A.Cpk)}</span>${A.capState==='reliable'?'':'<span class="muted" title="'+CAPN[A.capState]+'"> †</span>'}`}</td>
      <td class="n">${A.N>=T.minCap?f2(A.Ppk):'<span class="muted">–</span>'}</td>
-     <td class="n">${A.N>=T.minCap?(A.sigma>9?'> 9':A.sigma.toFixed(1)):'<span class="muted">–</span>'}</td>
+     <td class="n">${A.N>=T.minCap?sig1(A.sigma):'<span class="muted">–</span>'}</td>
      <td>${A.trend?chip(A.trend[0].toUpperCase()+A.trend.slice(1),{improving:'ok',steady:'na',deteriorating:'bad'}[A.trend]):'<span class="muted">–</span>'}</td></tr>`}
   h+=`</tbody></table></div>
-   <p class="note">* ECP level provisional (fewer than ${T.finalECP} samples). A mix needs ${T.minDesc} samples to be analysed, ${T.minSPC} for stability, ${T.minCap} for capability (Cpk, Ppk) and sigma level, ${T.minTrend} for the trend. Cpk is withheld when the mix is not stable. Each plant's mix is analysed on its own; mixes are never pooled.</p>`;
+   <p class="note">* ECP level provisional (fewer than ${T.finalECP} samples). A mix needs ${T.minDesc} samples to be analysed, ${T.minSPC} for stability, ${T.minCap} for capability (Cpk, Ppk) and sigma level, ${T.minTrend} for the trend. † Cpk not reliable (process unstable or data not normal). Each plant's mix is analysed on its own; mixes are never pooled.</p>`;
   // plant comparison per grade, one line per plant per mix
   const mg=grades.filter(gr=>list.filter(g=>g.f.grade===gr&&g.ok).length>=2);
   if(mg.length){h+=`<h3>Plant comparison by grade (mixes with N ≥ ${T.minDesc})</h3><div class="charts">`;
@@ -778,7 +1174,7 @@ function overview(list,sel=[]){
   return h+`</section></div>`}
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tab));
-  $('#app').innerHTML=S.tab==='reg'?vReg():vRep();
+  $('#app').innerHTML=S.tab==='reg'?vReg():S.tab==='dash'?vDash():vRep();
   $('#hdrSub').textContent=S.reg?(S.set.title||S.reg.title||S.reg.file):'28-day cube strength analysis · ECP 203-2020';
   bind()}
 function bind(){
@@ -790,15 +1186,29 @@ function bind(){
   document.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{const id=tr.dataset.id;const D=dataset(curFilt());const o=D.rows.find(z=>z.id===id);if(!o)return;
     if(o.use)S.ov[id]='out';else if(S.ov[id]==='out')delete S.ov[id];else{if(o.R==null&&S.reg.mode==='cubes'){toast('This set is incomplete and can\'t be analysed.');return}S.ov[id]='in'}
     save();render();toast(S.ov[id]==='out'?`${id} excluded`:`${id} included`)});
-  const openMix=tr=>{const[sup,grade,mix,cem]=JSON.parse(tr.dataset.k);S.pick={sup,grade,mix};S.filt={sup,item:'*',grade,mix,cem,from:S.filt?.from||'',to:S.filt?.to||''};S.set.fcuOv='';save();render();const r=$('#report');if(r)r.scrollIntoView({behavior:'smooth'})};
+  const openMix=tr=>{const[sup,grade,mix,cem]=JSON.parse(tr.dataset.k);S.pick={sup,grade,mix};S.filt={sup,item:'*',grade,mix,cem,from:S.filt?.from||'',to:S.filt?.to||''};save();render();const r=$('#report');if(r)r.scrollIntoView({behavior:'smooth'})};
   document.querySelectorAll('tr.pick').forEach(tr=>{tr.onclick=()=>openMix(tr);tr.onkeydown=e=>{if(e.key==='Enter')openMix(tr)}});
   ['sup','grade','mix'].forEach((k,i)=>{const e=$('#p-'+k);if(e)e.onchange=()=>{S.pick[k]=e.value;if(i<1)S.pick.grade='*';if(i<2)S.pick.mix='*';save();render()}});
   const pa=$('#pAll');if(pa)pa.onclick=()=>{S.pick={sup:'*',grade:'*',mix:'*'};save();render()};const po=$('#pOv');if(po)po.onclick=()=>{S.hideOv=!S.hideOv;render()};
-  FK.forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;if(k==='grade')S.set.fcuOv='';save();render()}});
+  FK.forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;save();render()}});
   ['from','to'].forEach(k=>{const e=$('#f-'+k);if(e)e.onchange=()=>{S.filt[k]=e.value;save();render()}});
-  ['fcuOv','lslOv','usl','binW','title','minDesc','minECP','finalECP','minSPC','minCap','minTrend','minSup','spreadPct'].forEach(k=>{const e=$('#s-'+k);if(e)e.onchange=()=>{const v=e.value.trim();S.set[k]=['fcuOv','lslOv','usl','binW','title'].includes(k)?v:Math.max(2,+v||DEF[k]);save();render();reopen()}});
+  ['binW','title','cubeLim','minDesc','minECP','finalECP','minSPC','minCap','minTrend','minSup','spreadPct'].forEach(k=>{const e=$('#s-'+k);if(e)e.onchange=()=>{const v=e.value.trim();S.set[k]=['binW','title','cubeLim'].includes(k)?v:Math.max(2,+v||DEF[k]);save();render();reopen()}});
   [0,1,2,3].forEach(i=>{const e=$('#s-ecp'+i);if(e)e.onchange=()=>{S.set.ecp[i]=+e.value||DEF.ecp[i];save();render();reopen()}});
   const rl=$('#s-rules');if(rl)rl.onchange=()=>{S.set.rules=rl.value;save();render();reopen()};
+  for(const[k,fn]of[['chart',v=>v],['defect',v=>v],['shift',v=>v==='1']]){const e=$('#s-'+k);if(e)e.onchange=()=>{S.set[k]=fn(e.value);save();render();reopen()}}
+  Object.keys(DEF.g).forEach(k=>[0,1].forEach(i=>{const e=$(`#g-${k}-${i}`);if(e)e.onchange=()=>{const v=+e.value;if(isFinite(v)&&v>0){S.set.g[k][i]=v;save();render();reopen()}}}));
+  const spSel=()=>{if(S.tab==='dash'){const g=mixList().find(g=>mkey(g.f)===S.dsel);return g&&g.f}const s=S.lastSel;return s&&s.length===1?s[0].f:null};
+  const sps=$('#sp-save');if(sps)sps.onclick=()=>{const f=spSel();if(f&&saveSpec(f,'mix')){render();if(S.tab==='rep')reopen();toast('Limits confirmed for '+mixLabel(f))}};
+  const spg=$('#sp-grade');if(spg)spg.onclick=()=>{const f=spSel();if(f&&saveSpec(f,'grade')){render();if(S.tab==='rep')reopen();toast('Limits confirmed for all '+f.grade+' mixes')}};
+  const spc=$('#sp-clear');if(spc)spc.onclick=()=>{const f=spSel();if(!f)return;delete S.specs[mkey(f)];delete S.specs['grade:'+f.grade];save();render();if(S.tab==='rep')reopen();toast('Back to default limits')};
+  document.querySelectorAll('.stabs button').forEach(b=>b.onclick=()=>{S.dtab=b.dataset.d;save();render()});
+  document.querySelectorAll('.cbtn').forEach(b=>b.onclick=()=>{S.set.chart=b.dataset.ct;save();render()});
+  document.querySelectorAll('.mcard').forEach(b=>b.onclick=()=>{S.dsel=b.dataset.k;save();render()});
+  const goRep=()=>{const g=mixList().find(g=>mkey(g.f)===S.dsel);if(g){S.pick={sup:g.f.sup,grade:g.f.grade,mix:g.f.mix};S.filt={...g.f}}S.tab='rep';save();render();scrollTo(0,0)};
+  const drp=$('#d-rep');if(drp)drp.onclick=goRep;const dop=$('#d-open');if(dop)dop.onclick=goRep;
+  const runXl=async(list,label,btn)=>{if(btn)btn.disabled=true;try{await exportExcel(list,label)}catch(e){console.error(e);toast('Could not create the Excel file.')}if(btn)btn.disabled=false};
+  const dx=$('#d-xl');if(dx)dx.onclick=()=>runXl(mixList(),'Dashboard',dx);
+  const rx=$('#xl');if(rx)rx.onclick=()=>{const s=S.lastSel||[];runXl(s,s.length===1?mixLabel(s[0].f):'Report',rx)};
   const at=$('#s-autoTypo');if(at)at.onchange=()=>{S.set.autoTypo=at.value==='1';save();render();reopen()};
   const rs=$('#resetSet');if(rs)rs.onclick=()=>{S.set={...DEF,ecp:[...DEF.ecp],title:S.set.title};save();render();reopen();toast('Settings reset')};
   const ro=$('#resetOv');if(ro)ro.onclick=()=>{S.ov={};save();render();reopen()};

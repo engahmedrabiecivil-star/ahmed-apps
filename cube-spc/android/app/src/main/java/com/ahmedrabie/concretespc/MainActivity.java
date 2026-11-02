@@ -2,6 +2,13 @@ package com.ahmedrabie.concretespc;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.util.Base64;
+import java.io.OutputStream;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -108,7 +115,56 @@ public class MainActivity extends Activity {
         else super.onBackPressed();
     }
 
+    private static final String FOLDER = Environment.DIRECTORY_DOWNLOADS + "/Concrete SPC/";
+
+    private Uri findExisting(ContentResolver cr, String name) {
+        Uri coll = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+        String sel = MediaStore.MediaColumns.DISPLAY_NAME + "=? AND " + MediaStore.MediaColumns.RELATIVE_PATH + "=?";
+        try (Cursor c = cr.query(coll, new String[]{MediaStore.MediaColumns._ID}, sel, new String[]{name, FOLDER}, null)) {
+            if (c != null && c.moveToFirst()) return Uri.withAppendedPath(coll, String.valueOf(c.getLong(0)));
+        } catch (Exception ignored) { }
+        return null;
+    }
+
     class Bridge {
+        // Saves the Excel report to Download/Concrete SPC and opens it
+        @JavascriptInterface
+        public String saveFile(String name, String base64, String mime, boolean open) {
+            try {
+                byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                ContentResolver cr = getContentResolver();
+                Uri uri = findExisting(cr, name);
+                if (uri == null) {
+                    ContentValues v = new ContentValues();
+                    v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                    v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+                    v.put(MediaStore.MediaColumns.RELATIVE_PATH, FOLDER);
+                    uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                }
+                if (uri == null) throw new IllegalStateException("can't create file");
+                try (OutputStream os = cr.openOutputStream(uri, "wt")) {
+                    if (os == null) throw new IllegalStateException("can't open file");
+                    os.write(bytes);
+                }
+                final Uri fileUri = uri;
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Saved to Download/Concrete SPC: " + name, Toast.LENGTH_LONG).show();
+                    if (open) {
+                        Intent view = new Intent(Intent.ACTION_VIEW);
+                        view.setDataAndType(fileUri, mime);
+                        view.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        try { startActivity(Intent.createChooser(view, "Open the Excel report")); }
+                        catch (ActivityNotFoundException e) { Toast.makeText(MainActivity.this, "Install Excel or WPS Office to open it", Toast.LENGTH_LONG).show(); }
+                    }
+                });
+                return uri.toString();
+            } catch (Exception e) {
+                final String m = e.getMessage();
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Save failed: " + m, Toast.LENGTH_LONG).show());
+                return "";
+            }
+        }
+
         @JavascriptInterface
         public void printPdf(final String name) {
             runOnUiThread(() -> {
