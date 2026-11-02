@@ -10,8 +10,8 @@ android {
         applicationId "com.ahmedrabie.concretespc"
         minSdk 29
         targetSdk 34
-        versionCode 9
-        versionName "1.8"
+        versionCode 10
+        versionName "1.9"
     }
 
     // fixed key so every new build installs as an update and keeps the saved log
