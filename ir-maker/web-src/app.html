@@ -220,10 +220,8 @@ async function init(){
 
 var B = E.block;
 function isB(){ return !!(S.log && B && B.isBlock(S.log)); }
-function isR(){ return !!(S.log && B && B.isRows && B.isRows(S.log)); }
 function tabKind(name){ var t = isB() ? S.log.tabs.filter(function(x){ return x.name===name; })[0] : null; return t ? t.kind : ''; }
 function applyDefaults(d, force){
-  if (isR()) return d;
   var fd = B.formDefaults(S.tplMeta, { desc: d.desc, unit: d.unit, kind: tabKind(d.tab) });
   if (force || !d._subj) d.subject = fd.subject;
   if (force || !d._loc) d.formLoc = fd.loc;
@@ -240,7 +238,6 @@ function renderSetup(){
 }
 var KNOWN = /^(irno|irnumber|ir|irnum|requestno|item|element|elementtype|submitteddate|date|submissiondate|irdate|description|desc|works|workdescription|mainlocation|location|loc|blockno|block|fromst|from|fromstation|tost|to|tostation|subitem|unitplantno|unit|discipline|revno|rev|revision)$/;
 var FIELD_LABEL = { IR_No:'IR number', Submitted__Date:'Date', Item:'Element type', Description:'Works', Main_Location:'Location' };
-var CELL_FIELDS = { IR_No:'Reference no.', Rev_No:'Revision', Submitted__Date:'Date', Description:'Inspection description', Main_Location:'Area', Item:'Item', File_No:'Footer file name' };
 var LABEL_FIELDS = { IR_No:'Reference no.', Submitted__Date:'Date', Insp_Date:'Date of inspection', Description:'Subject', Main_Location:'Location', Attachment:'Attachment', type:'Type of inspection boxes', insp:'1st / 2nd inspection boxes' };
 async function useTemplate(bytes, name){
   var fields = await E.inspectTemplate(bytes), note = null;
@@ -250,7 +247,7 @@ async function useTemplate(bytes, name){
     var L = await E.learnFromFilledIr(bytes, S.log);
     bytes = L.bytes; fields = await E.inspectTemplate(bytes);
     var ok = [], miss = [];
-    var FL = isR() ? CELL_FIELDS : isB() ? LABEL_FIELDS : FIELD_LABEL;
+    var FL = isB() ? LABEL_FIELDS : FIELD_LABEL;
     Object.keys(FL).forEach(function(k){ (L.report[k] && L.report[k] !== 'not found' ? ok : miss).push(FL[k]); });
     note = { kind: miss.length ? 'warn' : 'good', text: 'Learned the form from '+L.sourceIr+'. Found: '+ok.join(', ')+'.'+(miss.length ? ' Not found, will stay as in the old IR: '+miss.join(', ')+'.' : '') };
   }
@@ -269,15 +266,15 @@ function render(){
   var L=S.log;
   $('proj').textContent = projName();
   if (isB()) {
-    var nx = L.tabs.map(function(t){ return { k: t.kind, n: t.slots && t.slots.length ? t.slots[0].n : t.lastNum + 1 }; });
+    var nx = L.tabs.map(function(t){ return { k: t.kind, n: t.slots.length ? t.slots[0].n : t.lastNum + 1 }; });
     $('counter').querySelector('span').textContent = 'Next IR';
     $('lastIr').innerHTML = nx.map(function(x){ return '<span style="display:inline-block;font-size:13px;font-weight:600;margin-right:10px;letter-spacing:0;text-transform:none;color:var(--navy)">'+esc(x.k)+' '+x.n+'</span>'; }).join('');
     $('sub').textContent = L.rows.length+' requests in log · '+L.tabs.length+' tabs';
-    $('req').placeholder = isR() ? 'e.g. Check plaster for ground floor rooms (G-01 & G-02)' : 'e.g. RFT for GF columns 445'; $('req').dir = 'auto';
+    $('req').placeholder = 'e.g. RFT for GF columns 445'; $('req').dir = 'auto';
     var seenEx = {}, exB = [];
     L.rows.slice().reverse().forEach(function(r){ var x = r.desc.replace(/\(?\s*\d{3}\s*\)?/g,' ').replace(/\s+/g,' ').trim(); var k = x.toLowerCase(); if (x && !seenEx[k] && exB.length < 6) { seenEx[k] = 1; exB.push(x); } });
     $('examples').innerHTML = exB.map(function(x){return '<button class="chip" dir="auto" data-ex="'+esc(x+' ')+'">'+esc(x)+'</button>';}).join('');
-    $('reNo').placeholder = isR() ? 'e.g. ARCH 446' : 'e.g. Civil 70'; $('reNo').setAttribute('inputmode','text');
+    $('reNo').placeholder = 'e.g. Civil 70'; $('reNo').setAttribute('inputmode','text');
     renderRecent(); renderDrafts();
     $('info').textContent = 'Log: '+S.logName+' · Form: '+(S.tplName||'saved form');
     return;
@@ -304,26 +301,7 @@ function blockOptions(sel){
   return '<option value="">—</option>'+Object.keys(S.log.blocks).map(Number).sort(function(a,b){return a-b;}).map(function(n){return '<option value="'+n+'"'+(n===sel?' selected':'')+'>Block '+n+'</option>';}).join('');
 }
 var INS_TYPES = ['Architectural','Civil/Struct.','Electrical','HVAC','Plumbing','Fire Protection','Survey','Others'];
-function renderDraftsRows(){
-  var ser = B.preview(S.log, S.drafts);
-  var opt = function(list, sel){ return list.map(function(v){ return '<option'+(v===sel?' selected':'')+'>'+esc(v)+'</option>'; }).join(''); };
-  var uniq = function(tab, k){ var t = S.log.tabs.filter(function(x){ return x.name===tab; })[0], seen = {}, out = []; if (!t) return out;
-    t.numbered.slice().reverse().forEach(function(r){ var v = r[k]; if (v && !seen[v.toLowerCase()] && out.length < 60) { seen[v.toLowerCase()] = 1; out.push(v); } }); return out; };
-  $('drafts').innerHTML = S.drafts.map(function(d,i){
-    return '<article class="ir" data-i="'+i+'">'+
-      '<div class="ir-head"><span class="ir-no">'+esc(ser[i])+'</span><button class="danger" data-del="'+i+'" aria-label="Remove">Remove ✕</button></div>'+
-      '<div class="ir-body">'+
-        '<div class="field full"><label for="d-desc-'+i+'">Description</label><textarea dir="auto" id="d-desc-'+i+'" data-k="desc">'+esc(d.desc)+'</textarea></div>'+
-        '<div class="field"><label for="d-tab-'+i+'">Sheet</label><select id="d-tab-'+i+'" data-k="tab">'+opt(S.log.tabs.map(function(t){return t.name;}), d.tab)+'</select></div>'+
-        '<div class="field"><label for="d-loc-'+i+'">Location (area)</label><input dir="auto" id="d-loc-'+i+'" data-k="loc" list="dl-loc-'+i+'" value="'+esc(d.loc||'')+'"><datalist id="dl-loc-'+i+'">'+uniq(d.tab,'loc').map(function(v){return '<option value="'+esc(v)+'">';}).join('')+'</datalist></div>'+
-        '<div class="field full"><label for="d-cat-'+i+'">Category (item)</label><input dir="auto" id="d-cat-'+i+'" data-k="cat" list="dl-cat-'+i+'" value="'+esc(d.cat||'')+'"><datalist id="dl-cat-'+i+'">'+uniq(d.tab,'cat').map(function(v){return '<option value="'+esc(v)+'">';}).join('')+'</datalist></div>'+
-      '</div></article>';
-  }).join('');
-  $('bar').hidden = !S.drafts.length;
-  $('save').textContent = S.drafts.length>1 ? 'Add '+S.drafts.length+' IRs to log & print' : 'Add to log & print';
-}
 function renderDraftsBlock(){
-  if (isR()) return renderDraftsRows();
   var ser = B.preview(S.log, S.drafts);
   $('drafts').innerHTML = S.drafts.map(function(d,i){
     var opt = function(list, sel){ return list.map(function(v){ return '<option'+(v===sel?' selected':'')+'>'+esc(v)+'</option>'; }).join(''); };
@@ -406,8 +384,8 @@ function understand(){
 
 async function save(){
   if (!S.drafts.length) return;
-  var bad = S.drafts.filter(function(d){ return isR() ? (!d.tab || !String(d.desc||'').trim() || !String(d.loc||'').trim()) : isB() ? (!d.tab || !String(d.desc||'').trim()) : (d.block==null || d.block==='' || /…/.test(d.desc)); });
-  if (bad.length){ msg('err', isR() ? 'One IR is incomplete (missing description or location). Complete it first.' : 'One IR is incomplete (missing block, or a value shown as …). Complete it first.'); return; }
+  var bad = S.drafts.filter(function(d){ return isB() ? (!d.tab || !String(d.desc||'').trim()) : (d.block==null || d.block==='' || /…/.test(d.desc)); });
+  if (bad.length){ msg('err','One IR is incomplete (missing block, or a value shown as …). Complete it first.'); return; }
   var again = checkDuplicates(S.drafts, []);
   if (again.notes.length){ $('msgs').innerHTML=''; again.notes.forEach(function(t){ msgHtml('err', t); }); msg('warn','Nothing was saved. Remove the repeated IRs above, then try again.', true); return; }
   $('save').disabled = true;
@@ -504,7 +482,6 @@ document.addEventListener('click', function(ev){
 document.addEventListener('input', function(ev){
   var el=ev.target, card=el.closest('.ir'); if(!card||!el.dataset.k) return;
   var d=S.drafts[+card.dataset.i]; var k=el.dataset.k;
-  if (isR()) { d[k] = el.value; if (k==='cat') d.item = d.formItem = el.value; if (k==='tab') renderDrafts(); return; }
   if (isB()) {
     d[k] = el.value;
     if (k==='subject') d._subj = 1; if (k==='formLoc') d._loc = 1; if (k==='insType') d._type = 1;
