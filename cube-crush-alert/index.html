@@ -43,9 +43,15 @@ h2{font-size:22px}
 h3{font-size:17px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .mono{font-family:var(--mono);font-size:13px}
 .muted{color:var(--muted)}
-.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.topr{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-inline-start:auto}
-.credit{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:.02em;color:var(--accent);text-align:end;line-height:1.1}
+.top{display:flex;flex-direction:column;gap:0}
+.brand{position:relative;display:flex;justify-content:center;align-items:center;min-height:44px}
+.brand h1{text-align:center;white-space:nowrap}
+.logo{position:absolute;left:0;top:50%;transform:translateY(-50%);white-space:nowrap;display:flex;flex-direction:column;font-family:var(--display);font-weight:700;font-size:13px;line-height:1.15;letter-spacing:.08em;color:var(--fg);border-inline-start:3px solid var(--accent);padding-inline-start:7px}
+.logo span:last-child{color:var(--muted);font-size:11px;letter-spacing:.14em}
+.credit{margin-top:16px;text-align:center;font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:.02em;color:var(--accent);line-height:1.1}
+.projrow{margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.projrow .sub{flex:1;min-width:0}
+.projrow select{max-width:100%}
 .top .sub{font-size:13px;color:var(--muted)}
 select,input,button{font:inherit;color:inherit}
 select,input[type=time],input[type=date],input[type=number],input[type=text]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:42px;max-width:100%}
@@ -121,15 +127,18 @@ th{position:sticky;top:0;background:var(--sunk);font-weight:600}
 @media (prefers-reduced-motion:no-preference){.alarm.ringing{animation:pulse 1s steps(2) infinite}}
 @keyframes pulse{50%{background:#7f1010}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:40;max-width:calc(100% - 32px)}
-@media (max-width:480px){h1{font-size:26px}.tile .n{font-size:26px}.map{grid-template-columns:1fr}.alarm .flash{font-size:36px}}
+@media (max-width:480px){h1{font-size:22px}.logo{font-size:9.5px;letter-spacing:.03em;padding-inline-start:5px;border-inline-start-width:2px}.logo span:last-child{font-size:8px;letter-spacing:.08em}.credit{font-size:16px}.tile .n{font-size:26px}.map{grid-template-columns:1fr}.alarm .flash{font-size:36px}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div><h1>Cube Crush Alert</h1><div class="sub" id="projName"></div></div>
-    <div class="topr"><div class="credit">Developed by Eng Ahmed Rabie</div>
-    <select id="projSel" aria-label="Project"></select></div>
+    <div class="brand">
+      <div class="logo" aria-label="Hassan Allam Construction"><span>HASSAN ALLAM</span><span>CONSTRUCTION</span></div>
+      <h1>Cube Crush Alert</h1>
+    </div>
+    <div class="credit">Developed by Eng. Ahmed Rabie</div>
+    <div class="projrow"><div class="sub" id="projName"></div><select id="projSel" aria-label="Project"></select></div>
   </header>
 
   <section class="status" id="status">
