@@ -50,7 +50,7 @@ h3{font-size:17px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
 .credit{margin-top:16px;text-align:center;font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:.02em;color:var(--accent);line-height:1.1}
 .projrow{margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .projrow .sub{flex:1;min-width:0}
-.projrow select{max-width:100%}
+.projrow select{flex:1;width:100%;min-width:0;max-width:100%;text-overflow:ellipsis}
 .top .sub{font-size:13px;color:var(--muted)}
 select,input,button{font:inherit;color:inherit}
 select,input[type=time],input[type=date],input[type=number],input[type=text]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:42px;max-width:100%}
@@ -137,7 +137,7 @@ th{position:sticky;top:0;background:var(--sunk);font-weight:600}
       <h1>Cube Crush Alert</h1>
     </div>
     <div class="credit">Developed by Eng. Ahmed Rabie</div>
-    <div class="projrow"><div class="sub" id="projName"></div><select id="projSel" aria-label="Project"></select></div>
+    <div class="projrow"><div class="sub" id="projName" hidden></div><select id="projSel" aria-label="Project"></select></div>
   </header>
 
   <section class="status" id="status">
