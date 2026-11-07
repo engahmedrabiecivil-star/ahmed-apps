@@ -1,0 +1,29 @@
+{
+  "name": "cube-crush-alert",
+  "productName": "Cube Crush Alert",
+  "version": "1.0.0",
+  "description": "Concrete cube crushing alarm for 3, 7 and 28-day tests",
+  "author": "Eng. Ahmed Rabie",
+  "main": "main.js",
+  "build": {
+    "appId": "com.ahmedrabie.cubecrush",
+    "productName": "Cube Crush Alert",
+    "files": ["main.js", "preload.js", "alarm-preload.js", "alarm.html", "siren.wav", "icon.png", "www/**"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Cube Crush Alert",
+      "artifactName": "CubeCrushAlert-Setup.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  }
+}

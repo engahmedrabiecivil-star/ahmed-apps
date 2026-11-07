@@ -237,6 +237,7 @@ function evFor(p,pi,days){
 function events(days=1){let ev=[];S.projects.forEach((p,i)=>{ev=ev.concat(evFor(p,i,days))});if(snoozeEv)ev.push(snoozeEv);return ev.sort((a,b)=>a.at-b.at)}
 /* ---------- native Android bridge ---------- */
 const NATIVE=!!window.Android;
+const DESKTOP=NATIVE&&window.Android.platform==='windows';
 const APK_URL=(()=>{const h=location.hostname,r=location.pathname.split('/')[1];return h.endsWith('.github.io')&&r?'https://github.com/'+h.split('.')[0]+'/'+r+'/releases/download/cube-crush-latest/CubeCrushAlert.apk':'https://github.com/engahmedrabiecivil-star/ahmed-apps/releases/download/cube-crush-latest/CubeCrushAlert.apk'})();
 function hashId(k){let h=7;for(const c of k)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)%1000000+1000}
 function evText(e){const g={};for(const x of e.items)(g[x.a]=g[x.a]||[]).push(x.s.id+(x.d<todayYmd()?' (late)':''));return Object.keys(g).sort((a,b)=>a-b).map(a=>a+'-day: '+g[a].join(', ')).join('\n')}
@@ -299,7 +300,7 @@ function ring(e){
 }
 $('#alDismiss').onclick=()=>{stopSound();$('#alarm').hidden=true;ringing=null;render()};
 $('#alSnooze').onclick=()=>{stopSound();$('#alarm').hidden=true;const at=Date.now()+S.settings.snooze*60e3;snoozeEv={...ringing,key:'snooze|'+at,kind:'snooze',at};ringing=null;status();toast('Snoozed until '+new Date(at).toTimeString().slice(0,5))};
-$('#armBtn').onclick=()=>{if(NATIVE){Android.testAlarm('Test · Cube Crush Alert','This is a test. Lock the phone now: the siren rings in 10 seconds.');toast('Test alarm in 10 seconds. Lock the phone.');return}if(!armed)arm();else{const b=bucket();ring({key:'test',kind:'main',day:todayYmd(),items:b.today.concat(b.over).filter(x=>!x.done).concat(b.tomorrow.filter(x=>!x.done)).slice(0,12)})}};
+$('#armBtn').onclick=()=>{if(NATIVE){if(DESKTOP){Android.testAlarm('Test · Cube Crush Alert','This is a test. Close this window now: the siren rings in 10 seconds.');toast('Test alarm in 10 seconds. Close the window to try it.');return}Android.testAlarm('Test · Cube Crush Alert','This is a test. Lock the phone now: the siren rings in 10 seconds.');toast('Test alarm in 10 seconds. Lock the phone.');return}if(!armed)arm();else{const b=bucket();ring({key:'test',kind:'main',day:todayYmd(),items:b.today.concat(b.over).filter(x=>!x.done).concat(b.tomorrow.filter(x=>!x.done)).slice(0,12)})}};
 /* ---------- UI ---------- */
 let view='today',filter='today',calMonth=null,calSel=null;
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600)}
@@ -458,7 +459,7 @@ function vSet(){
    <div class="field"><span>Days the lab is closed</span><div class="row">${DN.map((d,i)=>`<label class="row" style="flex:none;min-width:0;gap:4px"><input type="checkbox" class="off" value="${i}" ${st.offDays.includes(i)?'checked':''} style="width:20px;height:20px">${d}</label>`).join('')}</div></div>
    <label class="field"><span>If a test falls on a closed day</span><select id="s-shift"><option value="none" ${st.shift==='none'?'selected':''}>Keep the date</option><option value="prev" ${st.shift==='prev'?'selected':''}>Crush the working day before</option><option value="next" ${st.shift==='next'?'selected':''}>Crush the next working day</option></select></label>
    <label class="field"><span>Extra test ages in days (e.g. 3, 56)</span><input type="text" id="s-extra" value="${esc(st.extra)}" placeholder="none"></label></div>
-  ${NATIVE?'<p class="note">Alarms are set on the phone for the next 60 days and ring with the app closed, the screen locked, and after a restart. Open the app after importing a newer register so the alarms update.</p>':'<p class="note">This web version rings only while the page is open. <a href="'+APK_URL+'">Get the Android app</a> for an alarm that rings with the app closed.</p>'}`;
+  ${DESKTOP?'<p class="note">Alarms are set for the next 60 days and ring from the icon near the clock, even with this window closed. Quitting from that icon stops them. Open the app after importing a newer register so the alarms update.</p>':NATIVE?'<p class="note">Alarms are set on the phone for the next 60 days and ring with the app closed, the screen locked, and after a restart. Open the app after importing a newer register so the alarms update.</p>':'<p class="note">This web version rings only while the page is open. <a href="'+APK_URL+'">Get the Android app</a> for an alarm that rings with the app closed.</p>'}`;
 }
 function bindSettings(){
   const st=S.settings,up=()=>{save();status()};

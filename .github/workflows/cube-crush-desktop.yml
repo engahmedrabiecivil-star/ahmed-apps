@@ -1,0 +1,53 @@
+name: Build Cube Crush Alert for Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cube-crush-alert/**"
+      - ".github/workflows/cube-crush-desktop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Put the app page inside the program (works offline)
+        run: |
+          mkdir -p cube-crush-alert/desktop/www
+          cp cube-crush-alert/index.html cube-crush-alert/desktop/www/index.html
+          curl -fsSL -o cube-crush-alert/desktop/www/xlsx.full.min.js https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
+          sed -i 's#https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js#xlsx.full.min.js#' cube-crush-alert/desktop/www/index.html
+          grep -q 'src="xlsx.full.min.js"' cube-crush-alert/desktop/www/index.html
+
+      - name: Install
+        working-directory: cube-crush-alert/desktop
+        run: npm install --no-audit --no-fund
+
+      - name: Build Windows installer
+        working-directory: cube-crush-alert/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Publish the installer as a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete cube-crush-desktop-latest --yes --cleanup-tag || true
+          gh release create cube-crush-desktop-latest "cube-crush-alert/desktop/dist/CubeCrushAlert-Setup.exe" \
+            --title "Cube Crush Alert for Windows (build ${{ github.run_number }})" \
+            --notes "Download CubeCrushAlert-Setup.exe and open it. If Windows shows 'Windows protected your PC', click More info, then Run anyway. Developed by Eng. Ahmed Rabie" \
+            --latest=false

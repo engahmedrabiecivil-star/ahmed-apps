@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cube Crush Alert</title>
+<style>
+  * { box-sizing: border-box }
+  html, body { height: 100%; margin: 0 }
+  body { background: #c62828; color: #fff; font-family: "Segoe UI", Tahoma, sans-serif; display: flex; flex-direction: column; gap: 14px; padding: 26px 26px 22px }
+  h1 { margin: 0; font-size: 30px; line-height: 1.15; text-transform: uppercase; letter-spacing: .01em }
+  .when { opacity: .85; font-size: 15px }
+  .list { flex: 1; overflow: auto; background: rgba(0,0,0,.24); padding: 14px 16px; font-family: Consolas, "Courier New", monospace; font-size: 20px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+  button { font: 600 18px "Segoe UI", Tahoma, sans-serif; min-height: 58px; border: 0; cursor: pointer; text-transform: uppercase }
+  #snooze { background: rgba(0,0,0,.32); color: #fff }
+  #dismiss { background: #fff; color: #8a1414 }
+  button:focus-visible { outline: 3px solid #ffd54f; outline-offset: 2px }
+  @media (prefers-reduced-motion: no-preference) { body.ringing { animation: pulse 1s steps(2) infinite } }
+  @keyframes pulse { 50% { background: #7f1010 } }
+</style>
+</head>
+<body class="ringing">
+  <h1 id="title">Crush cubes now</h1>
+  <div class="when" id="when"></div>
+  <div class="list" id="body"></div>
+  <div class="btns"><button id="snooze">Snooze</button><button id="dismiss">Dismiss</button></div>
+  <audio id="snd" loop></audio>
+<script>
+(async () => {
+  const i = await window.alarm.info();
+  document.getElementById('title').textContent = i.title;
+  document.getElementById('body').textContent = i.body;
+  document.getElementById('when').textContent = new Date().toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  document.getElementById('snooze').textContent = 'Snooze ' + i.snooze + ' min';
+  const a = document.getElementById('snd');
+  a.src = i.sound; a.volume = i.vol;
+  a.play().catch(() => {});
+  setTimeout(() => { a.pause(); document.body.classList.remove('ringing') }, i.ring * 1000);
+  document.getElementById('snooze').onclick = () => { a.pause(); window.alarm.snooze() };
+  document.getElementById('dismiss').onclick = () => { a.pause(); window.alarm.dismiss() };
+  document.getElementById('dismiss').focus();
+})();
+</script>
+</body>
+</html>

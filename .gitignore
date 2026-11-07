@@ -19,3 +19,6 @@ lessons-library/android/build/
 lessons-library/android/app/build/
 lessons-library/desktop/node_modules/
 lessons-library/desktop/dist/
+cube-crush-alert/desktop/www/
+cube-crush-alert/desktop/node_modules/
+cube-crush-alert/desktop/dist/
